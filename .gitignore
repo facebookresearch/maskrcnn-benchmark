@@ -1,0 +1,27 @@
+# compilation and distribution
+__pycache__
+_ext
+*.pyc
+*.so
+torch_detectron.egg-info/
+torch_detectron/legacy/
+build/
+dist/
+
+# pytorch/python/numpy formats
+*.pth
+*.pkl
+*.npy
+
+# ipython/jupyter notebooks
+*.ipynb
+
+# Editor temporaries
+*.swn
+*.swo
+*.swp
+*~
+
+# project dirs
+/datasets
+/models
