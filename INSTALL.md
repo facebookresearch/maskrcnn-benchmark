@@ -12,6 +12,16 @@
 ### Step-by-step installation
 
 ```bash
+# first, make sure that your conda is setup properly with the right environment
+# for that, check that `which conda`, `which pip` and `which python` points to the
+# right path. From a clean conda env, this is what you need to do
+
+conda create --name maskrcnn_benchmark
+source activate maskrcnn_benchmark
+
+# this installs the right pip and dependencies for the fresh python
+conda install ipython
+
 # maskrnn_benchmark and coco api dependencies
 pip install ninja yacs cython matplotlib
 
@@ -44,5 +54,3 @@ python setup.py build develop
 # or if you are on macOS
 # MACOSX_DEPLOYMENT_TARGET=10.9 CC=clang CXX=clang++ python setup.py build develop
 ```
-
-
