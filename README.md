@@ -25,7 +25,7 @@ python webcam.py --min-image-size 800
 # can also run it on the CPU
 python webcam.py --min-image-size 300 MODEL.DEVICE cpu
 # or change the model that you want to use
-python webcam.py --config-file ../configs/caffe2/e2e_mask_rcnn_R_101_FPN_1x_caffe2.py --min-image-size 300 MODEL.DEVICE cpu
+python webcam.py --config-file ../configs/caffe2/e2e_mask_rcnn_R_101_FPN_1x_caffe2.yaml --min-image-size 300 MODEL.DEVICE cpu
 # in order to see the probability heatmaps, pass --show-mask-heatmaps
 python webcam.py --min-image-size 300 --show-mask-heatmaps MODEL.DEVICE cpu
 ```
