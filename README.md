@@ -134,7 +134,7 @@ class MyDataset(object):
         labels = torch.tensor([10, 20])
 
         # create a BoxList from the boxes
-        boxlist = Boxlist(boxes, size=image.size, mode="xyxy")
+        boxlist = BoxList(boxes, size=image.size, mode="xyxy")
         # add the labels to the boxlist
         boxlist.add_field("labels", labels)
 
