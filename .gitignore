@@ -3,8 +3,7 @@ __pycache__
 _ext
 *.pyc
 *.so
-torch_detectron.egg-info/
-torch_detectron/legacy/
+maskrcnn-benchmark.egg-info/
 build/
 dist/
 
@@ -21,6 +20,9 @@ dist/
 *.swo
 *.swp
 *~
+
+# Pycharm editor settings
+.idea
 
 # project dirs
 /datasets
