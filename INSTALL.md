@@ -31,19 +31,19 @@ conda install pytorch-nightly -c pytorch
 
 # install torchvision
 cd ~/github
-git clone git@github.com:pytorch/vision.git
+git clone https://github.com/pytorch/vision.git
 cd vision
 python setup.py install
 
 # install pycocotools
 cd ~/github
-git clone git@github.com:cocodataset/cocoapi.git
+git clone https://github.com/cocodataset/cocoapi.git
 cd cocoapi/PythonAPI
 python setup.py build_ext install
 
 # install PyTorch Detection
 cd ~/github
-git clone git@github.com:facebookresearch/maskrcnn-benchmark.git
+git clone https://github.com/facebookresearch/maskrcnn-benchmark.git
 cd maskrcnn-benchmark
 # the following will install the lib with
 # symbolic links, so that you can modify
