@@ -9,7 +9,7 @@ from maskrcnn_benchmark.structures.bounding_box import BoxList
 
 
 class ListDataset(object):
-    def __init__(self, image_list, transforms=None):
+    def __init__(self, image_lists, transforms=None):
         self.image_lists = image_lists
         self.transforms = transforms
 
@@ -26,7 +26,7 @@ class ListDataset(object):
         return img, target
 
     def __len__(self):
-        return len(image_lists)
+        return len(self.image_lists)
 
     def get_img_info(self, item):
         """
