@@ -3,9 +3,7 @@ __pycache__
 _ext
 *.pyc
 *.so
-# TODO: unify name
-torch_detectron.egg-info/
-torch_detectron/legacy/
+maskrcnn-benchmark.egg-info/
 build/
 dist/
 
