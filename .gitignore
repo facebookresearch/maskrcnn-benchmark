@@ -3,6 +3,7 @@ __pycache__
 _ext
 *.pyc
 *.so
+# TODO: unify name
 torch_detectron.egg-info/
 torch_detectron/legacy/
 build/
@@ -21,6 +22,9 @@ dist/
 *.swo
 *.swp
 *~
+
+# Pycharm editor settings
+.idea
 
 # project dirs
 /datasets
