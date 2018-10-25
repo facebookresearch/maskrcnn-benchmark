@@ -62,7 +62,7 @@ setup(
     author="fmassa",
     url="https://github.com/facebookresearch/maskrnn-benchmark",
     description="object detection in pytorch",
-    # packages=find_packages(exclude=("configs", "examples", "test",)),
+    packages=find_packages(exclude=("configs", "tests",)),
     # install_requires=requirements,
     ext_modules=get_extensions(),
     cmdclass={"build_ext": torch.utils.cpp_extension.BuildExtension},
