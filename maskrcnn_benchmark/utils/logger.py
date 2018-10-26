@@ -4,11 +4,11 @@ import os
 import sys
 
 
-def setup_logger(name, save_dir, local_rank):
+def setup_logger(name, save_dir, distributed_rank):
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
     # don't log results for the non-master process
-    if local_rank > 0:
+    if distributed_rank > 0:
         return logger
     ch = logging.StreamHandler(stream=sys.stdout)
     ch.setLevel(logging.DEBUG)
