@@ -27,3 +27,21 @@ which has a summary of the solution. Basically, CUDA 9.0 is not compatible with 
 This means that `maskrcnn-benchmark` has not been properly installed.
 Refer to https://github.com/facebookresearch/maskrcnn-benchmark/issues/22 for a few possible issues.
 Note that we now support Python 2 as well.
+
+## Segmentation fault (core dumped) when running the library
+This probably means that you have compiled the library using GCC < 4.9, which is ABI incompatible with PyTorch.
+Indeed, during installation, you probably saw a message like
+```
+Your compiler (g++ 4.8) may be ABI-incompatible with PyTorch!
+Please use a compiler that is ABI-compatible with GCC 4.9 and above.
+See https://gcc.gnu.org/onlinedocs/libstdc++/manual/abi.html.
+
+See https://gist.github.com/goldsborough/d466f43e8ffc948ff92de7486c5216d6
+for instructions on how to install GCC 4.9 or higher.
+```
+Follow the instructions on https://gist.github.com/goldsborough/d466f43e8ffc948ff92de7486c5216d6
+to install GCC 4.9 or higher, and try recompiling `maskrcnn-benchmark` again, after cleaning the
+`build` folder with
+```
+rm -rf build
+```
