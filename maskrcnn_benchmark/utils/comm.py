@@ -18,6 +18,12 @@ def get_world_size():
     return torch.distributed.deprecated.get_world_size()
 
 
+def get_rank():
+    if not torch.distributed.deprecated.is_initialized():
+        return 0
+    return torch.distributed.deprecated.get_rank()
+
+
 def is_main_process():
     if not torch.distributed.deprecated.is_initialized():
         return True
