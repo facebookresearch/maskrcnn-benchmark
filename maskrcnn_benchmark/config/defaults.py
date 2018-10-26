@@ -225,66 +225,66 @@ _C.MODEL.RESNETS.STEM_OUT_CHANNELS = 64
 # ---------------------------------------------------------------------------- #
 # RetinaNet Options (Follow the Detectron version)
 # ---------------------------------------------------------------------------- #
-__C.RETINANET = CN()
+_C.RETINANET = CN()
 
 # RetinaNet is used (instead of Fast/er/Mask R-CNN/R-FCN/RPN) if True
-__C.RETINANET.RETINANET_ON = False
+_C.RETINANET.RETINANET_ON = False
 
 # Anchor aspect ratios to use
-__C.RETINANET.ASPECT_RATIOS = (0.5, 1.0, 2.0)
+_C.RETINANET.ASPECT_RATIOS = (0.5, 1.0, 2.0)
 
 # Anchor scales per octave
-__C.RETINANET.SCALES_PER_OCTAVE = 3
+_C.RETINANET.SCALES_PER_OCTAVE = 3
 
 # At each FPN level, we generate anchors based on their scale, aspect_ratio,
 # stride of the level, and we multiply the resulting anchor by ANCHOR_SCALE
-__C.RETINANET.ANCHOR_SCALE = 4
+_C.RETINANET.ANCHOR_SCALE = 4
 
 # Convolutions to use in the cls and bbox tower
 # NOTE: this doesn't include the last conv for logits
-__C.RETINANET.NUM_CONVS = 4
+_C.RETINANET.NUM_CONVS = 4
 
 # Weight for bbox_regression loss
-__C.RETINANET.BBOX_REG_WEIGHT = 1.0
+_C.RETINANET.BBOX_REG_WEIGHT = 1.0
 
 # Smooth L1 loss beta for bbox regression
-__C.RETINANET.BBOX_REG_BETA = 0.11
+_C.RETINANET.BBOX_REG_BETA = 0.11
 
 # During inference, #locs to select based on cls score before NMS is performed
 # per FPN level
-__C.RETINANET.PRE_NMS_TOP_N = 1000
+_C.RETINANET.PRE_NMS_TOP_N = 1000
 
 # IoU overlap ratio for labeling an anchor as positive
 # Anchors with >= iou overlap are labeled positive
-__C.RETINANET.POSITIVE_OVERLAP = 0.5
+_C.RETINANET.POSITIVE_OVERLAP = 0.5
 
 # IoU overlap ratio for labeling an anchor as negative
 # Anchors with < iou overlap are labeled negative
-__C.RETINANET.NEGATIVE_OVERLAP = 0.4
+_C.RETINANET.NEGATIVE_OVERLAP = 0.4
 
 # Focal loss parameter: alpha
-__C.RETINANET.LOSS_ALPHA = 0.25
+_C.RETINANET.LOSS_ALPHA = 0.25
 
 # Focal loss parameter: gamma
-__C.RETINANET.LOSS_GAMMA = 2.0
+_C.RETINANET.LOSS_GAMMA = 2.0
 
 # Prior prob for the positives at the beginning of training. This is used to set
 # the bias init for the logits layer
-__C.RETINANET.PRIOR_PROB = 0.01
+_C.RETINANET.PRIOR_PROB = 0.01
 
 # Whether classification and bbox branch tower should be shared or not
-__C.RETINANET.SHARE_CLS_BBOX_TOWER = False
+_C.RETINANET.SHARE_CLS_BBOX_TOWER = False
 
 # Use class specific bounding box regression instead of the default class
 # agnostic regression
-__C.RETINANET.CLASS_SPECIFIC_BBOX = False
+_C.RETINANET.CLASS_SPECIFIC_BBOX = False
 
 # Whether softmax should be used in classification branch training
-__C.RETINANET.SOFTMAX = False
+_C.RETINANET.SOFTMAX = False
 
 # Inference cls score threshold, anchors with score > INFERENCE_TH are
 # considered for inference
-__C.RETINANET.INFERENCE_TH = 0.05
+_C.RETINANET.INFERENCE_TH = 0.05
 
 
 # ---------------------------------------------------------------------------- #
