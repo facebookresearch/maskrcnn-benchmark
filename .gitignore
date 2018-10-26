@@ -3,7 +3,7 @@ __pycache__
 _ext
 *.pyc
 *.so
-maskrcnn-benchmark.egg-info/
+maskrcnn_benchmark.egg-info/
 build/
 dist/
 
@@ -27,3 +27,5 @@ dist/
 # project dirs
 /datasets
 /models
+/test_data
+/logs

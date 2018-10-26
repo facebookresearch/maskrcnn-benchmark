@@ -8,6 +8,7 @@ from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
 from maskrcnn_benchmark.structures.image_list import to_image_list
 from maskrcnn_benchmark.modeling.roi_heads.mask_head.inference import Masker
 
+import time
 
 class COCODemo(object):
     # COCO categories for pretty print
@@ -166,8 +167,11 @@ class COCODemo(object):
                 of the detection properties can be found in the fields of
                 the BoxList via `prediction.fields()`
         """
+        start = time.time()
         predictions = self.compute_prediction(image)
         top_predictions = self.select_top_predictions(predictions)
+        end = time.time()
+        print('detection: predict finished in %2.2f sec with %d objects'%(end-start, len(top_predictions)))
 
         result = image.copy()
         if self.show_mask_heatmaps:
