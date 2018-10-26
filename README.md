@@ -190,6 +190,11 @@ While the aforementioned example should work for training, we leverage the
 cocoApi for computing the accuracies during testing. Thus, test datasets
 should currently follow the cocoApi for now.
 
+## Troubleshooting
+If you have issues running or compiling this code, we have compiled a list of common issues in
+[TROUBLESHOOTING.md](TROUBLESHOOTING.md). If your issue is not present there, please feel
+free to open a new issue.
+
 ## License
 
 maskrcnn-benchmark is released under the MIT license. See [LICENSE](LICENSE) for additional details.
