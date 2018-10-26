@@ -1,5 +1,4 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-import math
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -57,7 +56,7 @@ class Pooler(nn.Module):
         """
         Arguments:
             output_size (list[tuple[int]] or list[int]): output size for the pooled region
-            scales (list[flaot]): scales for each Pooler
+            scales (list[float]): scales for each Pooler
             sampling_ratio (int): sampling ratio for ROIAlign
         """
         super(Pooler, self).__init__()
@@ -72,8 +71,8 @@ class Pooler(nn.Module):
         self.output_size = output_size
         # get the levels in the feature map by leveraging the fact that the network always
         # downsamples by a factor of 2 at each level.
-        lvl_min = -math.log2(scales[0])
-        lvl_max = -math.log2(scales[-1])
+        lvl_min = -torch.log2(torch.tensor(scales[0], dtype=torch.float32)).item()
+        lvl_max = -torch.log2(torch.tensor(scales[-1], dtype=torch.float32)).item()
         self.map_levels = LevelMapper(lvl_min, lvl_max)
 
     def convert_to_roi_format(self, boxes):
