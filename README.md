@@ -93,9 +93,38 @@ and pass it as a config argument `PATHS_CATALOG` during training.
 
 ### Single GPU training
 
+Most of the configuration files that we provide assume that we are running on 8 GPUs.
+In order to be able to run it on fewer GPUs, there are a few possibilities:
+
+**1. Run the following without modifications**
+
 ```bash
 python /path_to_maskrnn_benchmark/tools/train_net.py --config-file "/path/to/config/file.yaml"
 ```
+This should work out of the box and is very similar to what we should do for multi-GPU training.
+But the drawback is that it will use much more GPU memory. The reason is that we set in the
+configuration files a global batch size that is divided over the number of GPUs. So if we only
+have a single GPU, this means that the batch size for that GPU will be 8x larger, which might lead
+to out-of-memory errors.
+
+If you have a lot of memory available, this is the easiest solution.
+
+**2. Modify the cfg parameters**
+
+If you experience out-of-memory errors, you can reduce the global batch size. But this means that
+you'll also need to change the learning rate, the number of iterations and the learning rate schedule.
+
+Here is an example for Mask R-CNN R-50 FPN with the 1x schedule:
+```bash
+python tools/train_net.py --config-file "configs/e2e_mask_rcnn_R_50_FPN_1x.yaml" SOLVER.IMS_PER_BATCH 2 SOLVER.BASE_LR 0.0025 SOLVER.MAX_ITER 720000 SOLVER.STEPS "(480000, 640000)" TEST.IMS_PER_BATCH 1
+```
+This follows the [scheduling rules from Detectron.](https://github.com/facebookresearch/Detectron/blob/master/configs/getting_started/tutorial_1gpu_e2e_faster_rcnn_R-50-FPN.yaml#L14-L30)
+Note that we have multiplied the number of iterations by 8x (as well as the learning rate schedules),
+and we have divided the learning rate by 8x.
+
+We also changed the batch size during testing, but that is generally not necessary because testing
+requires much less memory than training.
+
 
 ### Multi-GPU training
 We use internally `torch.distributed.launch` in order to launch
