@@ -230,15 +230,17 @@ _C.RETINANET = CN()
 # RetinaNet is used (instead of Fast/er/Mask R-CNN/R-FCN/RPN) if True
 _C.RETINANET.RETINANET_ON = False
 
+# This is the number of foreground classes, background is not included.
+_C.RETINANET.NUM_CLASSES = 81
+
 # Anchor aspect ratios to use
+_C.RETINANET.ANCHOR_SIZES = (32, 64, 128, 256, 512)
 _C.RETINANET.ASPECT_RATIOS = (0.5, 1.0, 2.0)
+_C.RETINANET.ANCHOR_STRIDES = (8, 16, 32, 64, 128)
 
 # Anchor scales per octave
+_C.RETINANET.OCTAVE = 2.0
 _C.RETINANET.SCALES_PER_OCTAVE = 3
-
-# At each FPN level, we generate anchors based on their scale, aspect_ratio,
-# stride of the level, and we multiply the resulting anchor by ANCHOR_SCALE
-_C.RETINANET.ANCHOR_SCALE = 4
 
 # Convolutions to use in the cls and bbox tower
 # NOTE: this doesn't include the last conv for logits

@@ -24,9 +24,14 @@ class FPN(nn.Module):
         super(FPN, self).__init__()
         self.inner_blocks = []
         self.layer_blocks = []
+        # If in_channels is 0, it would be used. 
+        self.valid_layers = [i > 0 for i in in_channels_list]
         for idx, in_channels in enumerate(in_channels_list, 1):
             inner_block = "fpn_inner{}".format(idx)
             layer_block = "fpn_layer{}".format(idx)
+
+            if in_channels == 0:
+                continue
             inner_block_module = nn.Conv2d(in_channels, out_channels, 1)
             layer_block_module = nn.Conv2d(out_channels, out_channels, 3, 1, 1)
             for module in [inner_block_module, layer_block_module]:
@@ -54,13 +59,14 @@ class FPN(nn.Module):
         for feature, inner_block, layer_block in zip(
             x[:-1][::-1], self.inner_blocks[:-1][::-1], self.layer_blocks[:-1][::-1]
         ):
-            inner_top_down = F.interpolate(last_inner, scale_factor=2, mode="nearest")
-            inner_lateral = getattr(self, inner_block)(feature)
-            # TODO use size instead of scale to make it robust to different sizes
-            # inner_top_down = F.upsample(last_inner, size=inner_lateral.shape[-2:],
-            # mode='bilinear', align_corners=False)
-            last_inner = inner_lateral + inner_top_down
-            results.insert(0, getattr(self, layer_block)(last_inner))
+            if len(inner_block):
+                inner_top_down = F.interpolate(last_inner, scale_factor=2, mode="nearest")
+                inner_lateral = getattr(self, inner_block)(feature)
+                # TODO use size instead of scale to make it robust to different sizes
+                # inner_top_down = F.upsample(last_inner, size=inner_lateral.shape[-2:],
+                # mode='bilinear', align_corners=False)
+                last_inner = inner_lateral + inner_top_down
+                results.insert(0, getattr(self, layer_block)(last_inner))
 
         if self.top_blocks is not None:
             last_results = self.top_blocks(results[-1])
@@ -72,3 +78,21 @@ class FPN(nn.Module):
 class LastLevelMaxPool(nn.Module):
     def forward(self, x):
         return [F.max_pool2d(x, 1, 2, 0)]
+
+
+class LastLevelP6P7(nn.Module):
+    """
+    This module is used in RetinaNet to generate extra layers, P6 and P7.
+    """
+    def __init__(self, out_channels):
+        super(LastLevelP6P7, self).__init__()
+        self.p6 = nn.Conv2d(out_channels, out_channels, 3, 1, 1)
+        self.p7 = nn.Conv2d(out_channels, out_channels, 3, 1, 1)
+        for module in [self.p6, self.p7]:
+            nn.init.kaiming_uniform_(module.weight, a=1)
+            nn.init.constant_(module.bias, 0)
+
+    def forward(self, x):
+        p6 = self.p6(x)
+        p7 = self.p7(F.relu(x))
+        return [p7, p6]
