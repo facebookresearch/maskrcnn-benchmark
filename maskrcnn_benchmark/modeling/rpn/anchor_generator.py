@@ -54,8 +54,13 @@ class AnchorGenerator(nn.Module):
         else:
             if len(anchor_strides) != len(sizes):
                 raise RuntimeError("FPN should have #anchor_strides == #sizes")
+
             cell_anchors = [
-                generate_anchors(anchor_stride, (size,), aspect_ratios).float()
+                generate_anchors(
+                    anchor_stride,
+                    size if type(size) is tuple else (size,),
+                    aspect_ratios
+                ).float()
                 for anchor_stride, size in zip(anchor_strides, sizes)
             ]
         self.strides = anchor_strides
@@ -138,6 +143,28 @@ def make_anchor_generator(config):
     )
     return anchor_generator
 
+
+def make_anchor_generator_retinanet(config):
+    anchor_sizes = config.RETINANET.ANCHOR_SIZES
+    aspect_ratios = config.RETINANET.ASPECT_RATIOS
+    anchor_strides = config.RETINANET.ANCHOR_STRIDES
+    straddle_thresh = config.RETINANET.STRADDLE_THRESH
+    octave = config.RETINANET.OCTAVE
+    scales_per_octave = config.RETINANET.SCALES_PER_OCTAVE
+
+    assert len(anchor_strides) == len(anchor_sizes), "Only support FPN now"
+    new_anchor_sizes = []
+    for size in anchor_sizes:
+        per_layer_anchor_sizes = []
+        for scale_per_octave in range(scales_per_octave):
+            octave_scale = octave ** (scale_per_octave / float(scales_per_octave))
+            per_layer_anchor_sizes.append(octave_scale * size)
+        new_anchor_sizes.append(tuple(per_layer_anchor_sizes))
+
+    anchor_generator = AnchorGenerator(
+        tuple(new_anchor_sizes), aspect_ratios, anchor_strides, straddle_thresh
+    )
+    return anchor_generator
 
 # Copyright (c) 2017-present, Facebook, Inc.
 #

@@ -5,7 +5,7 @@ from torch import nn
 
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 from .loss import make_rpn_loss_evaluator
-from .anchor_generator import make_anchor_generator
+from .anchor_generator import make_anchor_generator_retinanet
 from .inference import make_rpn_postprocessor
 
 
@@ -21,11 +21,11 @@ class RetinaNetHead(torch.nn.Module):
             num_anchors (int): number of anchors to be predicted
         """
         super(RetinaNetHead, self).__init__()
-        anchor_generator = make_anchor_generator(cfg)
         # TODO: Add the sigmoid version first.
         num_classes = cfg.RETINANET.NUM_CLASSES - 1
         in_channels = cfg.MODEL.BACKBONE.OUT_CHANNELS
-        num_anchors = anchor_generator.num_anchors_per_location()[0]
+        #num_anchors = anchor_generator.num_anchors_per_location()[0]
+        num_anchors = 9
 
         self.cls_tower = []
         self.bbox_tower = []
@@ -93,7 +93,7 @@ class RetinaNetModule(torch.nn.Module):
 
         self.cfg = cfg.clone()
 
-        anchor_generator = make_anchor_generator(cfg)
+        anchor_generator = make_anchor_generator_retinanet(cfg)
         head = RetinaNetHead(cfg)
         '''
         box_coder = BoxCoder(weights=(1.0, 1.0, 1.0, 1.0))
