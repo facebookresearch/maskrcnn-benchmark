@@ -86,13 +86,13 @@ class LastLevelP6P7(nn.Module):
     """
     def __init__(self, out_channels):
         super(LastLevelP6P7, self).__init__()
-        self.p6 = nn.Conv2d(out_channels, out_channels, 3, 1, 1)
-        self.p7 = nn.Conv2d(out_channels, out_channels, 3, 1, 1)
+        self.p6 = nn.Conv2d(out_channels, out_channels, 3, 2, 1)
+        self.p7 = nn.Conv2d(out_channels, out_channels, 3, 2, 1)
         for module in [self.p6, self.p7]:
             nn.init.kaiming_uniform_(module.weight, a=1)
             nn.init.constant_(module.bias, 0)
 
     def forward(self, x):
         p6 = self.p6(x)
-        p7 = self.p7(F.relu(x))
-        return [p7, p6]
+        p7 = self.p7(F.relu(p6))
+        return [p6, p7]
