@@ -99,7 +99,7 @@ class RetinaNetLossComputation(object):
         # sampled_neg_inds = torch.nonzero(torch.cat(sampled_neg_inds, dim=0)).squeeze(1)
 
         # sampled_inds = torch.cat([sampled_pos_inds, sampled_neg_inds], dim=0)
-
+        num_layers = len(box_cls)
         box_cls_flattened = []
         box_regression_flattened = []
         # for each feature level, permute the outputs to make them be in the
@@ -141,7 +141,7 @@ class RetinaNetLossComputation(object):
         retinanet_cls_loss =self.box_cls_loss_func(
             box_cls,
             labels
-        ) / (max((labels > 0).sum(), 1))
+        ) / ((labels > 0).sum() +  num_layers)
 
         return retinanet_cls_loss, retinanet_regression_loss
 

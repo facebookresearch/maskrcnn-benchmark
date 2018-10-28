@@ -127,7 +127,7 @@ class RetinaNetModule(torch.nn.Module):
         """
         box_cls, box_regression = self.head(features)
         anchors = self.anchor_generator(images, features)
-
+ 
         if self.training:
             return self._forward_train(anchors, box_cls, box_regression, targets)
         else:
