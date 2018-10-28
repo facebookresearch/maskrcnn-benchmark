@@ -4,9 +4,9 @@ import torch.nn.functional as F
 from torch import nn
 
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
-from .loss import make_rpn_loss_evaluator
+from .retinanet_loss import make_retinanet_loss_evaluator
 from .anchor_generator import make_anchor_generator_retinanet
-from .inference import make_rpn_postprocessor
+#from .inference import make_rpn_postprocessor
 
 
 class RetinaNetHead(torch.nn.Module):
@@ -24,14 +24,12 @@ class RetinaNetHead(torch.nn.Module):
         # TODO: Add the sigmoid version first.
         num_classes = cfg.RETINANET.NUM_CLASSES - 1
         in_channels = cfg.MODEL.BACKBONE.OUT_CHANNELS
-        #num_anchors = anchor_generator.num_anchors_per_location()[0]
-        num_anchors = 9
+        num_anchors = len(cfg.RETINANET.ASPECT_RATIOS) \
+                        * cfg.RETINANET.SCALES_PER_OCTAVE
 
-        self.cls_tower = []
-        self.bbox_tower = []
         cls_tower = []
         bbox_tower = []
-        for i in cfg.RETINANET.NUM_CONVS:
+        for i in range(cfg.RETINANET.NUM_CONVS):
             cls_tower.append(
                 nn.Conv2d(
                     in_channels,
@@ -52,8 +50,8 @@ class RetinaNetHead(torch.nn.Module):
                 )
             )
 
-        self.add_module(cls_tower, nn.Sequential(*cls_tower))
-        self.add_module(bbox_tower, nn.Sequential(*bbox_tower))
+        self.add_module('cls_tower', nn.Sequential(*cls_tower))
+        self.add_module('bbox_tower', nn.Sequential(*bbox_tower))
         self.cls_logits = nn.Conv2d(
             in_channels, num_anchors * num_classes, kernel_size=1, stride=1
         )
@@ -62,11 +60,13 @@ class RetinaNetHead(torch.nn.Module):
         )
 
         # Initialization
-        for m in [self.cls_tower, self.bbox_tower, self.cls_logits,
+        for modules in [self.cls_tower, self.bbox_tower, self.cls_logits,
                   self.bbox_pred]:
-            for l in m.module():
-                torch.nn.init.normal_(l.weight, std=0.01)
-                torch.nn.init.constant_(l.bias, 0)
+            for l in modules.modules():
+                if isinstance(l, nn.Conv2d):
+                    torch.nn.init.normal_(l.weight, std=0.01)
+                    torch.nn.init.constant_(l.bias, 0)
+
 
         # retinanet_bias_init
         prior_prob = cfg.RETINANET.PRIOR_PROB
@@ -78,7 +78,7 @@ class RetinaNetHead(torch.nn.Module):
         bbox_reg = []
         for feature in x:
             logits.append(self.cls_logits(self.cls_tower(feature)))
-            bbox_reg.append(self.bbox_pred(self.bbox_twoer(feature)))
+            bbox_reg.append(self.bbox_pred(self.bbox_tower(feature)))
         return logits, bbox_reg
 
 
@@ -95,20 +95,21 @@ class RetinaNetModule(torch.nn.Module):
 
         anchor_generator = make_anchor_generator_retinanet(cfg)
         head = RetinaNetHead(cfg)
-        '''
         box_coder = BoxCoder(weights=(1.0, 1.0, 1.0, 1.0))
 
-        box_selector_train = make_rpn_postprocessor(cfg, box_coder, is_train=True)
-        box_selector_test = make_rpn_postprocessor(cfg, box_coder, is_train=False)
+        # box_selector_train = make_rpn_postprocessor(cfg, box_coder, is_train=True)
+        # box_selector_test = make_rpn_postprocessor(cfg, box_coder, is_train=False)
+        box_selector_train = None
+        box_selector_test = None
 
-        loss_evaluator = make_rpn_loss_evaluator(cfg, box_coder)
+        loss_evaluator = make_retinanet_loss_evaluator(cfg, box_coder)
 
         self.anchor_generator = anchor_generator
         self.head = head
         self.box_selector_train = box_selector_train
         self.box_selector_test = box_selector_test
         self.loss_evaluator = loss_evaluator
-        '''
+
     def forward(self, images, features, targets=None):
         """
         Arguments:
@@ -146,12 +147,12 @@ class RetinaNetModule(torch.nn.Module):
                 boxes = self.box_selector_train(
                     anchors, objectness, rpn_box_regression, targets
                 )
-        loss_objectness, loss_rpn_box_reg = self.loss_evaluator(
+        loss_box_cls, loss_box_reg = self.loss_evaluator(
             anchors, objectness, rpn_box_regression, targets
         )
         losses = {
-            "loss_retina_cls": loss_objectness,
-            "loss_retina_reg": loss_rpn_box_reg,
+            "loss_retina_cls": loss_box_cls,
+            "loss_retina_reg": loss_box_reg,
         }
         return boxes, losses
 
