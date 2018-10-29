@@ -31,6 +31,22 @@ class DatasetCatalog(object):
             "img_dir": "coco/val2014",
             "ann_file": "coco/annotations/instances_valminusminival2014.json"
         },
+        "keypoints_coco_2014_train": {
+            "img_dir": "coco/train2014",
+            "ann_file": "annotations/person_keypoints_train2017_train_mod.json",
+        },
+        "keypoints_coco_2014_val": {
+            "img_dir": "coco/val2014",
+            "ann_file": "coco/annotations/instances_val2014.json"
+        },
+        "keypoints_coco_2014_minival": {
+            "img_dir": "coco/val2014",
+            "ann_file": "annotations/person_keypoints_val2017_mod.json",
+        },
+        "keypoints_coco_2014_valminusminival": {
+            "img_dir": "coco/val2014",
+            "ann_file": "annotations/person_keypoints_train2017_valminusminival_mod.json",
+        },
         "voc_2007_train": {
             "data_dir": "voc/VOC2007",
             "split": "train"
@@ -92,6 +108,18 @@ class DatasetCatalog(object):
 
     @staticmethod
     def get(name):
+        if "keypoints" in name:
+            data_dir = DatasetCatalog.DATA_DIR
+            anno_dir = "/private/home/fmassa/coco_trainval2017"
+            attrs = DatasetCatalog.DATASETS[name]
+            args = dict(
+                root=os.path.join(data_dir, attrs["img_dir"]),
+                ann_file=os.path.join(anno_dir, attrs["ann_file"]),
+            )
+            return dict(
+                factory="COCODataset",
+                args=args,
+            )
         if "coco" in name:
             data_dir = DatasetCatalog.DATA_DIR
             attrs = DatasetCatalog.DATASETS[name]
