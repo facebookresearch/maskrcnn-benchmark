@@ -66,7 +66,7 @@ class MultiScaleResize(object):
             self.resizers.append(Resize(min_size, max_size))
 
     def __call__(self, image, target):
-        resizer = random.choice(imageself.resizers)
+        resizer = random.choice(self.resizers)
         image, target = resizer(image, target)
 
         return image, target
