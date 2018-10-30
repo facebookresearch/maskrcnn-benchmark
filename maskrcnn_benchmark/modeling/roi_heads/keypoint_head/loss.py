@@ -94,12 +94,12 @@ class KeypointRCNNLossComputation(object):
 
             keypoints_per_image = matched_targets.get_field('keypoints')
             # TODO remove conditional  when better support for zero-dim is in
-            if keypoints_per_image.keypoints.numel() > 0:
-                within_box = _within_box(keypoints_per_image.keypoints, matched_targets.bbox)
-                vis_kp = keypoints_per_image.keypoints[..., 2] > 0
-                is_visible = (within_box & vis_kp).sum(1) > 0
+            # if keypoints_per_image.keypoints.numel() > 0:
+            within_box = _within_box(keypoints_per_image.keypoints, matched_targets.bbox)
+            vis_kp = keypoints_per_image.keypoints[..., 2] > 0
+            is_visible = (within_box & vis_kp).sum(1) > 0
 
-                labels_per_image[~is_visible] = -1
+            labels_per_image[~is_visible] = -1
 
             labels.append(labels_per_image)
             keypoints.append(keypoints_per_image)
@@ -120,8 +120,6 @@ class KeypointRCNNLossComputation(object):
 
         labels, keypoints = self.prepare_targets(proposals, targets)
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
-        # FIXME hack to simplify a few things.
-        sampled_neg_inds = [i.new() for i in sampled_neg_inds]
 
         proposals = list(proposals)
         # add corresponding label and regression_targets information to the bounding boxes
