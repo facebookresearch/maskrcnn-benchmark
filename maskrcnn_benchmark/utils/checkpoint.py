@@ -125,7 +125,7 @@ class DetectronCheckpointer(Checkpointer):
         # download url files
         if f.startswith("http"):
             # if the file is a url path, download it and cache it
-            cached_f = cache_url(f)
+            cached_f = cache_url(f, self.cfg.PRETRAINED_DIR)
             self.logger.info("url {} cached in {}".format(f, cached_f))
             f = cached_f
         # convert Caffe2 checkpoint from pkl
