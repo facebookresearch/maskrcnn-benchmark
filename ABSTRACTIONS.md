@@ -31,7 +31,7 @@ a specific image, as well as the size of the image as a `(width, height)` tuple.
 It also contains a set of methods that allow to perform geometric
 transformations to the bounding boxes (such as cropping, scaling and flipping).
 The class accepts bounding boxes from two different input formats:
-- `xyxy`, where each box is encoded as a `x1`, `y1`, `x2` and `y2` coordinates)
+- `xyxy`, where each box is encoded as a `x1`, `y1`, `x2` and `y2` coordinates, and
 - `xywh`, where each box is encoded as `x1`, `y1`, `w` and `h`.
 
 Additionally, each `BoxList` instance can also hold arbitrary additional information
