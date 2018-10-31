@@ -134,7 +134,7 @@ class RetinaNetLossComputation(object):
             regression_targets[pos_inds],
             beta=1.0 / 9,
             size_average=False,
-        ) / (pos_inds.sum())
+        ) / (pos_inds.sum() * 4)
 
         labels = labels.int()
 

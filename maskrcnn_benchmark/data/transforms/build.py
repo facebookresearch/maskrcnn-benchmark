@@ -12,7 +12,7 @@ def build_transforms(cfg, is_train=True):
         min_size = cfg.INPUT.MIN_SIZE_TEST
         max_size = cfg.INPUT.MAX_SIZE_TEST
         flip_prob = 0
-        resize = T.resize(min_size, max_size)
+        resize = T.Resize(min_size, max_size)
 
     to_bgr255 = cfg.INPUT.TO_BGR255
     normalize_transform = T.Normalize(

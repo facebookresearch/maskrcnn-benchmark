@@ -6,7 +6,7 @@ from torch import nn
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 from .retinanet_loss import make_retinanet_loss_evaluator
 from .anchor_generator import make_anchor_generator_retinanet
-#from .inference import make_rpn_postprocessor
+from .retinanet_infer import  make_retinanet_postprocessor
 
 
 class RetinaNetHead(torch.nn.Module):
@@ -21,7 +21,7 @@ class RetinaNetHead(torch.nn.Module):
             num_anchors (int): number of anchors to be predicted
         """
         super(RetinaNetHead, self).__init__()
-        # TODO: Add the sigmoid version first.
+        # TODO: Implement the sigmoid version first.
         num_classes = cfg.RETINANET.NUM_CLASSES - 1
         in_channels = cfg.MODEL.BACKBONE.OUT_CHANNELS
         num_anchors = len(cfg.RETINANET.ASPECT_RATIOS) \
@@ -95,18 +95,14 @@ class RetinaNetModule(torch.nn.Module):
 
         anchor_generator = make_anchor_generator_retinanet(cfg)
         head = RetinaNetHead(cfg)
-        box_coder = BoxCoder(weights=(1.0, 1.0, 1.0, 1.0))
+        box_coder = BoxCoder(weights=(10., 10., 5., 5.))
 
-        # box_selector_train = make_rpn_postprocessor(cfg, box_coder, is_train=True)
-        # box_selector_test = make_rpn_postprocessor(cfg, box_coder, is_train=False)
-        box_selector_train = None
-        box_selector_test = None
+        box_selector_test = make_retinanet_postprocessor(cfg, box_coder, is_train=False)
 
         loss_evaluator = make_retinanet_loss_evaluator(cfg, box_coder)
 
         self.anchor_generator = anchor_generator
         self.head = head
-        self.box_selector_train = box_selector_train
         self.box_selector_test = box_selector_test
         self.loss_evaluator = loss_evaluator
 
@@ -133,31 +129,20 @@ class RetinaNetModule(torch.nn.Module):
         else:
             return self._forward_test(anchors, box_cls, box_regression)
 
-    def _forward_train(self, anchors, objectness, rpn_box_regression, targets):
-        if self.cfg.MODEL.RPN_ONLY:
-            # When training an RPN-only model, the loss is determined by the
-            # predicted objectness and rpn_box_regression values and there is
-            # no need to transform the anchors into predicted boxes; this is an
-            # optimization that avoids the unnecessary transformation.
-            boxes = anchors
-        else:
-            # For end-to-end models, anchors must be transformed into boxes and
-            # sampled into a training batch.
-            with torch.no_grad():
-                boxes = self.box_selector_train(
-                    anchors, objectness, rpn_box_regression, targets
-                )
+    def _forward_train(self, anchors, box_cls, box_regression, targets):
+
         loss_box_cls, loss_box_reg = self.loss_evaluator(
-            anchors, objectness, rpn_box_regression, targets
+            anchors, box_cls, box_regression, targets
         )
         losses = {
             "loss_retina_cls": loss_box_cls,
             "loss_retina_reg": loss_box_reg,
         }
-        return boxes, losses
+        return anchors, losses
 
-    def _forward_test(self, anchors, objectness, rpn_box_regression):
-        boxes = self.box_selector_test(anchors, objectness, rpn_box_regression)
+    def _forward_test(self, anchors, box_cls, box_regression):
+        boxes = self.box_selector_test(anchors, box_cls, box_regression)
+        '''
         if self.cfg.MODEL.RPN_ONLY:
             # For end-to-end models, the RPN proposals are an intermediate state
             # and don't bother to sort them in decreasing score order. For RPN-only
@@ -167,6 +152,7 @@ class RetinaNetModule(torch.nn.Module):
                 box.get_field("objectness").sort(descending=True)[1] for box in boxes
             ]
             boxes = [box[ind] for box, ind in zip(boxes, inds)]
+        '''
         return boxes, {}
 
 
