@@ -39,7 +39,7 @@ for each bounding box, such as labels, visibility, probability scores etc.
 
 Here is an example on how to create a `BoxList` from a list of coordinates:
 ```python
-from maskrcnn_baseline.structures.bounding_box import BoxList, FLIP_LEFT_RIGHT
+from maskrcnn_benchmark.structures.bounding_box import BoxList, FLIP_LEFT_RIGHT
 
 width = 100
 height = 200
