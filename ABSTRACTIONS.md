@@ -49,7 +49,7 @@ boxes = [
   [10, 10, 50, 50]
 ]
 # create a BoxList with 3 boxes
-bbox = BoxList(boxes, size=(width, height), mode='xyxy')
+bbox = BoxList(boxes, image_size=(width, height), mode='xyxy')
 
 # perform some box transformations, has similar API as PIL.Image
 bbox_scaled = bbox.resize((width * 2, height * 3))
