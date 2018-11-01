@@ -10,7 +10,7 @@ class BoxList(object):
     """
     This class represents a set of bounding boxes.
     The bounding boxes are represented as a Nx4 Tensor.
-    In order ot uniquely determine the bounding boxes with respect
+    In order to uniquely determine the bounding boxes with respect
     to an image, we also store the corresponding image dimensions.
     They can contain extra information that is specific to each bounding box, such as
     labels.
