@@ -60,15 +60,17 @@ class RetinaNetLossComputation(object):
 
             matched_idxs = matched_targets.get_field("matched_idxs")
             labels_per_image = matched_targets.get_field("labels").clone()
-            labels_per_image[matched_idxs < 0] = 0
-            labels_per_image = labels_per_image.to(dtype=torch.float32)
-            # discard anchors that go out of the boundaries of the image
-            labels_per_image[~anchors_per_image.get_field("visibility")] = -1
 
-            # discard indices that are between thresholds
+            # Background (negative examples)
+            bg_indices = matched_idxs == Matcher.BELOW_LOW_THRESHOLD
+            labels_per_image[bg_indices] = 0
+
+            # discard indices that are between thresholds 
+            # -1 will be ignored in SigmoidFocalLoss
             inds_to_discard = matched_idxs == Matcher.BETWEEN_THRESHOLDS
             labels_per_image[inds_to_discard] = -1
 
+            labels_per_image = labels_per_image.to(dtype=torch.float32)
             # compute regression targets
             regression_targets_per_image = self.box_coder.encode(
                 matched_targets.bbox, anchors_per_image.bbox
@@ -141,7 +143,7 @@ class RetinaNetLossComputation(object):
         retinanet_cls_loss =self.box_cls_loss_func(
             box_cls,
             labels
-        ) / ((labels > 0).sum() +  num_layers)
+        ) / ((labels > 0).sum() + N)
 
         return retinanet_cls_loss, retinanet_regression_loss
 

@@ -49,14 +49,17 @@ class RetinaNetHead(torch.nn.Module):
                     padding=1
                 )
             )
+            bbox_tower.append(nn.ReLU())
 
         self.add_module('cls_tower', nn.Sequential(*cls_tower))
         self.add_module('bbox_tower', nn.Sequential(*bbox_tower))
         self.cls_logits = nn.Conv2d(
-            in_channels, num_anchors * num_classes, kernel_size=1, stride=1
+            in_channels, num_anchors * num_classes, kernel_size=3, stride=1,
+            padding=1
         )
         self.bbox_pred = nn.Conv2d(
-            in_channels,  num_anchors * 4, kernel_size=1, stride=1
+            in_channels,  num_anchors * 4, kernel_size=3, stride=1,
+            padding=1
         )
 
         # Initialization
