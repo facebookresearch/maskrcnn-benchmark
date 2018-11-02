@@ -224,9 +224,16 @@ class BoxList(object):
         return self
 
     def area(self):
-        TO_REMOVE = 1
-        box = self.bbox
-        area = (box[:, 2] - box[:, 0] + TO_REMOVE) * (box[:, 3] - box[:, 1] + TO_REMOVE)
+        if self.mode == 'xyxy':
+            TO_REMOVE = 1
+            box = self.bbox
+            area = (box[:, 2] - box[:, 0] + TO_REMOVE) * (box[:, 3] - box[:, 1] + TO_REMOVE)
+        elif self.mode == 'xywh':
+            box = self.bbox
+            area = box[:, 2] * box[:, 3]
+        else:
+            raise RuntimeError("Should not be here")
+            
         return area
 
     def copy_with_fields(self, fields):
