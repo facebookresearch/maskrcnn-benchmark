@@ -17,10 +17,10 @@ class FastRCNNPredictor(nn.Module):
         self.bbox_pred = nn.Linear(num_inputs, num_classes * 4)
 
         nn.init.normal_(self.cls_score.weight, mean=0, std=0.01)
-        nn.init.constant_(self.cls_score.weight, 0)
+        nn.init.constant_(self.cls_score.bias, 0)
 
         nn.init.normal_(self.bbox_pred.weight, mean=0, std=0.001)
-        nn.init.constant_(self.bbox_pred.weight, 0)
+        nn.init.constant_(self.bbox_pred.bias, 0)
 
     def forward(self, x):
         x = self.avgpool(x)

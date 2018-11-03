@@ -31,7 +31,7 @@ a specific image, as well as the size of the image as a `(width, height)` tuple.
 It also contains a set of methods that allow to perform geometric
 transformations to the bounding boxes (such as cropping, scaling and flipping).
 The class accepts bounding boxes from two different input formats:
-- `xyxy`, where each box is encoded as a `x1`, `y1`, `x2` and `y2` coordinates)
+- `xyxy`, where each box is encoded as a `x1`, `y1`, `x2` and `y2` coordinates, and
 - `xywh`, where each box is encoded as `x1`, `y1`, `w` and `h`.
 
 Additionally, each `BoxList` instance can also hold arbitrary additional information
@@ -39,7 +39,7 @@ for each bounding box, such as labels, visibility, probability scores etc.
 
 Here is an example on how to create a `BoxList` from a list of coordinates:
 ```python
-from maskrcnn_baseline.structures.bounding_box import BoxList, FLIP_LEFT_RIGHT
+from maskrcnn_benchmark.structures.bounding_box import BoxList, FLIP_LEFT_RIGHT
 
 width = 100
 height = 200
@@ -49,7 +49,7 @@ boxes = [
   [10, 10, 50, 50]
 ]
 # create a BoxList with 3 boxes
-bbox = BoxList(boxes, size=(width, height), mode='xyxy')
+bbox = BoxList(boxes, image_size=(width, height), mode='xyxy')
 
 # perform some box transformations, has similar API as PIL.Image
 bbox_scaled = bbox.resize((width * 2, height * 3))
