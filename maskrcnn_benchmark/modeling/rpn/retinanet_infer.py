@@ -53,7 +53,7 @@ class RetinaNetPostProcessor(torch.nn.Module):
         """
         device = box_cls.device
         N, _ , H, W = box_cls.shape
-        A = box_regression.size(1) / 4
+        A = int(box_regression.size(1) / 4)
         C = int(box_cls.size(1) / A)
 
         # put in the same format as anchors
@@ -61,7 +61,8 @@ class RetinaNetPostProcessor(torch.nn.Module):
         box_cls = box_cls.reshape(N, -1, C)
         box_cls = box_cls.sigmoid()
 
-        box_regression = box_regression.view(N, -1, 4, H, W).permute(0, 3, 4, 1, 2)
+        box_regression = box_regression.view(N, -1, 4, H, W)
+        box_regression = box_regression.permute(0, 3, 4, 1, 2)
         box_regression = box_regression.reshape(N, -1, 4)
 
         num_anchors = A * H * W
@@ -84,14 +85,17 @@ class RetinaNetPostProcessor(torch.nn.Module):
             anchors)):
 
             # Sort and select TopN
-            per_box_cls, top_k_indices = \
-                    per_box_cls[per_candidate_inds].topk(per_pre_nms_top_n, sorted=False)
-            class_idx = torch.arange(1, C+1, device=device)[None, :]
-            anchor_idx = torch.arange(per_candidate_inds.size(0), device=device)[:, None]
-            per_class = \
-                    class_idx.expand_as(per_candidate_inds)[per_candidate_inds][top_k_indices]
+            per_box_cls = per_box_cls[per_candidate_inds]
+            per_candidate_nonzeros = per_candidate_inds.nonzero()
+            per_box_loc = per_candidate_nonzeros[:, 0]
+            per_class = per_candidate_nonzeros[:, 1]
+            per_class += 1
+            if per_candidate_inds.sum().item() > per_pre_nms_top_n.item():
+                per_box_cls, top_k_indices = \
+                        per_box_cls.topk(per_pre_nms_top_n, sorted=False)
+                per_box_loc = per_box_loc[top_k_indices]
+                per_class = per_class[top_k_indices]
 
-            per_box_loc = per_candidate_inds.nonzero()[:, 0][top_k_indices]
             detections = self.box_coder.decode(
                 per_box_regression[per_box_loc, :].view(-1, 4),
                 per_anchors.bbox[per_box_loc, :].view(-1, 4)
