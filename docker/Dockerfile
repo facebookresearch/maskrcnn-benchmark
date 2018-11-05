@@ -5,7 +5,7 @@ FROM nvidia/cuda:${CUDA_VERSION}-cudnn${CUDNN_VERSION}-devel-ubuntu16.04
 
 # install basics
 RUN apt-get update -y \
- && apt-get install -y git curl ca-certificates bzip2 cmake tree htop bmon iotop g++
+ && apt-get install -y git curl ca-certificates bzip2 cmake tree htop bmon iotop g++ \
  && apt-get install -y --no-install-recommends libnccl2=2.3.5-2+cuda${CUDA_VERSION}
 
 # Install Miniconda
