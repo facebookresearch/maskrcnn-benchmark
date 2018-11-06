@@ -120,7 +120,7 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
     padded_mask, scale = expand_masks(mask[None], padding=padding)
     mask = padded_mask[0, 0]
     box = expand_boxes(box[None], scale)[0]
-    box = box.type(dtype=torch.int32)
+    box = box.to(dtype=torch.int32)
 
     TO_REMOVE = 1
     w = box[2] - box[0] + TO_REMOVE
@@ -132,16 +132,12 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
     mask = mask.expand((1, 1, -1, -1))
 
     # Resize mask
-    mask = mask.type(torch.float32)
+    mask = mask.to(torch.float32)
     mask = F.interpolate(mask, size=(h, w), mode='bilinear')
     mask = mask[0][0]
 
     if thresh >= 0:
-        mask = (mask > thresh).type(torch.uint8)
-    else:
-        # for visualization and debugging, we also
-        # allow it to return an unmodified mask
-        mask = (mask * 255).type(torch.uint8)
+        mask = mask > thresh
 
     im_mask = torch.zeros((im_h, im_w), dtype=torch.uint8)
     x_0 = max(box[0], 0)

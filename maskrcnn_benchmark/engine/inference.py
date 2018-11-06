@@ -87,10 +87,10 @@ def prepare_for_coco_segmentation(predictions, dataset):
         image_height = dataset.coco.imgs[original_id]["height"]
         prediction = prediction.resize((image_width, image_height))
         masks = prediction.get_field("mask")
-        
+
         # t = time.time()
         # Masker is necessary only if masks haven't been already resized.
-        if list(masks.shape[-2:]) != [image_width, image_height]:
+        if list(masks.shape[-2:]) != [image_height, image_width]:
             masks = masker(masks, prediction)
         # logger.info('Time mask: {}'.format(time.time() - t))
         # prediction = prediction.convert('xywh')
@@ -429,6 +429,6 @@ def inference(
     check_expected_results(results, expected_results, expected_results_sigma_tol)
     if output_folder:
         torch.save(results, os.path.join(output_folder, "coco_results.pth"))
-        
+
     return results, coco_results, predictions
 
