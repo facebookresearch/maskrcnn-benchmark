@@ -71,7 +71,16 @@ class RetinaNetPostProcessor(torch.nn.Module):
         pre_nms_thresh = self.pre_nms_thresh
         candidate_inds = box_cls > self.pre_nms_thresh
         if candidate_inds.sum().item() == 0:
-            return results
+            empty_boxlists = []
+            for a in anchors:
+                empty_boxlist = BoxList(torch.Tensor(0, 4).to(device), a.size)
+                empty_boxlist.add_field(
+                    "labels", torch.LongTensor([]).to(device))
+                empty_boxlist.add_field(
+                    "scores", torch.Tensor([]).to(device))
+                empty_boxlists.append(empty_boxlist)
+            return empty_boxlists
+
 
         pre_nms_top_n = candidate_inds.view(N, -1).sum(1)
         pre_nms_top_n = pre_nms_top_n.clamp(max=self.pre_nms_top_n)
@@ -129,7 +138,6 @@ class RetinaNetPostProcessor(torch.nn.Module):
 
         boxlists = list(zip(*sampled_boxes))
         boxlists = [cat_boxlist(boxlist) for boxlist in boxlists]
-
         boxlists = self.select_over_all_levels(boxlists)
 
         return boxlists

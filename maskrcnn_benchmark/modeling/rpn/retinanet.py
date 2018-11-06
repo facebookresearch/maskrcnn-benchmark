@@ -1,4 +1,4 @@
-import numpy as np
+import math
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -73,7 +73,7 @@ class RetinaNetHead(torch.nn.Module):
 
         # retinanet_bias_init
         prior_prob = cfg.MODEL.RETINANET.PRIOR_PROB
-        bias_value = -np.log((1 - prior_prob) / prior_prob)
+        bias_value = -math.log((1 - prior_prob) / prior_prob)
         torch.nn.init.constant_(self.cls_logits.bias, bias_value)
 
     def forward(self, x):
@@ -145,17 +145,6 @@ class RetinaNetModule(torch.nn.Module):
 
     def _forward_test(self, anchors, box_cls, box_regression):
         boxes = self.box_selector_test(anchors, box_cls, box_regression)
-        '''
-        if self.cfg.MODEL.RPN_ONLY:
-            # For end-to-end models, the RPN proposals are an intermediate state
-            # and don't bother to sort them in decreasing score order. For RPN-only
-            # models, the proposals are the final output and we return them in
-            # high-to-low confidence order.
-            inds = [
-                box.get_field("objectness").sort(descending=True)[1] for box in boxes
-            ]
-            boxes = [box[ind] for box, ind in zip(boxes, inds)]
-        '''
         return boxes, {}
 
 
