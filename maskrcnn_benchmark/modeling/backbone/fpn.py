@@ -24,8 +24,6 @@ class FPN(nn.Module):
         super(FPN, self).__init__()
         self.inner_blocks = []
         self.layer_blocks = []
-        # If in_channels is 0, it would be used. 
-        self.valid_layers = [i > 0 for i in in_channels_list]
         for idx, in_channels in enumerate(in_channels_list, 1):
             inner_block = "fpn_inner{}".format(idx)
             layer_block = "fpn_layer{}".format(idx)
