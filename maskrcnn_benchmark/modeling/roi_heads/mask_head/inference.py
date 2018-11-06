@@ -3,6 +3,7 @@ import numpy as np
 import torch
 from PIL import Image
 from torch import nn
+import torch.nn.functional as F
 
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 
@@ -119,7 +120,7 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
     padded_mask, scale = expand_masks(mask[None], padding=padding)
     mask = padded_mask[0, 0]
     box = expand_boxes(box[None], scale)[0]
-    box = box.numpy().astype(np.int32)
+    box = box.type(dtype=torch.int32)
 
     TO_REMOVE = 1
     w = box[2] - box[0] + TO_REMOVE
@@ -127,17 +128,20 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
     w = max(w, 1)
     h = max(h, 1)
 
-    mask = Image.fromarray(mask.cpu().numpy())
-    mask = mask.resize((w, h), resample=Image.BILINEAR)
-    mask = np.array(mask, copy=False)
+    # Set shape to [batchxCxWxH]
+    mask = mask.expand((1, 1, -1, -1))
+
+    # Resize mask
+    mask = mask.type(torch.float32)
+    mask = F.interpolate(mask, size=(h, w), mode='bilinear')
+    mask = mask[0][0]
 
     if thresh >= 0:
-        mask = np.array(mask > thresh, dtype=np.uint8)
-        mask = torch.from_numpy(mask)
+        mask = (mask > thresh).type(torch.uint8)
     else:
         # for visualization and debugging, we also
         # allow it to return an unmodified mask
-        mask = torch.from_numpy(mask * 255).to(torch.uint8)
+        mask = (mask * 255).type(torch.uint8)
 
     im_mask = torch.zeros((im_h, im_w), dtype=torch.uint8)
     x_0 = max(box[0], 0)
@@ -184,6 +188,10 @@ class Masker(object):
 
 
 def make_roi_mask_post_processor(cfg):
-    masker = None
+    if cfg.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS:
+        mask_threshold = cfg.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS_THRESHOLD
+        masker = Masker(threshold=mask_threshold, padding=1)
+    else:
+        masker = None
     mask_post_processor = MaskPostProcessor(masker)
     return mask_post_processor
