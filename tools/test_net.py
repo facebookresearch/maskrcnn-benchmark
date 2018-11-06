@@ -79,7 +79,6 @@ def main():
             model,
             data_loader_val,
             iou_types=iou_types,
-            #box_only=cfg.MODEL.RPN_ONLY,
             box_only=False if cfg.MODEL.RETINANET_ON else cfg.MODEL.RPN_ONLY,
             device=cfg.MODEL.DEVICE,
             expected_results=cfg.TEST.EXPECTED_RESULTS,
