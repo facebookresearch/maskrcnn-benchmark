@@ -28,11 +28,12 @@ class GeneralizedRCNN(nn.Module):
         super(GeneralizedRCNN, self).__init__()
 
         self.backbone = build_backbone(cfg)
-        if not cfg.RETINANET.RETINANET_ON:
-            self.rpn = build_rpn(cfg)
-        else:
+        if cfg.MODEL.RETINANET_ON:
             self.rpn = build_retinanet(cfg)
-        self.roi_heads = build_roi_heads(cfg)
+            self.roi_heads = []
+        else:
+            self.rpn = build_rpn(cfg)
+            self.roi_heads = build_roi_heads(cfg)
 
     def forward(self, images, targets=None):
         """

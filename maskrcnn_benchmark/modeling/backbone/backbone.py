@@ -61,7 +61,7 @@ def build_backbone(cfg):
     ), "Only ResNet and ResNeXt models are currently implemented"
     # Models using FPN end with "-FPN"
     if cfg.MODEL.BACKBONE.CONV_BODY.endswith("-FPN"):
-        if cfg.RETINANET.RETINANET_ON:
+        if cfg.MODEL.RETINANET_ON:
             return build_resnet_fpn_p3p7_backbone(cfg)
         else:
             return build_resnet_fpn_backbone(cfg)

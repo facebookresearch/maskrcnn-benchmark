@@ -29,11 +29,11 @@ class RetinaNetLossComputation(object):
         # self.target_preparator = target_preparator
         self.proposal_matcher = proposal_matcher
         self.box_coder = box_coder
-        self.num_classes = cfg.RETINANET.NUM_CLASSES -1
+        self.num_classes = cfg.MODEL.RETINANET.NUM_CLASSES -1
         self.box_cls_loss_func = SigmoidFocalLoss(
             self.num_classes,
-            cfg.RETINANET.LOSS_GAMMA,
-            cfg.RETINANET.LOSS_ALPHA
+            cfg.MODEL.RETINANET.LOSS_GAMMA,
+            cfg.MODEL.RETINANET.LOSS_ALPHA
         )
 
     def match_targets_to_anchors(self, anchor, target):

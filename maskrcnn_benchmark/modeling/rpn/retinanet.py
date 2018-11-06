@@ -22,14 +22,14 @@ class RetinaNetHead(torch.nn.Module):
         """
         super(RetinaNetHead, self).__init__()
         # TODO: Implement the sigmoid version first.
-        num_classes = cfg.RETINANET.NUM_CLASSES - 1
+        num_classes = cfg.MODEL.RETINANET.NUM_CLASSES - 1
         in_channels = cfg.MODEL.BACKBONE.OUT_CHANNELS
-        num_anchors = len(cfg.RETINANET.ASPECT_RATIOS) \
-                        * cfg.RETINANET.SCALES_PER_OCTAVE
+        num_anchors = len(cfg.MODEL.RETINANET.ASPECT_RATIOS) \
+                        * cfg.MODEL.RETINANET.SCALES_PER_OCTAVE
 
         cls_tower = []
         bbox_tower = []
-        for i in range(cfg.RETINANET.NUM_CONVS):
+        for i in range(cfg.MODEL.RETINANET.NUM_CONVS):
             cls_tower.append(
                 nn.Conv2d(
                     in_channels,
@@ -72,7 +72,7 @@ class RetinaNetHead(torch.nn.Module):
 
 
         # retinanet_bias_init
-        prior_prob = cfg.RETINANET.PRIOR_PROB
+        prior_prob = cfg.MODEL.RETINANET.PRIOR_PROB
         bias_value = -np.log((1 - prior_prob) / prior_prob)
         torch.nn.init.constant_(self.cls_logits.bias, bias_value)
 

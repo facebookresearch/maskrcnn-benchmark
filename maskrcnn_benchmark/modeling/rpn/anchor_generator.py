@@ -145,12 +145,12 @@ def make_anchor_generator(config):
 
 
 def make_anchor_generator_retinanet(config):
-    anchor_sizes = config.RETINANET.ANCHOR_SIZES
-    aspect_ratios = config.RETINANET.ASPECT_RATIOS
-    anchor_strides = config.RETINANET.ANCHOR_STRIDES
-    straddle_thresh = config.RETINANET.STRADDLE_THRESH
-    octave = config.RETINANET.OCTAVE
-    scales_per_octave = config.RETINANET.SCALES_PER_OCTAVE
+    anchor_sizes = config.MODEL.RETINANET.ANCHOR_SIZES
+    aspect_ratios = config.MODEL.RETINANET.ASPECT_RATIOS
+    anchor_strides = config.MODEL.RETINANET.ANCHOR_STRIDES
+    straddle_thresh = config.MODEL.RETINANET.STRADDLE_THRESH
+    octave = config.MODEL.RETINANET.OCTAVE
+    scales_per_octave = config.MODEL.RETINANET.SCALES_PER_OCTAVE
 
     assert len(anchor_strides) == len(anchor_sizes), "Only support FPN now"
     new_anchor_sizes = []
