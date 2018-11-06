@@ -26,7 +26,6 @@ class RetinaNetLossComputation(object):
             proposal_matcher (Matcher)
             box_coder (BoxCoder)
         """
-        # self.target_preparator = target_preparator
         self.proposal_matcher = proposal_matcher
         self.box_coder = box_coder
         self.num_classes = cfg.MODEL.RETINANET.NUM_CLASSES -1
@@ -35,12 +34,12 @@ class RetinaNetLossComputation(object):
             cfg.MODEL.RETINANET.LOSS_GAMMA,
             cfg.MODEL.RETINANET.LOSS_ALPHA
         )
+        self.bbox_reg_weight = cfg.MODEL.RETINANET.BBOX_REG_WEIGHT
+        self.bbox_reg_beta = cfg.MODEL.RETINANET.BBOX_REG_BETA
 
     def match_targets_to_anchors(self, anchor, target):
         match_quality_matrix = boxlist_iou(target, anchor)
         matched_idxs = self.proposal_matcher(match_quality_matrix)
-        # RPN doesn't need any fields from target
-        # for creating the labels, so clear them all
         target = target.copy_with_fields(['labels'])
         # get the targets corresponding GT for each anchor
         # NB: need to clamp the indices because we can have a single
@@ -85,29 +84,24 @@ class RetinaNetLossComputation(object):
         """
         Arguments:
             anchors (list[BoxList])
-            objectness (list[Tensor])
+            box_cls (list[Tensor])
             box_regression (list[Tensor])
             targets (list[BoxList])
 
         Returns:
-            objectness_loss (Tensor)
-            box_loss (Tensor
+            retinanet_cls_loss (Tensor)
+            retinanet_regression_loss (Tensor
         """
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]
         labels, regression_targets = self.prepare_targets(anchors, targets)
 
-        # sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
-        # sampled_pos_inds = torch.nonzero(torch.cat(sampled_pos_inds, dim=0)).squeeze(1)
-        # sampled_neg_inds = torch.nonzero(torch.cat(sampled_neg_inds, dim=0)).squeeze(1)
-
-        # sampled_inds = torch.cat([sampled_pos_inds, sampled_neg_inds], dim=0)
         num_layers = len(box_cls)
         box_cls_flattened = []
         box_regression_flattened = []
         # for each feature level, permute the outputs to make them be in the
         # same format as the labels. Note that the labels are computed for
         # all feature levels concatenated, so we keep the same representation
-        # for the objectness and the box_regression
+        # for the box_cls and the box_regression
         for box_cls_per_level, box_regression_per_level in zip(
             box_cls, box_regression
         ):
@@ -134,9 +128,10 @@ class RetinaNetLossComputation(object):
         retinanet_regression_loss = smooth_l1_loss(
             box_regression[pos_inds],
             regression_targets[pos_inds],
-            beta=1.0 / 9,
+            beta=self.bbox_reg_beta,
             size_average=False,
         ) / (pos_inds.sum() * 4)
+        retinanet_regression_loss *= self.bbox_reg_weight
 
         labels = labels.int()
 
@@ -154,10 +149,6 @@ def make_retinanet_loss_evaluator(cfg, box_coder):
         cfg.MODEL.RPN.BG_IOU_THRESHOLD,
         allow_low_quality_matches=True,
     )
-
-    # fg_bg_sampler = BalancedPositiveNegativeSampler(
-    #   cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE, cfg.MODEL.RPN.POSITIVE_FRACTION
-    # )
 
     loss_evaluator = RetinaNetLossComputation(
         cfg, matcher, box_coder

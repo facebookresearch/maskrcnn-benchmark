@@ -273,20 +273,12 @@ _C.MODEL.RETINANET.LOSS_GAMMA = 2.0
 # the bias init for the logits layer
 _C.MODEL.RETINANET.PRIOR_PROB = 0.01
 
-# Whether classification and bbox branch tower should be shared or not
-_C.MODEL.RETINANET.SHARE_CLS_BBOX_TOWER = False
-
-# Use class specific bounding box regression instead of the default class
-# agnostic regression
-_C.MODEL.RETINANET.CLASS_SPECIFIC_BBOX = False
-
-# Whether softmax should be used in classification branch training
-_C.MODEL.RETINANET.SOFTMAX = False
-
 # Inference cls score threshold, anchors with score > INFERENCE_TH are
 # considered for inference
 _C.MODEL.RETINANET.INFERENCE_TH = 0.05
 
+# NMS threshold used in RetinaNet
+_C.MODEL.RETINANET.NMS_TH = 0.4
 
 # ---------------------------------------------------------------------------- #
 # Solver
@@ -326,6 +318,8 @@ _C.TEST.EXPECTED_RESULTS_SIGMA_TOL = 4
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
 _C.TEST.IMS_PER_BATCH = 8
+# Number of detections per image
+_C.TEST.DETECTIONS_PER_IMG = 100
 
 
 # ---------------------------------------------------------------------------- #

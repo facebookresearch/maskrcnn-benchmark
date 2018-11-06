@@ -192,14 +192,12 @@ class RetinaNetPostProcessor(torch.nn.Module):
 
 
 def make_retinanet_postprocessor(config, rpn_box_coder, is_train):
-    pre_nms_thresh = 0.05
-    pre_nms_top_n = 1000
-    nms_thresh = 0.4
-    fpn_post_nms_top_n = 2000
+    pre_nms_thresh = config.MODEL.RETINANET.INFERENCE_TH
+    pre_nms_top_n = config.MODEL.RETINANET.PRE_NMS_TOP_N
+    nms_thresh = config.MODEL.RETINANET.NMS_TH
+    fpn_post_nms_top_n = config.TEST.DETECTIONS_PER_IMG
     min_size = 0
 
-    # nms_thresh = config.MODEL.RPN.NMS_THRESH
-    # min_size = config.MODEL.RPN.MIN_SIZE
     box_selector = RetinaNetPostProcessor(
         pre_nms_thresh=pre_nms_thresh,
         pre_nms_top_n=pre_nms_top_n,
