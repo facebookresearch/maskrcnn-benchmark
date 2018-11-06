@@ -10,7 +10,7 @@ from maskrcnn_benchmark.structures.image_list import to_image_list
 
 from ..backbone import build_backbone
 from ..rpn.rpn import build_rpn
-from ..rpn.retinanet import build_retinanet
+from ..rpn.retinanet.retinanet import build_retinanet
 from ..roi_heads.roi_heads import build_roi_heads
 
 

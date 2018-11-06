@@ -4,9 +4,9 @@ import torch.nn.functional as F
 from torch import nn
 
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
-from .retinanet_loss import make_retinanet_loss_evaluator
-from .anchor_generator import make_anchor_generator_retinanet
-from .retinanet_infer import  make_retinanet_postprocessor
+from .loss import make_retinanet_loss_evaluator
+from ..anchor_generator import make_anchor_generator_retinanet
+from .inference import  make_retinanet_postprocessor
 
 
 class RetinaNetHead(torch.nn.Module):
