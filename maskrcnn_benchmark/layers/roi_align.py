@@ -5,7 +5,23 @@ from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 from torch.nn.modules.utils import _pair
 
-from maskrcnn_benchmark import _C
+from torch.utils.cpp_extension import load
+import os
+import glob
+
+ext_dir = os.path.join(os.path.abspath("../csrc"))
+main_file = glob.glob(os.path.join(ext_dir, "*.cpp"))
+source_cpu = glob.glob(os.path.join(ext_dir, "cpu", "*.cpp"))
+source_cuda = glob.glob(os.path.join(ext_dir, "cuda", "*.cu"))
+sources = main_file + source_cpu  + source_cuda
+cuda_flags = [
+    "-DCUDA_HAS_FP16=1",
+    "-D__CUDA_NO_HALF_OPERATORS__",
+    "-D__CUDA_NO_HALF_CONVERSIONS__",
+    "-D__CUDA_NO_HALF2_OPERATORS__",
+]
+
+C_functions = load("vision", sources, extra_cuda_cflags=cuda_flags, extra_include_paths=[ext_dir], with_cuda=True)
 
 
 class _ROIAlign(Function):
@@ -16,7 +32,7 @@ class _ROIAlign(Function):
         ctx.spatial_scale = spatial_scale
         ctx.sampling_ratio = sampling_ratio
         ctx.input_shape = input.size()
-        output = _C.roi_align_forward(
+        output = C_functions.roi_align_forward(
             input, roi, spatial_scale, output_size[0], output_size[1], sampling_ratio
         )
         return output
@@ -29,7 +45,7 @@ class _ROIAlign(Function):
         spatial_scale = ctx.spatial_scale
         sampling_ratio = ctx.sampling_ratio
         bs, ch, h, w = ctx.input_shape
-        grad_input = _C.roi_align_backward(
+        grad_input = C_functions.roi_align_backward(
             grad_output,
             rois,
             spatial_scale,
