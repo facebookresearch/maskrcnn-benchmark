@@ -3,7 +3,6 @@
 Implements the Generalized R-CNN framework
 """
 
-import torch
 from torch import nn
 
 from maskrcnn_benchmark.structures.image_list import to_image_list
@@ -46,13 +45,13 @@ class GeneralizedRCNN(nn.Module):
         if self.training and targets is None:
             raise ValueError("In training mode, targets should be passed")
         images = to_image_list(images)
-        features = self.backbone(images.tensors)
-        proposals, proposal_losses = self.rpn(images, features, targets)
+        features = self.backbone.forward(images.tensors)
+        proposals, proposal_losses = self.rpn.forward(images, features, targets)
         if self.roi_heads:
-            x, result, detector_losses = self.roi_heads(features, proposals, targets)
+            x, result, detector_losses = self.roi_heads.forward(features, proposals, targets)
         else:
             # RPN-only models don't have roi_heads
-            x = features
+            # x = features
             result = proposals
             detector_losses = {}
 

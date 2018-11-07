@@ -48,7 +48,7 @@ class MaskRCNNFPNFeatureExtractor(nn.Module):
             self.blocks.append(layer_name)
 
     def forward(self, x, proposals):
-        x = self.pooler(x, proposals)
+        x = self.pooler.forward(x, proposals)
 
         for layer_name in self.blocks:
             x = F.relu(getattr(self, layer_name)(x))

@@ -1,11 +1,22 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+from typing import List
+
 import torch
-import torch.nn.functional as F
+import torch.jit
 from torch import nn
 
 from maskrcnn_benchmark.layers import ROIAlign
+import maskrcnn_benchmark._C  # we need this for the custom op to exist
 
 from .utils import cat
+
+torch.ops.load_library(maskrcnn_benchmark._C.__file__)
+
+
+# wrapper for the custom op (pytorch issue #13564)
+@torch.jit.script
+def merge_levels(levels, unmerged_results: List[torch.Tensor]):
+    return torch.ops.maskrcnn_benchmark.merge_levels(levels, unmerged_results)
 
 
 class LevelMapper(object):
@@ -77,10 +88,11 @@ class Pooler(nn.Module):
 
     def convert_to_roi_format(self, boxes):
         concat_boxes = cat([b.bbox for b in boxes], dim=0)
-        device, dtype = concat_boxes.device, concat_boxes.dtype
+        # device, dtype = concat_boxes.device, concat_boxes.dtype
         ids = cat(
             [
-                torch.full((len(b), 1), i, dtype=dtype, device=device)
+                torch.full_like(b.bbox[:, :1], i)
+                # torch.full((len(b), 1), i, dtype=dtype, device=device)
                 for i, b in enumerate(boxes)
             ],
             dim=0,
@@ -108,14 +120,21 @@ class Pooler(nn.Module):
         output_size = self.output_size[0]
 
         dtype, device = x[0].dtype, x[0].device
-        result = torch.zeros(
-            (num_rois, num_channels, output_size, output_size),
-            dtype=dtype,
-            device=device,
-        )
-        for level, (per_level_feature, pooler) in enumerate(zip(x, self.poolers)):
-            idx_in_level = torch.nonzero(levels == level).squeeze(1)
-            rois_per_level = rois[idx_in_level]
-            result[idx_in_level] = pooler(per_level_feature, rois_per_level)
-
+        if 0:  # facilitate scripting
+            result = torch.zeros(
+                (num_rois, num_channels, output_size, output_size),
+                dtype=dtype,
+                device=device,
+            )
+            for level, (per_level_feature, pooler) in enumerate(zip(x, self.poolers)):
+                idx_in_level = torch.nonzero(levels == level).squeeze(1)
+                rois_per_level = rois[idx_in_level]
+                result[idx_in_level] = pooler(per_level_feature, rois_per_level)
+        else:
+            unmerged_results = []
+            for level, (per_level_feature, pooler) in enumerate(zip(x, self.poolers)):
+                idx_in_level = torch.nonzero(levels == level).squeeze(1)
+                rois_per_level = rois[idx_in_level]
+                unmerged_results.append(pooler(per_level_feature, rois_per_level))
+                result = merge_levels(levels, unmerged_results)
         return result

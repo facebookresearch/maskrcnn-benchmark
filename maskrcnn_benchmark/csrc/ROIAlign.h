@@ -10,10 +10,10 @@
 // Interface for Python
 at::Tensor ROIAlign_forward(const at::Tensor& input,
                             const at::Tensor& rois,
-                            const float spatial_scale,
-                            const int pooled_height,
-                            const int pooled_width,
-                            const int sampling_ratio) {
+                            const double spatial_scale,
+                            const int64_t pooled_height,
+                            const int64_t pooled_width,
+                            const int64_t sampling_ratio) {
   if (input.type().is_cuda()) {
 #ifdef WITH_CUDA
     return ROIAlign_forward_cuda(input, rois, spatial_scale, pooled_height, pooled_width, sampling_ratio);

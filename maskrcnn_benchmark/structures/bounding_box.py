@@ -36,6 +36,16 @@ class BoxList(object):
         self.mode = mode
         self.extra_fields = {}
 
+    # note: _get_tensors/_set_tensors only work if the keys don't change in between!
+    def _get_tensors(self):
+        return (self.bbox,)+tuple(f for f in (self.get_field(field) for field in sorted(self.fields())) if isinstance(f, torch.Tensor))
+
+    def _set_tensors(self, ts):
+        self.bbox = ts[0]
+        for i, f in enumerate(sorted(self.fields())):
+            if isinstance(self.extra_fields[f], torch.Tensor):
+                self.extra_fields[f] = ts[1 + i]
+
     def add_field(self, field, field_data):
         self.extra_fields[field] = field_data
 
@@ -213,10 +223,12 @@ class BoxList(object):
 
     def clip_to_image(self, remove_empty=True):
         TO_REMOVE = 1
-        self.bbox[:, 0].clamp_(min=0, max=self.size[0] - TO_REMOVE)
-        self.bbox[:, 1].clamp_(min=0, max=self.size[1] - TO_REMOVE)
-        self.bbox[:, 2].clamp_(min=0, max=self.size[0] - TO_REMOVE)
-        self.bbox[:, 3].clamp_(min=0, max=self.size[1] - TO_REMOVE)
+        self.bbox = torch.stack([
+            self.bbox[:, 0].clamp(min=0, max=self.size[0] - TO_REMOVE),
+            self.bbox[:, 1].clamp(min=0, max=self.size[1] - TO_REMOVE),
+            self.bbox[:, 2].clamp(min=0, max=self.size[0] - TO_REMOVE),
+            self.bbox[:, 3].clamp(min=0, max=self.size[1] - TO_REMOVE),
+            ], dim=1)
         if remove_empty:
             box = self.bbox
             keep = (box[:, 3] > box[:, 1]) & (box[:, 2] > box[:, 0])

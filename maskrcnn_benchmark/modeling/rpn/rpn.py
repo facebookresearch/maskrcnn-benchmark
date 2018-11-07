@@ -40,7 +40,7 @@ class RPNHead(nn.Module):
             t = F.relu(self.conv(feature))
             logits.append(self.cls_logits(t))
             bbox_reg.append(self.bbox_pred(t))
-        return logits, bbox_reg
+        return tuple(logits), tuple(bbox_reg)
 
 
 class RPNModule(torch.nn.Module):
@@ -88,7 +88,7 @@ class RPNModule(torch.nn.Module):
                 testing, it is an empty dict.
         """
         objectness, rpn_box_regression = self.head(features)
-        anchors = self.anchor_generator(images, features)
+        anchors = self.anchor_generator.forward(images, features)
 
         if self.training:
             return self._forward_train(anchors, objectness, rpn_box_regression, targets)
@@ -119,7 +119,7 @@ class RPNModule(torch.nn.Module):
         return boxes, losses
 
     def _forward_test(self, anchors, objectness, rpn_box_regression):
-        boxes = self.box_selector_test(anchors, objectness, rpn_box_regression)
+        boxes = self.box_selector_test.forward(anchors, objectness, rpn_box_regression)
         if self.cfg.MODEL.RPN_ONLY:
             # For end-to-end models, the RPN proposals are an intermediate state
             # and don't bother to sort them in decreasing score order. For RPN-only

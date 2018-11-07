@@ -1,6 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
-from torch import nn
 
 from .roi_box_feature_extractors import make_roi_box_feature_extractor
 from .roi_box_predictors import make_roi_box_predictor
@@ -43,12 +42,12 @@ class ROIBoxHead(torch.nn.Module):
 
         # extract features that will be fed to the final classifier. The
         # feature_extractor generally corresponds to the pooler + heads
-        x = self.feature_extractor(features, proposals)
+        x = self.feature_extractor.forward(features, proposals)
         # final classifier that converts the features into predictions
         class_logits, box_regression = self.predictor(x)
 
         if not self.training:
-            result = self.post_processor((class_logits, box_regression), proposals)
+            result = self.post_processor.forward((class_logits, box_regression), proposals)
             return x, result, {}
 
         loss_classifier, loss_box_reg = self.loss_evaluator(

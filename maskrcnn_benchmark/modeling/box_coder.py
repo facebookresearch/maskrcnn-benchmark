@@ -2,6 +2,12 @@
 import math
 
 import torch
+import torch.jit
+
+
+@torch.jit.script
+def view_as(x, y):
+    return x.view(y.shape)
 
 
 class BoxCoder(object):
@@ -82,14 +88,20 @@ class BoxCoder(object):
         pred_w = torch.exp(dw) * widths[:, None]
         pred_h = torch.exp(dh) * heights[:, None]
 
-        pred_boxes = torch.zeros_like(rel_codes)
-        # x1
-        pred_boxes[:, 0::4] = pred_ctr_x - 0.5 * pred_w
-        # y1
-        pred_boxes[:, 1::4] = pred_ctr_y - 0.5 * pred_h
-        # x2 (note: "- 1" is correct; don't be fooled by the asymmetry)
-        pred_boxes[:, 2::4] = pred_ctr_x + 0.5 * pred_w - 1
-        # y2 (note: "- 1" is correct; don't be fooled by the asymmetry)
-        pred_boxes[:, 3::4] = pred_ctr_y + 0.5 * pred_h - 1
+        if 0:
+            pred_boxes = torch.zeros_like(rel_codes)
+            # x1
+            pred_boxes[:, 0::4] = pred_ctr_x - 0.5 * pred_w
+            # y1
+            pred_boxes[:, 1::4] = pred_ctr_y - 0.5 * pred_h
+            # x2 (note: "- 1" is correct; don't be fooled by the asymmetry)
+            pred_boxes[:, 2::4] = pred_ctr_x + 0.5 * pred_w - 1
+            # y2 (note: "- 1" is correct; don't be fooled by the asymmetry)
+            pred_boxes[:, 3::4] = pred_ctr_y + 0.5 * pred_h - 1
+        if 1:    # jit-friendly version
+            pred_boxes = view_as(torch.stack([pred_ctr_x - 0.5 * pred_w,
+                                              pred_ctr_y - 0.5 * pred_h,
+                                              pred_ctr_x + 0.5 * pred_w - 1,
+                                              pred_ctr_y + 0.5 * pred_h - 1], 2), rel_codes)
 
         return pred_boxes

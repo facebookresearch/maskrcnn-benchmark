@@ -1,6 +1,4 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-import torch
-
 from .batch_norm import FrozenBatchNorm2d
 from .misc import Conv2d
 from .misc import ConvTranspose2d

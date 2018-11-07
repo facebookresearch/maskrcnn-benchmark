@@ -16,7 +16,7 @@ class _ROIAlign(Function):
         ctx.spatial_scale = spatial_scale
         ctx.sampling_ratio = sampling_ratio
         ctx.input_shape = input.size()
-        output = _C.roi_align_forward(
+        output = torch.ops.maskrcnn_benchmark.roi_align_forward(
             input, roi, spatial_scale, output_size[0], output_size[1], sampling_ratio
         )
         return output
@@ -50,14 +50,27 @@ roi_align = _ROIAlign.apply
 class ROIAlign(nn.Module):
     def __init__(self, output_size, spatial_scale, sampling_ratio):
         super(ROIAlign, self).__init__()
-        self.output_size = output_size
+        self.output_size = _pair(output_size)
         self.spatial_scale = spatial_scale
         self.sampling_ratio = sampling_ratio
 
+        @torch.jit.script
+        def roi_align_fixed1(input, roi,
+                             spatial_scale: float=spatial_scale,
+                             output_size0: int=output_size[0],
+                             output_size1: int=output_size[1],
+                             sampling_ratio: int=sampling_ratio):
+            return torch.ops.maskrcnn_benchmark.roi_align_forward(
+                input, roi, spatial_scale, output_size0, output_size1, sampling_ratio)
+
+        @torch.jit.script
+        def roi_align_fixed(input, roi):
+            return roi_align_fixed1(input, roi)
+
+        self.roi_align_fixed = roi_align_fixed
+
     def forward(self, input, rois):
-        return roi_align(
-            input, rois, self.output_size, self.spatial_scale, self.sampling_ratio
-        )
+        return self.roi_align_fixed(input, rois)
 
     def __repr__(self):
         tmpstr = self.__class__.__name__ + "("

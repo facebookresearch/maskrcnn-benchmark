@@ -25,6 +25,13 @@ class ImageList(object):
         cast_tensor = self.tensors.to(*args, **kwargs)
         return ImageList(cast_tensor, self.image_sizes)
 
+    # note: _get_tensors/_set_tensors only work if the keys don't change in between!
+    def _get_tensors(self):
+        return self.tensors
+
+    def _set_tensors(self, ts):
+        self.tensors = ts
+
 
 def to_image_list(tensors, size_divisible=0):
     """

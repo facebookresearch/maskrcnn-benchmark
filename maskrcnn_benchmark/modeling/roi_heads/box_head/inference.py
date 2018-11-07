@@ -34,6 +34,27 @@ class PostProcessor(nn.Module):
             box_coder = BoxCoder(weights=(10., 10., 5., 5.))
         self.box_coder = box_coder
 
+        @torch.jit.script
+        def _detections_to_keep(scores, detections_per_img: int=self.detections_per_img):
+            number_of_detections = scores.size(0)
+
+            # Limit to max_per_image detections **over all classes**
+            if number_of_detections > detections_per_img > 0:
+                image_thresh, _ = torch.kthvalue(
+                    scores, number_of_detections - detections_per_img + 1
+                )
+                keep = scores >= image_thresh  # remove for jit compat... .item()
+                keep = torch.nonzero(keep).squeeze(1)
+            else:
+                keep = torch.ones_like(scores, dtype=torch.uint8)
+            return keep
+
+        @torch.jit.script
+        def detections_to_keep(scores):
+            return _detections_to_keep(scores)
+
+        self.detections_to_keep = detections_to_keep
+
     def forward(self, x, boxes):
         """
         Arguments:
@@ -101,7 +122,7 @@ class PostProcessor(nn.Module):
         boxes = boxlist.bbox.reshape(-1, num_classes * 4)
         scores = boxlist.get_field("scores").reshape(-1, num_classes)
 
-        device = scores.device
+        # device = scores.device
         result = []
         # Apply threshold on detection probabilities and apply NMS
         # Skip j = 0, because it's the background class
@@ -115,29 +136,37 @@ class PostProcessor(nn.Module):
             boxlist_for_class = boxlist_nms(
                 boxlist_for_class, self.nms, score_field="scores"
             )
-            num_labels = len(boxlist_for_class)
+            # num_labels = len(boxlist_for_class)
             boxlist_for_class.add_field(
-                "labels", torch.full((num_labels,), j, dtype=torch.int64, device=device)
+                "labels", torch.full_like(boxlist_for_class.bbox[:, 0], j, dtype=torch.int64)
+                # "labels", torch.full((num_labels,), j, dtype=torch.int64, device=device)
             )
             result.append(boxlist_for_class)
 
         result = cat_boxlist(result)
-        number_of_detections = len(result)
+        if 0:  # jit tracing compatibility
+            number_of_detections = len(result)
 
-        # Limit to max_per_image detections **over all classes**
-        if number_of_detections > self.detections_per_img > 0:
-            cls_scores = result.get_field("scores")
-            image_thresh, _ = torch.kthvalue(
-                cls_scores.cpu(), number_of_detections - self.detections_per_img + 1
-            )
-            keep = cls_scores >= image_thresh.item()
-            keep = torch.nonzero(keep).squeeze(1)
-            result = result[keep]
+            # Limit to max_per_image detections **over all classes**
+            if number_of_detections > self.detections_per_img > 0:
+                cls_scores = result.get_field("scores")
+                image_thresh, _ = torch.kthvalue(
+                    cls_scores.cpu(), number_of_detections - self.detections_per_img + 1
+                )
+                keep = cls_scores >= image_thresh.item()
+                keep = torch.nonzero(keep).squeeze(1)
+                result = result[keep]
+        else:
+            scores = result.get_field("scores")
+            keep = self.detections_to_keep(scores)
+            result.bbox = result.bbox[keep]
+            for f in result.fields():
+                result.add_field(f, result.get_field(f)[keep])
         return result
 
 
 def make_roi_box_post_processor(cfg):
-    use_fpn = cfg.MODEL.ROI_HEADS.USE_FPN
+    # use_fpn = cfg.MODEL.ROI_HEADS.USE_FPN
 
     bbox_reg_weights = cfg.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS
     box_coder = BoxCoder(weights=bbox_reg_weights)

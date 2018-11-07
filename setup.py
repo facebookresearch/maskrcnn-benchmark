@@ -1,5 +1,5 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 #!/usr/bin/env python
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 import glob
 import os
@@ -48,6 +48,10 @@ def get_extensions():
             "maskrcnn_benchmark._C",
             sources,
             include_dirs=include_dirs,
+            libraries=['opencv_core', 'opencv_highgui',
+                       'torch', 'caffe2',  # for jit ops (don't know why this is needed)
+                       ],
+            library_dirs=[os.path.join(os.path.dirname(torch._C.__file__), 'lib')],
             define_macros=define_macros,
             extra_compile_args=extra_compile_args,
         )
