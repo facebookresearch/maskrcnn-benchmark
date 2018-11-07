@@ -1,7 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import numpy as np
 import torch
-from PIL import Image
 from torch import nn
 import torch.nn.functional as F
 
@@ -128,7 +127,7 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
     w = max(w, 1)
     h = max(h, 1)
 
-    # Set shape to [batchxCxWxH]
+    # Set shape to [batchxCxHxW]
     mask = mask.expand((1, 1, -1, -1))
 
     # Resize mask
@@ -138,6 +137,10 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
 
     if thresh >= 0:
         mask = mask > thresh
+    else:
+        # for visualization and debugging, we also
+        # allow it to return an unmodified mask
+        mask = mask * 255
 
     im_mask = torch.zeros((im_h, im_w), dtype=torch.uint8)
     x_0 = max(box[0], 0)
