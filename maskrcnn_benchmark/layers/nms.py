@@ -4,7 +4,7 @@ from torch.utils.cpp_extension import load
 import os
 import glob
 
-ext_dir = os.path.join(os.path.abspath("../csrc"))
+ext_dir = os.path.join(os.path.abspath("../maskrcnn_benchmark/csrc"))
 main_file = glob.glob(os.path.join(ext_dir, "*.cpp"))
 source_cpu = glob.glob(os.path.join(ext_dir, "cpu", "*.cpp"))
 source_cuda = glob.glob(os.path.join(ext_dir, "cuda", "*.cu"))
