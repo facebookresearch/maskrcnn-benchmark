@@ -1,8 +1,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import numpy as np
 import torch
-from PIL import Image
 from torch import nn
+import torch.nn.functional as F
 
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 
@@ -115,42 +115,6 @@ def expand_masks(mask, padding):
     return padded_mask, scale
 
 
-def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
-    padded_mask, scale = expand_masks(mask[None], padding=padding)
-    mask = padded_mask[0, 0]
-    box = expand_boxes(box[None], scale)[0]
-    box = box.numpy().astype(np.int32)
-
-    TO_REMOVE = 1
-    w = box[2] - box[0] + TO_REMOVE
-    h = box[3] - box[1] + TO_REMOVE
-    w = max(w, 1)
-    h = max(h, 1)
-
-    mask = Image.fromarray(mask.cpu().numpy())
-    mask = mask.resize((w, h), resample=Image.BILINEAR)
-    mask = np.array(mask, copy=False)
-
-    if thresh >= 0:
-        mask = np.array(mask > thresh, dtype=np.uint8)
-        mask = torch.from_numpy(mask)
-    else:
-        # for visualization and debugging, we also
-        # allow it to return an unmodified mask
-        mask = torch.from_numpy(mask * 255).to(torch.uint8)
-
-    im_mask = torch.zeros((im_h, im_w), dtype=torch.uint8)
-    x_0 = max(box[0], 0)
-    x_1 = min(box[2] + 1, im_w)
-    y_0 = max(box[1], 0)
-    y_1 = min(box[3] + 1, im_h)
-
-    im_mask[y_0:y_1, x_0:x_1] = mask[
-        (y_0 - box[1]) : (y_1 - box[1]), (x_0 - box[0]) : (x_1 - box[0])
-    ]
-    return im_mask
-
-
 class Masker(object):
     """
     Projects a set of masks in an image on the locations
@@ -161,20 +125,81 @@ class Masker(object):
         self.threshold = threshold
         self.padding = padding
 
+    # TODO this gives slightly different results
+    # than the Detectron implementation. Fix it
+    def compute_flow_field_cpu(self, boxes):
+        im_w, im_h = boxes.size
+        boxes_data = boxes.bbox
+        num_boxes = len(boxes_data)
+        device = boxes_data.device
+
+        TO_REMOVE = 1
+        boxes_data = boxes_data.int()
+        box_widths = boxes_data[:, 2] - boxes_data[:, 0] + TO_REMOVE
+        box_heights = boxes_data[:, 3] - boxes_data[:, 1] + TO_REMOVE
+
+        box_widths.clamp_(min=1)
+        box_heights.clamp_(min=1)
+
+        boxes_data = boxes_data.tolist()
+        box_widths = box_widths.tolist()
+        box_heights = box_heights.tolist()
+
+        flow_field = torch.full((num_boxes, im_h, im_w, 2), -2)
+
+        for i in range(num_boxes):
+            w = box_widths[i]
+            h = box_heights[i]
+            if w < 2 or h < 2:
+                continue
+            x = torch.linspace(-1, 1, w)
+            y = torch.linspace(-1, 1, h)
+            # meshogrid
+            x = x[None, :].expand(h, w)
+            y = y[:, None].expand(h, w)
+
+            b = boxes_data[i]
+            x_0 = max(b[0], 0)
+            x_1 = min(b[2] + 0, im_w)
+            y_0 = max(b[1], 0)
+            y_1 = min(b[3] + 0, im_h)
+            flow_field[i, y_0:y_1, x_0:x_1, 0] = x[
+                (y_0 - b[1]) : (y_1 - b[1]), (x_0 - b[0]) : (x_1 - b[0])
+            ]
+            flow_field[i, y_0:y_1, x_0:x_1, 1] = y[
+                (y_0 - b[1]) : (y_1 - b[1]), (x_0 - b[0]) : (x_1 - b[0])
+            ]
+
+        return flow_field.to(device)
+
+    def compute_flow_field_gpu(self, boxes):
+        from torch_detectron import layers
+
+        width, height = boxes.size
+        flow_field = layers.compute_flow(boxes.bbox, height, width)
+        return flow_field
+
+    def compute_flow_field(self, boxes):
+        if boxes.bbox.is_cuda:
+            return self.compute_flow_field_gpu(boxes)
+        return self.compute_flow_field_cpu(boxes)
+
+    # TODO make it work better for batches
     def forward_single_image(self, masks, boxes):
         boxes = boxes.convert("xyxy")
-        im_w, im_h = boxes.size
-        res = [
-            paste_mask_in_image(mask[0], box, im_h, im_w, self.threshold, self.padding)
-            for mask, box in zip(masks, boxes.bbox)
-        ]
-        if len(res) > 0:
-            res = torch.stack(res, dim=0)[:, None]
-        else:
-            res = masks.new_empty((0, 1, masks.shape[-2], masks.shape[-1]))
-        return res
+        if self.padding:
+            boxes = BoxList(boxes.bbox.clone(), boxes.size, boxes.mode)
+            masks, scale = expand_masks(masks, self.padding)
+            boxes.bbox = expand_boxes(boxes.bbox, scale)
 
-    def __call__(self, masks, boxes):
+        flow_field = self.compute_flow_field(boxes)
+        masks = masks.to(torch.float32)
+        result = torch.nn.functional.grid_sample(masks, flow_field)
+        if self.threshold > 0:
+            result = result > self.threshold
+        return result
+
+    def __call__(self, masks, boxes:
         # TODO do this properly
         if isinstance(boxes, BoxList):
             boxes = [boxes]
