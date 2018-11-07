@@ -140,7 +140,7 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
     else:
         # for visualization and debugging, we also
         # allow it to return an unmodified mask
-        mask = mask * 255
+        mask = (mask * 255).to(torch.uint8)
 
     im_mask = torch.zeros((im_h, im_w), dtype=torch.uint8)
     x_0 = max(box[0], 0)
