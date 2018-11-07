@@ -1,0 +1,12 @@
+MODEL:
+  META_ARCHITECTURE: "GeneralizedRCNN"
+  C2_COMPAT:
+    WEIGHTS: "/private/home/fmassa/detectron_c2_models/e2e_mask_rcnn_R_50_C4_1x.pkl"
+    WEIGHT_LOADER: "mask_rcnn_R_50_C4"
+    ENABLED: True
+  ROI_MASK_HEAD:
+    PREDICTOR: "MaskRCNNC4Predictor"
+  SHARE_FEATURES_DURING_TRAINING: True
+  MASK_ON: True
+DATASETS:
+  TEST: ("coco_2014_minival",)

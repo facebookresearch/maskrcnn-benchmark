@@ -1,0 +1,23 @@
+*/**/__pycache__
+*/**/_ext
+*/**/*.pyc
+*/**/*~
+torch_detectron.egg-info/
+torch_detectron/legacy/
+
+*.pth
+*.plk
+*.pkl
+*.npy
+*.ipynb
+*.so
+*.pth
+
+# Editor temporaries
+*.swn
+*.swo
+*.swp
+*.idea
+*~
+build/
+dist/
