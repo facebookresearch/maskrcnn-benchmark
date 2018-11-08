@@ -44,11 +44,11 @@ class MaskPostProcessor(nn.Module):
         index = torch.arange(num_masks, device=labels.device)
         mask_prob = mask_prob[index, labels][:, None]
 
-        if self.masker:
-            mask_prob = self.masker(mask_prob, boxes)
-
         boxes_per_image = [len(box) for box in boxes]
         mask_prob = mask_prob.split(boxes_per_image, dim=0)
+
+        if self.masker:
+            mask_prob = self.masker(mask_prob, boxes)
 
         results = []
         for prob, box in zip(mask_prob, boxes):
@@ -178,12 +178,20 @@ class Masker(object):
         return res
 
     def __call__(self, masks, boxes):
-        # TODO do this properly
         if isinstance(boxes, BoxList):
             boxes = [boxes]
-        assert len(boxes) == 1, "Only single image batch supported"
-        result = self.forward_single_image(masks, boxes[0])
-        return result
+
+        # Make some sanity check
+        assert len(boxes) == len(masks), "Masks and boxes should have the same length."
+
+        # TODO:  Is this JIT compatible?
+        # If not we should make it compatible.
+        results = []
+        for mask, box in zip(masks, boxes):
+            assert mask.shape[0] == box.bbox.shape[0], "Number of objects should be the same."
+            result = self.forward_single_image(mask, box)
+            results.append(result)
+        return results
 
 
 def make_roi_mask_post_processor(cfg):
