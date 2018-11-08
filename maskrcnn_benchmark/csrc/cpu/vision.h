@@ -1,6 +1,6 @@
 // Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 #pragma once
-#include <torch/extension.h>
+#include <torch/script.h>
 
 
 at::Tensor ROIAlign_forward_cpu(const at::Tensor& input,

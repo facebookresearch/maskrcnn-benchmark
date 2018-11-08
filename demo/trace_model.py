@@ -4,7 +4,6 @@ import argparse
 from typing import List, Tuple
 import time
 
-import cv2
 import numpy
 from matplotlib import pyplot
 
@@ -13,18 +12,27 @@ import torch
 from PIL import Image
 from maskrcnn_benchmark.config import cfg
 from predictor import COCODemo
-from maskrcnn_benchmark.structures.image_list import to_image_list, ImageList
+from maskrcnn_benchmark.structures.image_list import ImageList
 from maskrcnn_benchmark.structures.bounding_box import BoxList
-from maskrcnn_benchmark.modeling.box_coder import BoxCoder
-from maskrcnn_benchmark.structures.bounding_box import BoxList
-from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
-from maskrcnn_benchmark.structures.boxlist_ops import boxlist_nms
-from maskrcnn_benchmark.structures.boxlist_ops import remove_small_boxes
-import maskrcnn_benchmark.layers
 
+if __name__ == "__main__":
+    # load config from file and command-line arguments
+    cfg.merge_from_file("../configs/caffe2/e2e_mask_rcnn_R_50_FPN_1x_caffe2.yaml")
+    cfg.merge_from_list(["MODEL.DEVICE", "cpu"])
+    cfg.freeze()
 
+    # prepare object that handles inference plus adds predictions on top of image
+    coco_demo = COCODemo(
+        cfg,
+        confidence_threshold=0.7,
+        show_mask_heatmaps=False,
+        masks_per_dim=2,
+        min_image_size=480,
+    )
 
 def single_image_to_top_predictions(image):
+    image = image.float()/255.0
+    image = image.permute(2, 0, 1)
     # we are loading images with OpenCV, so we don't need to convert them
     # to BGR, they are already! So all we need to do is to normalize
     # by 255 if we want to convert to BGR255 format, or flip the channels
@@ -95,30 +103,34 @@ def my_paste_mask(mask, bbox, height: int, width: int, threshold: float=0.5, pad
     return mask
 
 @torch.jit.script
-def combine_masks(image, labels, masks, bboxes, threshold: float=0.5, padding: int=1, contour: bool=True, rectangle: bool=False, palette=torch.tensor([33554431, 32767, 2097151])):
-    """note: image is C,H,W!"""
-    height = image.size(-2)
-    width = image.size(-1)
+def add_annotations(image, labels, scores, bboxes, class_names: str=','.join(coco_demo.CATEGORIES), color=torch.tensor([255, 255, 255], dtype=torch.long)):
+  result_image = torch.ops.maskrcnn_benchmark.add_annotations(image, labels, scores, bboxes, class_names, color)
+  return result_image
+  
+
+@torch.jit.script
+def combine_masks(image, labels, masks, scores, bboxes, threshold: float=0.5, padding: int=1, contour: bool=True, rectangle: bool=False, palette=torch.tensor([33554431, 32767, 2097151])):
+    height = image.size(0)
+    width = image.size(1)
     image_with_mask = image.clone()
     for i in range(masks.size(0)):
         color = ((palette * labels[i]) % 255).to(torch.uint8)
         one_mask = my_paste_mask(masks[i, 0], bboxes[i], height, width, threshold, padding, contour, rectangle)
-        image_with_mask = torch.where(one_mask.unsqueeze(0), color.unsqueeze(1).unsqueeze(1), image_with_mask)
+        image_with_mask = torch.where(one_mask.unsqueeze(-1), color.unsqueeze(0).unsqueeze(0), image_with_mask)
+    image_with_mask = add_annotations(image_with_mask, labels, scores, bboxes)
     return image_with_mask
 
 def process_image_with_traced_model(image):
     original_image = image
-    image = image.float()/255.0
 
     if coco_demo.cfg.DATALOADER.SIZE_DIVISIBILITY:
-        assert (image.size(-2) % coco_demo.cfg.DATALOADER.SIZE_DIVISIBILITY == 0
-                and image.size(-1) % coco_demo.cfg.DATALOADER.SIZE_DIVISIBILITY == 0)
+        assert (image.size(0) % coco_demo.cfg.DATALOADER.SIZE_DIVISIBILITY == 0
+                and image.size(1) % coco_demo.cfg.DATALOADER.SIZE_DIVISIBILITY == 0)
 
     boxes, labels, masks, scores  = traced_model(image)
 
     # todo: make this in one large thing
-    result_image = combine_masks(original_image, labels, masks, boxes, 0.5, 1, rectangle=True)
-    result_image = result_image.permute(1,2,0)
+    result_image = combine_masks(original_image, labels, masks, scores, boxes, 0.5, 1, rectangle=True)
     template = "{}: {:.2f}"
     for i in range(len(boxes)):
         s = template.format(coco_demo.CATEGORIES[labels[i].item()], scores[i].item())
@@ -128,36 +140,28 @@ def process_image_with_traced_model(image):
     return result_image
 
 
+
 if __name__ == "__main__":
-    # load config from file and command-line arguments
-    cfg.merge_from_file("../configs/caffe2/e2e_mask_rcnn_R_50_FPN_1x_caffe2.yaml")
-    cfg.merge_from_list(["MODEL.DEVICE", "cpu"])
-    cfg.freeze()
-
-    # prepare object that handles inference plus adds predictions on top of image
-    coco_demo = COCODemo(
-        cfg,
-        confidence_threshold=0.7,
-        show_mask_heatmaps=False,
-        masks_per_dim=2,
-        min_image_size=480,
-    )
-
     pil_image = Image.open("3915380994_2e611b1779_z.jpg").convert("RGB")
     # convert to BGR format
     image = torch.from_numpy(numpy.array(pil_image)[:, :, [2, 1, 0]])
-    image = image.permute(2, 0, 1)
     original_image = image
-    image = image.float()/255.0
 
     if coco_demo.cfg.DATALOADER.SIZE_DIVISIBILITY:
-        assert (image.size(-2) % coco_demo.cfg.DATALOADER.SIZE_DIVISIBILITY == 0
-                and image.size(-1) % coco_demo.cfg.DATALOADER.SIZE_DIVISIBILITY == 0)
+        assert (image.size(0) % coco_demo.cfg.DATALOADER.SIZE_DIVISIBILITY == 0
+                and image.size(1) % coco_demo.cfg.DATALOADER.SIZE_DIVISIBILITY == 0)
 
     with torch.no_grad():
         traced_model = torch.jit.trace(single_image_to_top_predictions, (image,))
+        traced_model.save('model_single_image_to_top_predictions.pt')
 
-
+    @torch.jit.script
+    def end_to_end_model(image):
+        boxes, labels, masks, scores  = traced_model(image)
+        result_image = combine_masks(image, labels, masks, scores, boxes, 0.5, 1, rectangle=True)
+        return result_image
+    end_to_end_model.save('end_to_end_model.pt')
+    
     result_image = process_image_with_traced_model(original_image)
     
     # self.show_mask_heatmaps not done
@@ -170,7 +174,6 @@ if __name__ == "__main__":
     image2 = Image.open('17790319373_bd19b24cfc_k.jpg').convert("RGB")
     image2 = image2.resize((640, 480), Image.BILINEAR)
     image2 = torch.from_numpy(numpy.array(image2)[:, :, [2, 1, 0]])
-    image2 = image2.permute(2, 0, 1)
     result_image2 = process_image_with_traced_model(image2)
     
     # self.show_mask_heatmaps not done

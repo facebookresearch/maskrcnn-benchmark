@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 from typing import List
+import os
 
 import torch
 import torch.jit
@@ -10,7 +11,7 @@ import maskrcnn_benchmark._C  # we need this for the custom op to exist
 
 from .utils import cat
 
-torch.ops.load_library(maskrcnn_benchmark._C.__file__)
+torch.ops.load_library(os.path.join(os.path.dirname(maskrcnn_benchmark._C.__file__), 'libmaskrcnn_benchmark_customops.so'))
 
 
 # wrapper for the custom op (pytorch issue #13564)
@@ -136,5 +137,5 @@ class Pooler(nn.Module):
                 idx_in_level = torch.nonzero(levels == level).squeeze(1)
                 rois_per_level = rois[idx_in_level]
                 unmerged_results.append(pooler(per_level_feature, rois_per_level))
-                result = merge_levels(levels, unmerged_results)
+            result = merge_levels(levels, unmerged_results)
         return result
