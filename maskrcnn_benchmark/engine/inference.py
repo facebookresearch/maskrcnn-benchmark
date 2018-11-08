@@ -6,15 +6,17 @@ import time
 import os
 from collections import OrderedDict
 
+import numpy as np
+
+from ..config import cfg
 import torch
-
 from tqdm import tqdm
-
+from ..data.datasets.voc import VOC_BBOX_LABEL_NAMES
+from ..data.datasets.voc_eval import eval_detection_voc
 from ..structures.bounding_box import BoxList
 from ..utils.comm import is_main_process
 from ..utils.comm import scatter_gather
 from ..utils.comm import synchronize
-
 
 from maskrcnn_benchmark.modeling.roi_heads.mask_head.inference import Masker
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
@@ -123,7 +125,7 @@ def prepare_for_coco_segmentation(predictions, dataset):
 
 # inspired from Detectron
 def evaluate_box_proposals(
-    predictions, dataset, thresholds=None, area="all", limit=None
+        predictions, dataset, thresholds=None, area="all", limit=None
 ):
     """Evaluate detection proposal recall metrics. This function is a much
     faster alternative to the official COCO API recall evaluation code. However,
@@ -239,7 +241,7 @@ def evaluate_box_proposals(
 
 
 def evaluate_predictions_on_coco(
-    coco_gt, coco_results, json_result_file, iou_type="bbox"
+        coco_gt, coco_results, json_result_file, iou_type="bbox"
 ):
     import json
 
@@ -255,6 +257,42 @@ def evaluate_predictions_on_coco(
     coco_eval.accumulate()
     coco_eval.summarize()
     return coco_eval
+
+
+def evaluate_predictions_on_voc(predictions, dataset):
+    pred_bboxes_list, pred_labels_list, pred_scores_list = list(), list(), list()
+    gt_bboxes_list, gt_labels_list = list(), list()
+    for image_id, prediction in enumerate(predictions):
+        img_info = dataset.get_img_info(image_id)
+        original_id = dataset.id_to_img_map[image_id]
+        if len(prediction) == 0:
+            continue
+        image_width = img_info['width']
+        image_height = img_info["height"]
+        prediction = prediction.resize((image_width, image_height))
+        boxes = np.array(prediction.bbox.tolist())
+        scores = np.array(prediction.get_field("scores").tolist())
+        labels = np.array([dataset.contiguous_category_id_to_json_id[c] for c in prediction.get_field("labels").tolist()])
+        pred_bboxes_list.append(boxes)
+        pred_labels_list.append(labels)
+        pred_scores_list.append(scores)
+        ann = dataset.anns[original_id]
+        gt_boxes = np.array(ann['boxes'])
+        gt_labels = np.array(ann['labels'])
+        gt_bboxes_list.append(gt_boxes)
+        gt_labels_list.append(gt_labels)
+    result = eval_detection_voc(
+        pred_bboxes_list,
+        pred_labels_list,
+        pred_scores_list,
+        gt_bboxes_list,
+        gt_labels_list,
+        gt_difficults=None,
+        use_07_metric=True)
+    print('mAP: {:.4f}'.format(result['map']))
+    for i, ap in enumerate(result['ap']):
+        print('{:<16}: {:.4f}'.format(VOC_BBOX_LABEL_NAMES[i], ap))
+    return result
 
 
 def _accumulate_predictions_from_multiple_gpus(predictions_per_gpu):
@@ -356,7 +394,6 @@ def inference(
     expected_results_sigma_tol=4,
     output_folder=None,
 ):
-
     # convert to a torch.device for efficiency
     device = torch.device(device)
     num_devices = (
@@ -386,46 +423,54 @@ def inference(
     if output_folder:
         torch.save(predictions, os.path.join(output_folder, "predictions.pth"))
 
-    if box_only:
-        logger.info("Evaluating bbox proposals")
-        areas = {"all": "", "small": "s", "medium": "m", "large": "l"}
-        res = COCOResults("box_proposal")
-        for limit in [100, 1000]:
-            for area, suffix in areas.items():
-                stats = evaluate_box_proposals(
-                    predictions, dataset, area=area, limit=limit
-                )
-                key = "AR{}@{:d}".format(suffix, limit)
-                res.results["box_proposal"][key] = stats["ar"].item()
-        logger.info(res)
-        check_expected_results(res, expected_results, expected_results_sigma_tol)
-        if output_folder:
-            torch.save(res, os.path.join(output_folder, "box_proposals.pth"))
-        return
-    logger.info("Preparing results for COCO format")
-    coco_results = {}
-    if "bbox" in iou_types:
-        logger.info("Preparing bbox results")
-        coco_results["bbox"] = prepare_for_coco_detection(predictions, dataset)
-    if "segm" in iou_types:
-        logger.info("Preparing segm results")
-        coco_results["segm"] = prepare_for_coco_segmentation(predictions, dataset)
-
-    results = COCOResults(*iou_types)
-    logger.info("Evaluating predictions")
-    for iou_type in iou_types:
-        with tempfile.NamedTemporaryFile() as f:
-            file_path = f.name
+    def coco_eval():
+        if box_only:
+            logger.info("Evaluating bbox proposals")
+            areas = {"all": "", "small": "s", "medium": "m", "large": "l"}
+            res = COCOResults("box_proposal")
+            for limit in [100, 1000]:
+                for area, suffix in areas.items():
+                    stats = evaluate_box_proposals(
+                        predictions, dataset, area=area, limit=limit
+                    )
+                    key = "AR{}@{:d}".format(suffix, limit)
+                    res.results["box_proposal"][key] = stats["ar"].item()
+            logger.info(res)
+            check_expected_results(res, expected_results, expected_results_sigma_tol)
             if output_folder:
-                file_path = os.path.join(output_folder, iou_type + ".json")
-            res = evaluate_predictions_on_coco(
-                dataset.coco, coco_results[iou_type], file_path, iou_type
-            )
-            results.update(res)
-    logger.info(results)
-    check_expected_results(results, expected_results, expected_results_sigma_tol)
-    if output_folder:
-        torch.save(results, os.path.join(output_folder, "coco_results.pth"))
-        
-    return results, coco_results, predictions
+                torch.save(res, os.path.join(output_folder, "box_proposals.pth"))
+            return
+        logger.info("Preparing results for COCO format")
+        coco_results = {}
+        if "bbox" in iou_types:
+            logger.info("Preparing bbox results")
+            coco_results["bbox"] = prepare_for_coco_detection(predictions, dataset)
+        if "segm" in iou_types:
+            logger.info("Preparing segm results")
+            coco_results["segm"] = prepare_for_coco_segmentation(predictions, dataset)
 
+        results = COCOResults(*iou_types)
+        logger.info("Evaluating predictions")
+        for iou_type in iou_types:
+            with tempfile.NamedTemporaryFile() as f:
+                file_path = f.name
+                if output_folder:
+                    file_path = os.path.join(output_folder, iou_type + ".json")
+                res = evaluate_predictions_on_coco(
+                    dataset.coco, coco_results[iou_type], file_path, iou_type
+                )
+                results.update(res)
+        logger.info(results)
+        check_expected_results(results, expected_results, expected_results_sigma_tol)
+        if output_folder:
+            torch.save(results, os.path.join(output_folder, "coco_results.pth"))
+        return results, coco_results
+    if 'coco' in cfg.DATASETS.TEST[0]:
+        results, coco_results = coco_eval()
+    elif 'voc' in cfg.DATASETS.TEST[0]:
+        results = evaluate_predictions_on_voc(predictions, dataset)
+        coco_results = None
+    else:
+        raise NotImplementedError
+
+    return results, coco_results, predictions

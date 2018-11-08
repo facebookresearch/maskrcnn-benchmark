@@ -83,6 +83,8 @@ ln -s /path_to_coco_dataset/annotations datasets/coco/annotations
 ln -s /path_to_coco_dataset/train2014 datasets/coco/train2014
 ln -s /path_to_coco_dataset/test2014 datasets/coco/test2014
 ln -s /path_to_coco_dataset/val2014 datasets/coco/val2014
+# for pascal voc dataset:
+ln -s /path_to_VOCdevkit_dir datasets/voc
 ```
 
 You can also configure your own paths to the datasets.
