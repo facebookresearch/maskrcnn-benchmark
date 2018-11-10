@@ -43,8 +43,8 @@ class RetinaNetPostProcessor(torch.nn.Module):
             box_coder = BoxCoder(weights=(10., 10., 5., 5.))
         self.box_coder = box_coder
 
-
-    def forward_for_single_feature_map(self, anchors, box_cls, box_regression):
+    def forward_for_single_feature_map(
+            self, anchors, box_cls, box_regression, pre_nms_thresh=0.05):
         """
         Arguments:
             anchors: list[BoxList]
@@ -52,7 +52,7 @@ class RetinaNetPostProcessor(torch.nn.Module):
             box_regression: tensor of size N, A * 4, H, W
         """
         device = box_cls.device
-        N, _ , H, W = box_cls.shape
+        N, _, H, W = box_cls.shape
         A = int(box_regression.size(1) / 4)
         C = int(box_cls.size(1) / A)
 
@@ -68,8 +68,7 @@ class RetinaNetPostProcessor(torch.nn.Module):
         num_anchors = A * H * W
 
         results = [[] for _ in range(N)]
-        pre_nms_thresh = self.pre_nms_thresh
-        candidate_inds = box_cls > self.pre_nms_thresh
+        candidate_inds = box_cls > pre_nms_thresh
         if candidate_inds.sum().item() == 0:
             empty_boxlists = []
             for a in anchors:
@@ -133,8 +132,15 @@ class RetinaNetPostProcessor(torch.nn.Module):
         sampled_boxes = []
         num_levels = len(box_cls)
         anchors = list(zip(*anchors))
-        for a, o, b in zip(anchors, box_cls, box_regression):
-            sampled_boxes.append(self.forward_for_single_feature_map(a, o, b))
+        for l, (a, o, b) in enumerate(zip(anchors, box_cls, box_regression)):
+            sampled_boxes.append(
+                self.forward_for_single_feature_map(
+                    a,
+                    o,
+                    b,
+                    self.pre_nms_thresh if l < num_levels-1 else 0.0,
+                )
+            )
 
         boxlists = list(zip(*sampled_boxes))
         boxlists = [cat_boxlist(boxlist) for boxlist in boxlists]
