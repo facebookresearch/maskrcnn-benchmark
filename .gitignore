@@ -28,3 +28,6 @@ dist/
 # project dirs
 /datasets
 /models
+
+# log
+log.txt
