@@ -22,12 +22,10 @@ class DatasetCatalog(object):
             "coco/annotations/instances_valminusminival2014.json",
         ),
         "kitti_train": (
-            "kitti/train/images",
-            "kitti/train/labels",
+            "kitti/train", ""
         ),
         "kitti_val": (
-            "kitti/val/images",
-            "kitti/val/labels",
+            "kitti/val", ""
         ),
     }
 
@@ -52,6 +50,7 @@ class DatasetCatalog(object):
                 ann_file=os.path.join(data_dir, attrs[1]),
             )
             return dict(
+                factory="KittiDataset",
                 args=args,
             )
         raise RuntimeError("Dataset not available: {}".format(name))
