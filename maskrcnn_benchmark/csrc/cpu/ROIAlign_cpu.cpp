@@ -91,7 +91,7 @@ void pre_calc_for_bilinear_interpolate(
           T hy = 1. - ly, hx = 1. - lx;
           T w1 = hy * hx, w2 = hy * lx, w3 = ly * hx, w4 = ly * lx;
 
-          // save weights and indeces
+          // save weights and indices
           PreCalc<T> pc;
           pc.pos1 = y_low * width + x_low;
           pc.pos2 = y_low * width + x_high;
@@ -159,17 +159,17 @@ void ROIAlignForward_cpu_kernel(
     T bin_size_w = static_cast<T>(roi_width) / static_cast<T>(pooled_width);
 
     // We use roi_bin_grid to sample the grid and mimic integral
-    int roi_bin_grid_h = (sampling_ratio > 0)
-        ? sampling_ratio
-        : ceil(roi_height / pooled_height); // e.g., = 2
+    int roi_bin_grid_h =
+        (sampling_ratio > 0) ? sampling_ratio : ceil(roi_height / pooled_height);
+        // e.g. = 2
     int roi_bin_grid_w =
         (sampling_ratio > 0) ? sampling_ratio : ceil(roi_width / pooled_width);
 
     // We do average (integral) pooling inside a bin
     const T count = roi_bin_grid_h * roi_bin_grid_w; // e.g. = 4
 
-    // we want to precalculate indeces and weights shared by all chanels,
-    // this is the key point of optimiation
+    // we want to precalculate indices and weights shared by all channels,
+    // this is the key point of optimization
     std::vector<PreCalc<T>> pre_calc(
         roi_bin_grid_h * roi_bin_grid_w * pooled_width * pooled_height);
     pre_calc_for_bilinear_interpolate(
