@@ -3,6 +3,7 @@ import torch, os
 from torch.utils.data import Dataset
 from PIL import Image
 import torch.nn.functional as F
+from torchvision.transforms import ToTensor
 
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 
@@ -35,7 +36,7 @@ class KittiDataset(Dataset):
     def __init__(
         self, ann_file, root, remove_images_without_annotations, transforms=None
     ):
-        super(Dataset, self).__init__()
+        super(KittiDataset, self).__init__()
 
         # TODO: sort indices for reproducible results
 
@@ -44,13 +45,10 @@ class KittiDataset(Dataset):
         self.transforms = transforms
         self.image_dir = os.path.join(root, 'images')
         self.label_dir = os.path.join(root, 'labels')
-        image_ids = [d[:-4] for d in image_dir if d.endswith('.png')]
-        label_ids = [d[:-4] for d in image_dir if d.endswith('.txt')]
-        assert image_paths == label_ids
-        self.length = len(image_ids)
-        self.image_paths = [i + '.png' for i in image_ids]
-        self.label_paths = [i + '.txt' for i in label_ids]
-        
+        self.image_paths = [d for d in os.listdir(self.image_dir) if d.endswith('.png')]
+        self.label_paths = [d for d in os.listdir(self.label_dir) if d.endswith('.txt')]
+        assert len(self.image_paths) == len(self.label_paths)
+        self.length = len(self.image_paths)
         
     def __len__(self):
         return self.length;
@@ -59,16 +57,15 @@ class KittiDataset(Dataset):
     def __getitem__(self, idx):
         
         # load image
-        img = Image.open(self.image_paths[idx])
-        
+        img = ToTensor()(Image.open(os.path.join(self.image_dir, self.image_paths[idx])))
         # padding
         padBottom = KITTI_MAX_HEIGHT - img.size(1)
         padRight = KITTI_MAX_WIDTH - img.size(2)
         # (padLeft, padRight, padTop, padBottom)
-        img = F.pad(0, padRight, 0, padBottom)
+        img = F.pad(img, (0, padRight, 0, padBottom))
         
         # load annotations
-        with open(self.label_paths[idx]) as f:
+        with open(os.path.join(self.label_dir, self.label_paths[idx])) as f:
             labels = f.read().splitlines()
         
         boxes = []
@@ -83,14 +80,13 @@ class KittiDataset(Dataset):
                 boxes += [float(c) for c in attributes[4:8]]
         
         boxes = torch.as_tensor(boxes).reshape(-1, 4)
-        target = BoxList(boxes, img.size, mode="xyxy")
+        target = BoxList(boxes, (KITTI_MAX_WIDTH, KITTI_MAX_HEIGHT), mode="xyxy")
 
         classes = torch.tensor(classes)
         target.add_field("labels", classes)
 
         return img, target, idx
 
-    def get_img_info(self, index):
-        img_id = self.id_to_img_map[index]
-        img_data = self.coco.imgs[img_id]
-        return img_data
+    def get_img_info(self, idx):
+        img = Image.open(os.path.join(self.image_dir, self.image_paths[idx]))
+        return {'width': img.width, 'height': img.height}
