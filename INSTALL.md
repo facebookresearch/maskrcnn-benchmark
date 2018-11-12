@@ -56,7 +56,7 @@ python setup.py build develop
 # MACOSX_DEPLOYMENT_TARGET=10.9 CC=clang CXX=clang++ python setup.py build develop
 ```
 
-### Option 2: Docker Image (Requires CUDA)
+### Option 2: Docker Image (Requires CUDA, Linux only)
 
 Build image with defaults (`CUDA_VERSION=9.0`, `CUDNN_VERSION=7`):
 
