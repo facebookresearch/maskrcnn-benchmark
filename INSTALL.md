@@ -10,7 +10,7 @@
 - (optional) OpenCV for the webcam demo
 
 
-### Step-by-step installation
+### Option 1: Step-by-step installation
 
 ```bash
 # first, make sure that your conda is setup properly with the right environment
@@ -55,3 +55,13 @@ python setup.py build develop
 # or if you are on macOS
 # MACOSX_DEPLOYMENT_TARGET=10.9 CC=clang CXX=clang++ python setup.py build develop
 ```
+
+### Option 2: Docker Image (Requires CUDA, Linux Only)
+
+Build image with defaults (`CUDA_VERSION=9.0`, `CUDNN_VERSION=7`):
+
+    nvidia-docker build -t maskrcnn-benchmark docker/
+    
+Build image with other CUDA and CUDNN versions:
+
+    nvidia-docker build -t --build-arg CUDA_VERSION=9.2 --build-arg CUDNN_VERSION=7 maskrcnn-benchmark docker/ 
