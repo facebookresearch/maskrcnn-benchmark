@@ -72,9 +72,7 @@ class Mask(object):
     # torch.nn.functional.interpolate has a arg as dim, only tensor have dim, so turn array to tensor
     def resize(self, size, *args, **kwargs):
         width, height = size
-        scaled_mask = torch.squeeze(interpolate(torch.from_numpy(np.array(self.mask)[None, None, :, :]).float(),
-                                                (height, width),
-                                                mode='nearest'))
+        scaled_mask = interpolate(self.mask[None, None, :, :], (height, width), mode='nearest')[0, 0]
         return Mask(scaled_mask, size=size, mode=self.mode)
 
     def convert(self, mode):
