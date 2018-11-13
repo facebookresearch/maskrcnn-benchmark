@@ -19,6 +19,14 @@ from torch.utils.cpp_extension import CUDAExtension
 requirements = ["torch", "torchvision"]
 
 
+def mkdir(path):
+    try:
+        os.makedirs(path)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
+
+
 def get_extensions():
     this_dir = os.path.dirname(os.path.abspath(__file__))
     extensions_dir = os.path.join(this_dir, "maskrcnn_benchmark", "csrc")
@@ -65,7 +73,7 @@ class build_custom_ops(distutils.command.build.build):
     def run(self):
         build_dir = os.path.join('build', 'custom_ops')
         inst_dir = os.path.join(self.build_lib, 'maskrcnn_benchmark', 'lib')
-        os.makedirs(build_dir, exist_ok=True)
+        mkdir(build_dir)
         torch_path = os.path.dirname(torch.__file__)
         env = {'Torch_DIR': os.path.join(torch_path , 'share', 'cmake', 'Torch'),
                'Caffe2_DIR': os.path.join(torch_path , 'share', 'cmake', 'Caffe2')}
@@ -76,7 +84,7 @@ class build_custom_ops(distutils.command.build.build):
         if subprocess.call(['make'], cwd=build_dir) != 0:
             print("failed to build custom ops")
             sys.exit(1)
-        os.makedirs(inst_dir, exist_ok=True)
+        mkdir(inst_dir)
         ext = 'so'  # different for OS X and Windows
         shutil.copy(os.path.join(build_dir, 'libmaskrcnn_benchmark_customops.' + ext), inst_dir)
 
