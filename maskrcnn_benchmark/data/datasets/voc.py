@@ -1,4 +1,5 @@
 import os
+import time
 
 import torch
 import torch.utils.data as data
@@ -7,7 +8,8 @@ from lxml import etree
 
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 
-VOC_BBOX_LABEL_NAMES = ('aeroplane',
+VOC_BBOX_LABEL_NAMES = ('__background__ ',
+                        'aeroplane',
                         'bicycle',
                         'bird',
                         'boat',
@@ -30,22 +32,19 @@ VOC_BBOX_LABEL_NAMES = ('aeroplane',
 
 
 class PascalVOC(data.Dataset):
-    def __init__(self, data_dir, split, transforms=None):
+    def __init__(self, data_dir, split, name, transforms=None):
         self.data_dir = data_dir
         self.split = split
+        self.name = name
+
         self.anns_dir = os.path.join(data_dir, 'Annotations')
         self.imgs_dir = os.path.join(data_dir, 'JPEGImages')
-
         split_file = os.path.join(data_dir, 'ImageSets', 'Main', '%s.txt' % split)
+
+        print('loading %s annotations into memory...' % name)
+        tic = time.time()
         with open(split_file) as fid:
             self.ids = sorted([l.strip() for l in fid.readlines()])
-
-        self.json_category_id_to_contiguous_id = {
-            v: i + 1 for i, v in enumerate(range(20))
-        }
-        self.contiguous_category_id_to_json_id = {
-            v: k for k, v in self.json_category_id_to_contiguous_id.items()
-        }
         self.anns = {}
         for img_id in self.ids:
             with open(os.path.join(self.anns_dir, '%s.xml' % img_id)) as fid:
@@ -58,8 +57,9 @@ class PascalVOC(data.Dataset):
                            int(obj['bndbox']['xmax']),
                            int(obj['bndbox']['ymax'])] for obj in data['object'] if int(obj['difficult']) == 0],
                 'labels': [VOC_BBOX_LABEL_NAMES.index(obj['name']) for obj in data['object'] if int(obj['difficult']) == 0],
-                'size': data['size']
+                'info': data['size']
             }
+        print('Done (t={:0.2f}s)'.format(time.time() - tic))
 
         self.id_to_img_map = {k: v for k, v in enumerate(self.ids)}
         self.transforms = transforms
@@ -75,9 +75,8 @@ class PascalVOC(data.Dataset):
         labels = ann['labels']
 
         boxes = torch.as_tensor(boxes).reshape(-1, 4)  # guard against no boxes
-        target = BoxList(boxes, img.size, mode="xyxy").convert("xyxy")
-        classes = [self.json_category_id_to_contiguous_id[c] for c in labels]
-        classes = torch.tensor(classes)
+        target = BoxList(boxes, img.size, mode="xyxy")
+        classes = torch.tensor(labels)
         target.add_field("labels", classes)
 
         target = target.clip_to_image(remove_empty=True)
@@ -86,10 +85,14 @@ class PascalVOC(data.Dataset):
 
         return img, target, index
 
+    @staticmethod
+    def map_class_id_to_class_name(class_id):
+        return VOC_BBOX_LABEL_NAMES[class_id]
+
     def get_img_info(self, index):
         img_id = self.ids[index]
         ann = self.anns[img_id]
-        return ann['size']
+        return ann['info']
 
     def _recursive_parse_xml_to_dict(self, xml):
         """Recursively parses XML contents to python dict.
@@ -112,7 +115,3 @@ class PascalVOC(data.Dataset):
                     result[child.tag] = []
                 result[child.tag].append(child_result[child.tag])
         return {xml.tag: result}
-
-
-if __name__ == '__main__':
-    pass
