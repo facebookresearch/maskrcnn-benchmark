@@ -6,6 +6,8 @@ from torch.autograd.function import once_differentiable
 from torch.nn.modules.utils import _pair
 
 from maskrcnn_benchmark import _C
+# we need this for the custom ops to exist
+import maskrcnn_benchmark._custom_ops   # noqa: F401
 
 
 class _ROIAlign(Function):
@@ -54,23 +56,14 @@ class ROIAlign(nn.Module):
         self.spatial_scale = spatial_scale
         self.sampling_ratio = sampling_ratio
 
-        @torch.jit.script
-        def roi_align_fixed1(input, roi,
-                             spatial_scale: float=spatial_scale,
-                             output_size0: int=output_size[0],
-                             output_size1: int=output_size[1],
-                             sampling_ratio: int=sampling_ratio):
-            return torch.ops.maskrcnn_benchmark.roi_align_forward(
-                input, roi, spatial_scale, output_size0, output_size1, sampling_ratio)
-
-        @torch.jit.script
-        def roi_align_fixed(input, roi):
-            return roi_align_fixed1(input, roi)
-
-        self.roi_align_fixed = roi_align_fixed
-
     def forward(self, input, rois):
-        return self.roi_align_fixed(input, rois)
+        if torch._C._get_tracing_state():  # we cannot currently trace through the autograd function
+            return torch.ops.maskrcnn_benchmark.roi_align_forward(
+                input, rois, self.spatial_scale, self.output_size[0], self.output_size[1], self.sampling_ratio)
+
+        return roi_align(
+            input, rois, self.output_size, self.spatial_scale, self.sampling_ratio
+        )
 
     def __repr__(self):
         tmpstr = self.__class__.__name__ + "("
