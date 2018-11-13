@@ -68,7 +68,6 @@ class Mask(object):
         cropped_mask = self.mask[box[1]: box[3]+1, box[0]: box[2]+1]
         return Mask(cropped_mask, size=(w, h), mode=self.mode)
 
-    # torch.nn.functional.interpolate has a arg as dim, only tensor have dim, so turn array to tensor
     def resize(self, size, *args, **kwargs):
         width, height = size
         scaled_mask = interpolate(self.mask[None, None, :, :], (height, width), mode='nearest')[0, 0]
