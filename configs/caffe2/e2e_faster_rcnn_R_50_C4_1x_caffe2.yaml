@@ -3,3 +3,5 @@ MODEL:
   WEIGHT: "catalog://Caffe2Detectron/COCO/35857197/e2e_faster_rcnn_R-50-C4_1x"
 DATASETS:
   TEST: ("coco_2014_minival",)
+DATALOADER:
+  SIZE_DIVISIBILITY: 32

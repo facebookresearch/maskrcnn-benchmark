@@ -7,3 +7,5 @@ MODEL:
   MASK_ON: True
 DATASETS:
   TEST: ("coco_2014_minival",)
+DATALOADER:
+  SIZE_DIVISIBILITY: 32
