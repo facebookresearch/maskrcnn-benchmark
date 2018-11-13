@@ -64,8 +64,7 @@ class Mask(object):
 
     def crop(self, box):
         box = [int(b) for b in box]
-        TO_REMOVE = 1
-        w, h = box[2] - box[0] + TO_REMOVE, box[3] - box[1] + TO_REMOVE
+        w, h = box[2] - box[0], box[3] - box[1]
         cropped_mask = self.mask[box[1]: box[3]+1, box[0]: box[2]+1]
         return Mask(cropped_mask, size=(w, h), mode=self.mode)
 
@@ -134,8 +133,7 @@ class Polygons(object):
         return Polygons(flipped_polygons, size=self.size, mode=self.mode)
 
     def crop(self, box):
-        TO_REMOVE = 1
-        w, h = box[2] - box[0] + TO_REMOVE, box[3] - box[1] + TO_REMOVE
+        w, h = box[2] - box[0], box[3] - box[1]
 
         # TODO chck if necessary
         w = max(w, 1)
@@ -175,8 +173,7 @@ class Polygons(object):
             )
             rle = mask_utils.merge(rles)
             mask = mask_utils.decode(rle)
-            mask = np.sum(mask, axis=2)
-            mask = torch.from_numpy(np.array(mask > 0, dtype=np.float32))
+            mask = torch.from_numpy(mask)
             # TODO add squeeze?
             return mask
 
@@ -229,7 +226,7 @@ class SegmentationMask(object):
         return SegmentationMask(flipped, size=self.size, mode=self.mode)
 
     def crop(self, box):
-        w, h = box[2] - box[0] + 1, box[3] - box[1] + 1
+        w, h = box[2] - box[0], box[3] - box[1]
         cropped = []
         for mask in self.masks:
             cropped.append(mask.crop(box))
