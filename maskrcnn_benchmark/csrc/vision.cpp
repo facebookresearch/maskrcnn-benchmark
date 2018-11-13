@@ -1,4 +1,6 @@
 // Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+#include "torch/extension.h"
+
 #include "nms.h"
 #include "ROIAlign.h"
 #include "ROIPool.h"

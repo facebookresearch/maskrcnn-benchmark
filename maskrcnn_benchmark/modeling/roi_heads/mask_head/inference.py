@@ -6,9 +6,11 @@ from torch import nn
 
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 
+
 @torch.jit.script
 def arange_like(x):
     return torch.arange(x.size(0), device=x.device, dtype=torch.long)
+
 
 # TODO check if want to return a single BoxList or a composite
 # object
@@ -49,7 +51,7 @@ class MaskPostProcessor(nn.Module):
         if self.masker:
             mask_prob = self.masker(mask_prob, boxes)
 
-        if len(boxes) != 1: # we cannot have split in tracing...
+        if len(boxes) != 1:  # we cannot have split in tracing...
             boxes_per_image = [len(box) for box in boxes]
             mask_prob = mask_prob.split(boxes_per_image, dim=0)
         else:

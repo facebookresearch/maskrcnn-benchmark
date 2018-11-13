@@ -3,10 +3,15 @@
 
 import glob
 import os
+import sys
 
 import torch
 from setuptools import find_packages
 from setuptools import setup
+import distutils.command.build
+import subprocess
+import shutil
+
 from torch.utils.cpp_extension import CUDA_HOME
 from torch.utils.cpp_extension import CppExtension
 from torch.utils.cpp_extension import CUDAExtension
@@ -56,6 +61,32 @@ def get_extensions():
     return ext_modules
 
 
+class build_custom_ops(distutils.command.build.build):
+    def run(self):
+        build_dir = os.path.join('build', 'custom_ops')
+        inst_dir = os.path.join(self.build_lib, 'maskrcnn_benchmark', 'lib')
+        os.makedirs(build_dir, exist_ok=True)
+        torch_path = os.path.dirname(torch.__file__)
+        env = {'Torch_DIR': os.path.join(torch_path , 'share', 'cmake', 'Torch'),
+               'Caffe2_DIR': os.path.join(torch_path , 'share', 'cmake', 'Caffe2')}
+        os.environ.update(env)
+        if subprocess.call(['cmake', '../../maskrcnn_benchmark/csrc/custom_ops'], cwd=build_dir) != 0:
+            print("failed to build custom ops")
+            sys.exit(1)
+        if subprocess.call(['make'], cwd=build_dir) != 0:
+            print("failed to build custom ops")
+            sys.exit(1)
+        os.makedirs(inst_dir, exist_ok=True)
+        ext = 'so'  # different for OS X and Windows
+        shutil.copy(os.path.join(build_dir, 'libmaskrcnn_benchmark_customops.' + ext), inst_dir)
+
+
+class build(distutils.command.build.build):
+    sub_commands = distutils.command.build.build.sub_commands + [
+        ('build_custom_ops', lambda self: True),
+    ]
+
+
 setup(
     name="maskrcnn_benchmark",
     version="0.1",
@@ -65,5 +96,7 @@ setup(
     packages=find_packages(exclude=("configs", "tests",)),
     # install_requires=requirements,
     ext_modules=get_extensions(),
-    cmdclass={"build_ext": torch.utils.cpp_extension.BuildExtension},
+    cmdclass={"build_ext": torch.utils.cpp_extension.BuildExtension,
+              "build_custom_ops": build_custom_ops,
+              "build": build},
 )

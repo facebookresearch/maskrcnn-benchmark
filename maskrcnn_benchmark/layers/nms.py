@@ -2,9 +2,8 @@
 # from ._utils import _C
 import torch
 
-from maskrcnn_benchmark import _C
-
-torch.ops.load_library(_C.__file__)
+# we need this for the custom ops to exist
+import maskrcnn_benchmark._custom_ops   # noqa: F401
 
 if 0:  # the easy way
     nms = torch.ops.maskrcnn_benchmark.nms

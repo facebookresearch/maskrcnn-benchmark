@@ -38,7 +38,7 @@ class BoxList(object):
 
     # note: _get_tensors/_set_tensors only work if the keys don't change in between!
     def _get_tensors(self):
-        return (self.bbox,)+tuple(f for f in (self.get_field(field) for field in sorted(self.fields())) if isinstance(f, torch.Tensor))
+        return (self.bbox,) + tuple(f for f in (self.get_field(field) for field in sorted(self.fields())) if isinstance(f, torch.Tensor))
 
     def _set_tensors(self, ts):
         self.bbox = ts[0]
@@ -188,8 +188,7 @@ class BoxList(object):
         cropped_ymax = (ymax - box[1]).clamp(min=0, max=h)
 
         # TODO should I filter empty boxes here?
-        if False:
-            is_empty = (cropped_xmin == cropped_xmax) | (cropped_ymin == cropped_ymax)
+        # is_empty = (cropped_xmin == cropped_xmax) | (cropped_ymin == cropped_ymax)
 
         cropped_box = torch.cat(
             (cropped_xmin, cropped_ymin, cropped_xmax, cropped_ymax), dim=-1
@@ -228,7 +227,7 @@ class BoxList(object):
             self.bbox[:, 1].clamp(min=0, max=self.size[1] - TO_REMOVE),
             self.bbox[:, 2].clamp(min=0, max=self.size[0] - TO_REMOVE),
             self.bbox[:, 3].clamp(min=0, max=self.size[1] - TO_REMOVE),
-            ], dim=1)
+        ], dim=1)
         if remove_empty:
             box = self.bbox
             keep = (box[:, 3] > box[:, 1]) & (box[:, 2] > box[:, 0])

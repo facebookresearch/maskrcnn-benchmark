@@ -1,17 +1,16 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 from typing import List
-import os
 
 import torch
 import torch.jit
 from torch import nn
 
 from maskrcnn_benchmark.layers import ROIAlign
-import maskrcnn_benchmark._C  # we need this for the custom op to exist
+
+# we need this for the custom ops to exist
+import maskrcnn_benchmark._custom_ops   # noqa: F401
 
 from .utils import cat
-
-torch.ops.load_library(os.path.join(os.path.dirname(maskrcnn_benchmark._C.__file__), 'libmaskrcnn_benchmark_customops.so'))
 
 
 # wrapper for the custom op (pytorch issue #13564)
