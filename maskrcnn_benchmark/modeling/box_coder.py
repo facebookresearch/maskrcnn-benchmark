@@ -90,7 +90,7 @@ class BoxCoder(object):
 
         pred_boxes = view_as(torch.stack([pred_ctr_x - 0.5 * pred_w,
                                           pred_ctr_y - 0.5 * pred_h,
-            # x2/y2 (note: "- 1" is correct; don't be fooled by the asymmetry)
+                                          # x2/y2 (note: "- 1" is correct; don't be fooled by the asymmetry)
                                           pred_ctr_x + 0.5 * pred_w - 1,
                                           pred_ctr_y + 0.5 * pred_h - 1], 2), rel_codes)
 
