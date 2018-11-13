@@ -1,9 +1,4 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-import os
-import argparse
-from typing import List, Tuple
-import time
-
 import numpy
 from matplotlib import pyplot
 
@@ -13,7 +8,6 @@ from PIL import Image
 from maskrcnn_benchmark.config import cfg
 from predictor import COCODemo
 from maskrcnn_benchmark.structures.image_list import ImageList
-from maskrcnn_benchmark.structures.bounding_box import BoxList
 
 if __name__ == "__main__":
     # load config from file and command-line arguments
@@ -30,8 +24,9 @@ if __name__ == "__main__":
         min_image_size=480,
     )
 
+
 def single_image_to_top_predictions(image):
-    image = image.float()/255.0
+    image = image.float() / 255.0
     image = image.permute(2, 0, 1)
     # we are loading images with OpenCV, so we don't need to convert them
     # to BGR, they are already! So all we need to do is to normalize
@@ -56,14 +51,15 @@ def single_image_to_top_predictions(image):
               scores[keep])
     return result
 
+
 @torch.jit.script
 def my_paste_mask(mask, bbox, height: int, width: int, threshold: float=0.5, padding: int=1, contour: bool=True, rectangle: bool=False):
     padded_mask = torch.constant_pad_nd(mask, (padding, padding, padding, padding))
     scale = 1.0 + 2.0 * float(padding) / float(mask.size(-1))
     center_x = (bbox[2] + bbox[0]) * 0.5
     center_y = (bbox[3] + bbox[1]) * 0.5
-    w_2      = (bbox[2] - bbox[0]) * 0.5 * scale
-    h_2      = (bbox[3] - bbox[1]) * 0.5 * scale # should have two scales?
+    w_2 = (bbox[2] - bbox[0]) * 0.5 * scale
+    h_2 = (bbox[3] - bbox[1]) * 0.5 * scale  # should have two scales?
     bbox_scaled = torch.stack([center_x - w_2, center_y - h_2,
                                center_x + w_2, center_y + h_2], 0)
 
@@ -78,35 +74,36 @@ def my_paste_mask(mask, bbox, height: int, width: int, threshold: float=0.5, pad
     x = x0.clamp(min=0)
     y = y0.clamp(min=0)
     leftcrop = x - x0
-    topcrop  = y - y0
+    topcrop = y - y0
     w = torch.min(w - leftcrop, width - x)
     h = torch.min(h - topcrop, height - y)
 
     # mask = torch.zeros((height, width), dtype=torch.uint8)
     # mask[y:y + h, x:x + w] = (scaled_mask[topcrop:topcrop + h,  leftcrop:leftcrop + w] > threshold)
-    mask = torch.constant_pad_nd((scaled_mask[topcrop:topcrop + h,  leftcrop:leftcrop + w] > threshold),
+    mask = torch.constant_pad_nd((scaled_mask[topcrop:topcrop + h, leftcrop:leftcrop + w] > threshold),
                                  (int(x), int(width - x - w), int(y), int(height - y - h)))   # int for the script compiler
-    
+
     if contour:
         mask = mask.float()
         # poor person's contour finding by comparing to smoothed
         mask = (mask - torch.nn.functional.conv2d(mask.unsqueeze(0).unsqueeze(0),
-                                                  torch.full((1,1,3,3), 1.0/9.0), padding=1)[0, 0]).abs()>0.001
+                                                  torch.full((1, 1, 3, 3), 1.0 / 9.0), padding=1)[0, 0]).abs() > 0.001
     if rectangle:
         x = torch.arange(width, dtype=torch.long).unsqueeze(0)
         y = torch.arange(height, dtype=torch.long).unsqueeze(1)
         r = bbox.long()
         # work around script not liking bitwise ops
-        rectangle_mask = (  (((x==r[0]) + (x==r[2])) * (y>=r[1]) * (y<=r[3]))
-                          + (((y==r[1]) + (y==r[3])) * (x>=r[0]) * (x<=r[2])))
+        rectangle_mask = ((((x == r[0]) + (x == r[2])) * (y >= r[1]) * (y <= r[3]))
+                          + (((y == r[1]) + (y == r[3])) * (x >= r[0]) * (x <= r[2])))
         mask = (mask + rectangle_mask).clamp(max=1)
     return mask
 
+
 @torch.jit.script
 def add_annotations(image, labels, scores, bboxes, class_names: str=','.join(coco_demo.CATEGORIES), color=torch.tensor([255, 255, 255], dtype=torch.long)):
-  result_image = torch.ops.maskrcnn_benchmark.add_annotations(image, labels, scores, bboxes, class_names, color)
-  return result_image
-  
+    result_image = torch.ops.maskrcnn_benchmark.add_annotations(image, labels, scores, bboxes, class_names, color)
+    return result_image
+
 
 @torch.jit.script
 def combine_masks(image, labels, masks, scores, bboxes, threshold: float=0.5, padding: int=1, contour: bool=True, rectangle: bool=False, palette=torch.tensor([33554431, 32767, 2097151])):
@@ -120,6 +117,7 @@ def combine_masks(image, labels, masks, scores, bboxes, threshold: float=0.5, pa
     image_with_mask = add_annotations(image_with_mask, labels, scores, bboxes)
     return image_with_mask
 
+
 def process_image_with_traced_model(image):
     original_image = image
 
@@ -127,7 +125,7 @@ def process_image_with_traced_model(image):
         assert (image.size(0) % coco_demo.cfg.DATALOADER.SIZE_DIVISIBILITY == 0
                 and image.size(1) % coco_demo.cfg.DATALOADER.SIZE_DIVISIBILITY == 0)
 
-    boxes, labels, masks, scores  = traced_model(image)
+    boxes, labels, masks, scores = traced_model(image)
 
     # todo: make this in one large thing
     result_image = combine_masks(original_image, labels, masks, scores, boxes, 0.5, 1, rectangle=True)
@@ -138,7 +136,6 @@ def process_image_with_traced_model(image):
                                                              torch.tensor([255, 255, 255], dtype=torch.long), s)
 
     return result_image
-
 
 
 if __name__ == "__main__":
@@ -157,25 +154,23 @@ if __name__ == "__main__":
 
     @torch.jit.script
     def end_to_end_model(image):
-        boxes, labels, masks, scores  = traced_model(image)
+        boxes, labels, masks, scores = traced_model(image)
         result_image = combine_masks(image, labels, masks, scores, boxes, 0.5, 1, rectangle=True)
         return result_image
     end_to_end_model.save('end_to_end_model.pt')
-    
-    result_image = process_image_with_traced_model(original_image)
-    
-    # self.show_mask_heatmaps not done
-    pyplot.imshow(result_image[:, :, [2,1,0]])
-    pyplot.show()
-        
 
+    result_image = process_image_with_traced_model(original_image)
+
+    # self.show_mask_heatmaps not done
+    pyplot.imshow(result_image[:, :, [2, 1, 0]])
+    pyplot.show()
 
     # second image
     image2 = Image.open('17790319373_bd19b24cfc_k.jpg').convert("RGB")
     image2 = image2.resize((640, 480), Image.BILINEAR)
     image2 = torch.from_numpy(numpy.array(image2)[:, :, [2, 1, 0]])
     result_image2 = process_image_with_traced_model(image2)
-    
+
     # self.show_mask_heatmaps not done
-    pyplot.imshow(result_image2[:, :, [2,1,0]])
+    pyplot.imshow(result_image2[:, :, [2, 1, 0]])
     pyplot.show()
