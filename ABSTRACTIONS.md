@@ -16,7 +16,7 @@ We provide a convenience function `to_image_list` that accepts a few different
 input types, including a list of tensors, and returns an `ImageList` object.
 
 ```python
-from maskrnn_benchmark.structures.image_list import to_image_list
+from maskrcnn_benchmark.structures.image_list import to_image_list
 
 images = [torch.rand(3, 100, 200), torch.rand(3, 150, 170)]
 batched_images = to_image_list(images)
