@@ -27,12 +27,7 @@ def boxlist_nms(boxlist, nms_thresh, max_proposals=-1, score_field="score"):
     keep = _box_nms(boxes, score, nms_thresh)
     if max_proposals > 0:
         keep = keep[: max_proposals]
-    if 0:
-        boxlist = boxlist[keep]
-    else:
-        boxlist.bbox = boxlist.bbox[keep]
-        for f in boxlist.fields():
-            boxlist.add_field(f, boxlist.get_field(f)[keep])
+    boxlist = boxlist[keep]
     return boxlist.convert(mode)
 
 
@@ -50,12 +45,7 @@ def remove_small_boxes(boxlist, min_size):
     keep = (
         (ws >= min_size) & (hs >= min_size)
     ).nonzero().squeeze(1)
-    if 0:
-        boxlist = boxlist[keep]
-    else:
-        boxlist.bbox = boxlist.bbox[keep]
-        for f in boxlist.fields():
-            boxlist.add_field(f, boxlist.get_field(f)[keep])
+    boxlist = boxlist[keep]
     return boxlist
 
 
