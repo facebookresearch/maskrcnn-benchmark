@@ -2,10 +2,12 @@
 from torch import nn
 from torch.nn import functional as F
 
+from maskrcnn_benchmark.modeling import registry
 from maskrcnn_benchmark.modeling.backbone import resnet
 from maskrcnn_benchmark.modeling.poolers import Pooler
 
 
+@registry.ROI_BOX_FEATURE_EXTRACTORS.register("ResNet50Conv5ROIFeatureExtractor")
 class ResNet50Conv5ROIFeatureExtractor(nn.Module):
     def __init__(self, config):
         super(ResNet50Conv5ROIFeatureExtractor, self).__init__()
@@ -39,6 +41,7 @@ class ResNet50Conv5ROIFeatureExtractor(nn.Module):
         return x
 
 
+@registry.ROI_BOX_FEATURE_EXTRACTORS.register("FPN2MLPFeatureExtractor")
 class FPN2MLPFeatureExtractor(nn.Module):
     """
     Heads for FPN for classification
@@ -77,12 +80,8 @@ class FPN2MLPFeatureExtractor(nn.Module):
         return x
 
 
-_ROI_BOX_FEATURE_EXTRACTORS = {
-    "ResNet50Conv5ROIFeatureExtractor": ResNet50Conv5ROIFeatureExtractor,
-    "FPN2MLPFeatureExtractor": FPN2MLPFeatureExtractor,
-}
-
-
 def make_roi_box_feature_extractor(cfg):
-    func = _ROI_BOX_FEATURE_EXTRACTORS[cfg.MODEL.ROI_BOX_HEAD.FEATURE_EXTRACTOR]
+    func = registry.ROI_BOX_FEATURE_EXTRACTORS[
+        cfg.MODEL.ROI_BOX_HEAD.FEATURE_EXTRACTOR
+    ]
     return func(cfg)

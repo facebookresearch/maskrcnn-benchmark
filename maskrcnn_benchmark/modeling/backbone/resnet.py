@@ -18,6 +18,7 @@ from torch import nn
 
 from maskrcnn_benchmark.layers import FrozenBatchNorm2d
 from maskrcnn_benchmark.layers import Conv2d
+from maskrcnn_benchmark.utils.registry import Registry
 
 
 # ResNet stage specification
@@ -290,30 +291,15 @@ class StemWithFixedBatchNorm(nn.Module):
         return x
 
 
-_TRANSFORMATION_MODULES = {"BottleneckWithFixedBatchNorm": BottleneckWithFixedBatchNorm}
+_TRANSFORMATION_MODULES = Registry({
+    "BottleneckWithFixedBatchNorm": BottleneckWithFixedBatchNorm
+})
 
-_STEM_MODULES = {"StemWithFixedBatchNorm": StemWithFixedBatchNorm}
+_STEM_MODULES = Registry({"StemWithFixedBatchNorm": StemWithFixedBatchNorm})
 
-_STAGE_SPECS = {
+_STAGE_SPECS = Registry({
     "R-50-C4": ResNet50StagesTo4,
     "R-50-C5": ResNet50StagesTo5,
     "R-50-FPN": ResNet50FPNStagesTo5,
     "R-101-FPN": ResNet101FPNStagesTo5,
-}
-
-
-def register_transformation_module(module_name, module):
-    _register_generic(_TRANSFORMATION_MODULES, module_name, module)
-
-
-def register_stem_module(module_name, module):
-    _register_generic(_STEM_MODULES, module_name, module)
-
-
-def register_stage_spec(stage_spec_name, stage_spec):
-    _register_generic(_STAGE_SPECS, stage_spec_name, stage_spec)
-
-
-def _register_generic(module_dict, module_name, module):
-    assert module_name not in module_dict
-    module_dict[module_name] = module
+})
