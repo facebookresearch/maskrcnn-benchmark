@@ -9,13 +9,13 @@ from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 
 
-class PostProcessor(nn.Module):
+class PostProcessor(torch.jit.ScriptModule):
     """
     From a set of classification scores, box regression and proposals,
     computes the post-processed boxes, and applies NMS to obtain the
     final results
     """
-
+    __constants__ = ['detections_per_img']
     def __init__(
         self, score_thresh=0.05, nms=0.5, detections_per_img=100, box_coder=None
     ):
@@ -34,26 +34,20 @@ class PostProcessor(nn.Module):
             box_coder = BoxCoder(weights=(10., 10., 5., 5.))
         self.box_coder = box_coder
 
-        @torch.jit.script
-        def _detections_to_keep(scores, detections_per_img: int=self.detections_per_img):
-            number_of_detections = scores.size(0)
+    @torch.jit.script_method
+    def detections_to_keep(self, scores):
+        number_of_detections = scores.size(0)
 
-            # Limit to max_per_image detections **over all classes**
-            if number_of_detections > detections_per_img > 0:
-                image_thresh, _ = torch.kthvalue(
-                    scores, number_of_detections - detections_per_img + 1
-                )
-                keep = scores >= image_thresh  # remove for jit compat... .item()
-                keep = torch.nonzero(keep).squeeze(1)
-            else:
-                keep = torch.ones_like(scores, dtype=torch.uint8)
-            return keep
-
-        @torch.jit.script
-        def detections_to_keep(scores):
-            return _detections_to_keep(scores)
-
-        self.detections_to_keep = detections_to_keep
+        # Limit to max_per_image detections **over all classes**
+        if number_of_detections > self.detections_per_img > 0:
+            image_thresh, _ = torch.kthvalue(
+                scores, number_of_detections - self.detections_per_img + 1
+            )
+            keep = scores >= image_thresh  # remove for jit compat... .item()
+            keep = torch.nonzero(keep).squeeze(1)
+        else:
+            keep = torch.ones_like(scores, dtype=torch.uint8)
+        return keep
 
     def forward(self, x, boxes):
         """
@@ -144,24 +138,9 @@ class PostProcessor(nn.Module):
             result.append(boxlist_for_class)
 
         result = cat_boxlist(result)
-        if 0:  # jit tracing compatibility
-            number_of_detections = len(result)
-
-            # Limit to max_per_image detections **over all classes**
-            if number_of_detections > self.detections_per_img > 0:
-                cls_scores = result.get_field("scores")
-                image_thresh, _ = torch.kthvalue(
-                    cls_scores.cpu(), number_of_detections - self.detections_per_img + 1
-                )
-                keep = cls_scores >= image_thresh.item()
-                keep = torch.nonzero(keep).squeeze(1)
-                result = result[keep]
-        else:
-            scores = result.get_field("scores")
-            keep = self.detections_to_keep(scores)
-            result.bbox = result.bbox[keep]
-            for f in result.fields():
-                result.add_field(f, result.get_field(f)[keep])
+        scores = result.get_field("scores")
+        keep = self.detections_to_keep(scores)
+        result = result[keep]
         return result
 
 
