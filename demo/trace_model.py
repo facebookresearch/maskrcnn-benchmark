@@ -42,7 +42,7 @@ def single_image_to_top_predictions(image):
     image = image - torch.tensor(cfg.INPUT.PIXEL_MEAN)[:, None, None]
     # should also do variance...
     image_list = ImageList(image.unsqueeze(0), [(int(image.size(-2)), int(image.size(-1)))])
-    result, = coco_demo.model.forward(image_list)
+    result, = coco_demo.model(image_list)
     scores = result.get_field("scores")
     keep = (scores >= coco_demo.confidence_threshold)
     result = (result.bbox[keep],

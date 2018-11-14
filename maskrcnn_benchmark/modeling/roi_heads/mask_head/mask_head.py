@@ -65,13 +65,11 @@ class ROIMaskHead(torch.nn.Module):
             x = features
             x = x[torch.cat(positive_inds, dim=0)]
         else:
-            # evil trick around jit not liking boxlist
-            x = self.feature_extractor.forward(features, proposals)
+            x = self.feature_extractor(features, proposals)
         mask_logits = self.predictor(x)
 
         if not self.training:
-            # evil trick around jit not liking boxlist
-            result = self.post_processor.forward(mask_logits, proposals)
+            result = self.post_processor(mask_logits, proposals)
             return x, result, {}
 
         loss_mask = self.loss_evaluator(proposals, mask_logits, targets)

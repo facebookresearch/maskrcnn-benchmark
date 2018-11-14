@@ -45,8 +45,7 @@ def remove_small_boxes(boxlist, min_size):
     keep = (
         (ws >= min_size) & (hs >= min_size)
     ).nonzero().squeeze(1)
-    boxlist = boxlist[keep]
-    return boxlist
+    return boxlist[keep]
 
 
 # implementation from https://github.com/kuangliu/torchcv/blob/master/torchcv/utils/box.py

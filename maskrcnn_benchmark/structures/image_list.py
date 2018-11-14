@@ -25,12 +25,13 @@ class ImageList(object):
         cast_tensor = self.tensors.to(*args, **kwargs)
         return ImageList(cast_tensor, self.image_sizes)
 
-    # note: _get_tensors/_set_tensors only work if the keys don't change in between!
-    def _get_tensors(self):
+    # note: _jit_wrap/_jit_unwrap only work if the sizes don't change in between
+    def _jit_unwrap(self):
         return self.tensors
 
-    def _set_tensors(self, ts):
-        self.tensors = ts
+    def _jit_wrap(self, input_stream):
+        self.tensors = input_stream[0]
+        return self, input_stream[1:]
 
 
 def to_image_list(tensors, size_divisible=0):

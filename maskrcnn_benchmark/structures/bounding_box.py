@@ -38,15 +38,18 @@ class BoxList(object):
         self.mode = mode
         self.extra_fields = {}
 
-    # note: _get_tensors/_set_tensors only work if the keys don't change in between!
-    def _get_tensors(self):
+    # note: _jit_wrap/_jit_unwrap only work if the keys and the sizes don't change in between
+    def _jit_unwrap(self):
         return (self.bbox,) + tuple(f for f in (self.get_field(field) for field in sorted(self.fields())) if isinstance(f, torch.Tensor))
 
-    def _set_tensors(self, ts):
-        self.bbox = ts[0]
-        for i, f in enumerate(sorted(self.fields())):
+    def _jit_wrap(self, input_stream):
+        self.bbox = input_stream[0]
+        num_consumed = 1
+        for f in sorted(self.fields()):
             if isinstance(self.extra_fields[f], torch.Tensor):
-                self.extra_fields[f] = ts[1 + i]
+                self.extra_fields[f] = ts[num_consumed]
+                num_consumed += 1
+        return self, input_stream[num_consumed:]
 
     def add_field(self, field, field_data):
         self.extra_fields[field] = field_data
