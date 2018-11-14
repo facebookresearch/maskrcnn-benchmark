@@ -8,10 +8,9 @@ from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
 
 class COCODataset(torchvision.datasets.coco.CocoDetection):
     def __init__(
-        self, ann_file, root, name, remove_images_without_annotations, transforms=None
+        self, ann_file, root, remove_images_without_annotations, transforms=None
     ):
         super(COCODataset, self).__init__(root, ann_file)
-        self.name = name
         # sort indices for reproducible results
         self.ids = sorted(self.ids)
 
