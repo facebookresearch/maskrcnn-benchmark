@@ -36,7 +36,6 @@ class DatasetCatalog(object):
             args = dict(
                 root=os.path.join(data_dir, attrs[0]),
                 ann_file=os.path.join(data_dir, attrs[1]),
-                name=name,
             )
             return dict(
                 factory="COCODataset",
@@ -48,7 +47,7 @@ class DatasetCatalog(object):
             args = dict(
                 data_dir=os.path.join(data_dir, attrs[0]),
                 split=attrs[1],
-                name=name,
+                use_difficult=False,
             )
             return dict(
                 factory="PascalVOC",

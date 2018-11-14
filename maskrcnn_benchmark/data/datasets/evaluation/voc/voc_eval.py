@@ -3,10 +3,44 @@
 from __future__ import division
 
 import itertools
+import os
+import torch
 from collections import defaultdict
 import numpy as np
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
+
+
+def do_voc_evaluation(dataset, predictions, output_folder, logger):
+    pred_boxlists = []
+    gt_boxlists = []
+    for image_id, prediction in enumerate(predictions):
+        img_info = dataset.get_img_info(image_id)
+        original_id = dataset.id_to_img_map[image_id]
+        if len(prediction) == 0:
+            continue
+        image_width = img_info['width']
+        image_height = img_info["height"]
+        prediction = prediction.resize((image_width, image_height))
+        pred_boxlists.append(prediction)
+
+        ann = dataset.anns[original_id]
+        gt_boxes = ann['boxes']
+        gt_labels = ann['labels']
+        gt_boxlist = BoxList(gt_boxes, image_size=(image_width, image_height))
+        gt_boxlist.add_field('labels', torch.as_tensor(gt_labels))
+        gt_boxlists.append(gt_boxlist)
+    result = eval_detection_voc(pred_boxlists=pred_boxlists, gt_boxlists=gt_boxlists, use_07_metric=True)
+    result_str = 'mAP: {:.4f}\n'.format(result['map'])
+    for i, ap in enumerate(result['ap']):
+        if i == 0:  # skip background
+            continue
+        result_str += '{:<16}: {:.4f}\n'.format(dataset.map_class_id_to_class_name(i), ap)
+    logger.info(result_str)
+    if output_folder:
+        with open(os.path.join(output_folder, 'result.txt'), 'w') as fid:
+            fid.write(result_str)
+    return result
 
 
 def eval_detection_voc(pred_boxlists,

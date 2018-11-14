@@ -32,16 +32,16 @@ VOC_BBOX_LABEL_NAMES = ('__background__ ',
 
 
 class PascalVOC(data.Dataset):
-    def __init__(self, data_dir, split, name, transforms=None):
+    def __init__(self, data_dir, split, use_difficult=False, transforms=None):
         self.data_dir = data_dir
         self.split = split
-        self.name = name
+        self.use_difficult = use_difficult
 
         self.anns_dir = os.path.join(data_dir, 'Annotations')
         self.imgs_dir = os.path.join(data_dir, 'JPEGImages')
         split_file = os.path.join(data_dir, 'ImageSets', 'Main', '%s.txt' % split)
 
-        print('loading %s annotations into memory...' % name)
+        print('loading pascal voc %s annotations into memory...' % split)
         tic = time.time()
         with open(split_file) as fid:
             self.ids = sorted([l.strip() for l in fid.readlines()])
@@ -55,8 +55,12 @@ class PascalVOC(data.Dataset):
                 'boxes': [[int(obj['bndbox']['xmin']),
                            int(obj['bndbox']['ymin']),
                            int(obj['bndbox']['xmax']),
-                           int(obj['bndbox']['ymax'])] for obj in data['object'] if int(obj['difficult']) == 0],
-                'labels': [VOC_BBOX_LABEL_NAMES.index(obj['name']) for obj in data['object'] if int(obj['difficult']) == 0],
+                           int(obj['bndbox']['ymax'])]
+                          for obj in data['object']
+                          if self.use_difficult or int(obj['difficult']) == 0],
+                'labels': [VOC_BBOX_LABEL_NAMES.index(obj['name'])
+                           for obj in data['object']
+                           if self.use_difficult or int(obj['difficult']) == 0],
                 'info': data['size']
             }
         print('Done (t={:0.2f}s)'.format(time.time() - tic))
