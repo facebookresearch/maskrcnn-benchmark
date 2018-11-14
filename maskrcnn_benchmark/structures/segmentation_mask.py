@@ -21,10 +21,7 @@ class Mask(object):
         else:
             if type(segm) == list:
                 # polygons
-                rle = mask_utils.frPyObjects(segm, height, width)
-                mask = np.array(mask_utils.decode(rle), dtype=np.float32)
-                mask = np.sum(mask, axis=2)
-                mask = torch.from_numpy(np.array(mask > 0, dtype=np.float32))
+                mask = Polygons(segm, size, 'polygon').convert('mask').to(dtype=torch.float32)
             elif type(segm) == dict and 'counts' in segm:
                 if type(segm['counts']) == list:
                     # uncompressed RLE
@@ -41,7 +38,7 @@ class Mask(object):
                 if type(segm) == np.ndarray:
                     mask = torch.from_numpy(segm).to(dtype=torch.float32)
                 else: # torch.Tensor
-                    mask = segm
+                    mask = segm.to(dtype=torch.float32)
         self.mask = mask
         self.size = size
         self.mode = mode
@@ -65,7 +62,9 @@ class Mask(object):
     def crop(self, box):
         box = [int(b) for b in box]
         w, h = box[2] - box[0], box[3] - box[1]
-        cropped_mask = self.mask[box[1]: box[3]+1, box[0]: box[2]+1]
+        w = max(w, 1)
+        h = max(h, 1)
+        cropped_mask = self.mask[box[1]: box[3], box[0]: box[2]]
         return Mask(cropped_mask, size=(w, h), mode=self.mode)
 
     def resize(self, size, *args, **kwargs):
@@ -74,7 +73,7 @@ class Mask(object):
         return Mask(scaled_mask, size=size, mode=self.mode)
 
     def convert(self, mode):
-        mask = self.mask
+        mask = self.mask.to(dtype=torch.uint8)
         return mask
 
     def __iter__(self):
