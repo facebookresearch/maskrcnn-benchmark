@@ -27,33 +27,38 @@ class DatasetCatalog(object):
         "kitti_val": (
             "kitti/val", ""
         ),
+        "bdd100k_train": (
+            "bdd100k/images/100k/train", "bdd100k/labels/bdd100k_labels_images_train.json"
+        ),
+        "bdd100k_val": (
+            "bdd100k/images/100k/val", "bdd100k/labels/bdd100k_labels_images_val.json"
+        ),
     }
 
     @staticmethod
     def get(name):
-        if "coco" in name:
-            data_dir = DatasetCatalog.DATA_DIR
-            attrs = DatasetCatalog.DATASETS[name]
-            args = dict(
-                root=os.path.join(data_dir, attrs[0]),
-                ann_file=os.path.join(data_dir, attrs[1]),
-            )
-            return dict(
-                factory="COCODataset",
-                args=args,
-            )
-        if "kitti" in name:
-            data_dir = DatasetCatalog.DATA_DIR
-            attrs = DatasetCatalog.DATASETS[name]
-            args = dict(
-                root=os.path.join(data_dir, attrs[0]),
-                ann_file=os.path.join(data_dir, attrs[1]),
-            )
-            return dict(
-                factory="KittiDataset",
-                args=args,
-            )
-        raise RuntimeError("Dataset not available: {}".format(name))
+        factory_names = {
+            "coco": "COCODataset",
+            "kitti": "KittiDataset",
+            "bdd100k": "Bdd100kDataset"
+        }
+        for k in factory_names.keys():
+            if (k in name):
+                key = k
+        if not key:
+            raise RuntimeError("Dataset not available: {}".format(name))
+           
+        data_dir = DatasetCatalog.DATA_DIR
+        attrs = DatasetCatalog.DATASETS[name]
+        args = dict(
+            root=os.path.join(data_dir, attrs[0]),
+            ann_file=os.path.join(data_dir, attrs[1]),
+        )
+        return dict(
+            factory=factory_names[key],
+            args=args,
+        )
+        
 
 
 class ModelCatalog(object):
