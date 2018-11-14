@@ -7,16 +7,22 @@ from torch import nn
 
 from maskrcnn_benchmark.layers import ROIAlign
 
-# we need this for the custom ops to exist
-import maskrcnn_benchmark._custom_ops   # noqa: F401
-
 from .utils import cat
 
 
-# wrapper for the custom op (pytorch issue #13564)
+# when JIT supports indexing of a module list in script_methods,
+# this could be merged with the for loop at the end of Pooler.forward
+# into a single script_method
 @torch.jit.script
 def merge_levels(levels, unmerged_results: List[torch.Tensor]):
-    return torch.ops.maskrcnn_benchmark.merge_levels(levels, unmerged_results)
+    first_result = unmerged_results[0]
+    dtype, device = first_result.dtype, first_result.device
+    res = torch.zeros((levels.size(0), first_result.size(1),
+                       first_result.size(2), first_result.size(3)),
+                      dtype=dtype, device=device)
+    for l in range(len(unmerged_results)):
+        res.masked_scatter_((levels == l).view(-1, 1, 1, 1), unmerged_results[l])
+    return res
 
 
 class LevelMapper(object):
@@ -62,7 +68,6 @@ class Pooler(nn.Module):
     can be inferred from the size of the feature map / size of original image,
     which is available thanks to the BoxList.
     """
-
     def __init__(self, output_size, scales, sampling_ratio):
         """
         Arguments:
@@ -88,11 +93,10 @@ class Pooler(nn.Module):
 
     def convert_to_roi_format(self, boxes):
         concat_boxes = cat([b.bbox for b in boxes], dim=0)
-        # device, dtype = concat_boxes.device, concat_boxes.dtype
         ids = cat(
             [
+                # we use full_like to allow tracing with flexible shape
                 torch.full_like(b.bbox[:, :1], i)
-                # torch.full((len(b), 1), i, dtype=dtype, device=device)
                 for i, b in enumerate(boxes)
             ],
             dim=0,
@@ -115,26 +119,15 @@ class Pooler(nn.Module):
 
         levels = self.map_levels(boxes)
 
-        num_rois = len(rois)
-        num_channels = x[0].shape[1]
-        output_size = self.output_size[0]
+        # num_rois = len(rois)
+        # num_channels = x[0].shape[1]
+        # output_size = self.output_size[0]
 
-        dtype, device = x[0].dtype, x[0].device
-        if 0:  # facilitate scripting
-            result = torch.zeros(
-                (num_rois, num_channels, output_size, output_size),
-                dtype=dtype,
-                device=device,
-            )
-            for level, (per_level_feature, pooler) in enumerate(zip(x, self.poolers)):
-                idx_in_level = torch.nonzero(levels == level).squeeze(1)
-                rois_per_level = rois[idx_in_level]
-                result[idx_in_level] = pooler(per_level_feature, rois_per_level)
-        else:
-            unmerged_results = []
-            for level, (per_level_feature, pooler) in enumerate(zip(x, self.poolers)):
-                idx_in_level = torch.nonzero(levels == level).squeeze(1)
-                rois_per_level = rois[idx_in_level]
-                unmerged_results.append(pooler(per_level_feature, rois_per_level))
-            result = merge_levels(levels, unmerged_results)
+        unmerged_results = []
+        for level, (per_level_feature, pooler) in enumerate(zip(x, self.poolers)):
+            idx_in_level = torch.nonzero(levels == level).squeeze(1)
+            rois_per_level = rois[idx_in_level]
+            unmerged_results.append(pooler(per_level_feature, rois_per_level))
+
+        result = merge_levels(levels, unmerged_results)
         return result

@@ -1,7 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
 import torch.nn.functional as F
-from torch import nn
 
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_nms
@@ -16,6 +15,7 @@ class PostProcessor(torch.jit.ScriptModule):
     final results
     """
     __constants__ = ['detections_per_img']
+
     def __init__(
         self, score_thresh=0.05, nms=0.5, detections_per_img=100, box_coder=None
     ):
@@ -130,10 +130,9 @@ class PostProcessor(torch.jit.ScriptModule):
             boxlist_for_class = boxlist_nms(
                 boxlist_for_class, self.nms, score_field="scores"
             )
-            # num_labels = len(boxlist_for_class)
             boxlist_for_class.add_field(
+                # we use full_like to allow tracing with flexible shape
                 "labels", torch.full_like(boxlist_for_class.bbox[:, 0], j, dtype=torch.int64)
-                # "labels", torch.full((num_labels,), j, dtype=torch.int64, device=device)
             )
             result.append(boxlist_for_class)
 
