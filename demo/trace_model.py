@@ -129,12 +129,6 @@ def process_image_with_traced_model(image):
 
     # todo: make this in one large thing
     result_image = combine_masks(original_image, labels, masks, scores, boxes, 0.5, 1, rectangle=True)
-    template = "{}: {:.2f}"
-    for i in range(len(boxes)):
-        s = template.format(coco_demo.CATEGORIES[labels[i].item()], scores[i].item())
-        result_image = torch.ops.maskrcnn_benchmark.put_text(result_image, int(boxes[i, 0]), int(boxes[i, 1]),
-                                                             torch.tensor([255, 255, 255], dtype=torch.long), s)
-
     return result_image
 
 
