@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
 
   void* custom_op_lib = dlopen(argv[3], RTLD_NOW | RTLD_GLOBAL);
   if (custom_op_lib == NULL) {
-     std::cerr << "could not open custom op library" << std::endl;
+    std::cerr << "could not open custom op library: " << dlerror() << std::endl;
      return 1;
   }
 

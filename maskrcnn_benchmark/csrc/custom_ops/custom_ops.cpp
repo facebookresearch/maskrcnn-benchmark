@@ -6,7 +6,6 @@
 
 #include "nms.h"
 #include "ROIAlign.h"
-#include "ROIPool.h"
 
 using namespace at;
 

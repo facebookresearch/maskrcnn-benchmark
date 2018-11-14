@@ -1,4 +1,10 @@
+## IMPORTANT:
+## This file is only of use when you want to build the custom ops and don't have
+## python during the build.
+## setup.py will build the custom ops all on its own without using this file
+
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+
 project(maskrcnn_benchmark_customops)
 
 

@@ -144,7 +144,6 @@ if __name__ == "__main__":
 
     with torch.no_grad():
         traced_model = torch.jit.trace(single_image_to_top_predictions, (image,))
-        traced_model.save('model_single_image_to_top_predictions.pt')
 
     @torch.jit.script
     def end_to_end_model(image):
