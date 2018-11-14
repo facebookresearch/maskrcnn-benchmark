@@ -88,5 +88,4 @@ class KittiDataset(Dataset):
         return img, target, idx
 
     def get_img_info(self, idx):
-        img = Image.open(os.path.join(self.image_dir, self.image_paths[idx]))
-        return {'width': img.width, 'height': img.height}
+        return {'width': KITTI_MAX_WIDTH, 'height': KITTI_MAX_HEIGHT}
