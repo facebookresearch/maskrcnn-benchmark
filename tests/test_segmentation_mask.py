@@ -1,11 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 import torch
 import numpy as np
-from common_utils import TestCase, run_tests
+import unittest
 from maskrcnn_benchmark.structures.segmentation_mask import Mask, Polygons, SegmentationMask
 
 
-class TestSegmentationMask(TestCase):
+class TestSegmentationMask(unittest.TestCase):
     def __init__(self, method_name='runTest'):
         super(TestSegmentationMask, self).__init__(method_name)
         self.poly = [[423.0, 306.5, 406.5, 277.0, 400.0, 271.5, 389.5, 277.0, 387.5, 292.0,
@@ -24,14 +24,14 @@ class TestSegmentationMask(TestCase):
     def test_crop(self):
         poly_crop = self.polygon.crop(self.box)
         mask_from_poly_crop = poly_crop.convert('mask')
-        mask_crop = self.mask.crop(self.box).mask
+        mask_crop = self.mask.crop(self.box).convert('mask')
 
-        self.assertEqual(mask_from_poly_crop, mask_crop)
+        self.assertTrue(torch.equal(mask_from_poly_crop, mask_crop))
     
     def test_convert(self):
         mask_from_poly_convert = self.polygon.convert('mask')
         mask = self.mask.convert('mask')
-        self.assertEqual(mask_from_poly_convert, mask)
+        self.assertTrue(torch.equal(mask_from_poly_convert, mask))
 
     def test_transpose(self):
         FLIP_LEFT_RIGHT = 0
@@ -41,14 +41,14 @@ class TestSegmentationMask(TestCase):
             mask_from_poly_flip = self.polygon.transpose(method).convert('mask')
             mask_flip = self.mask.transpose(method).convert('mask')
             print(method, torch.abs(mask_flip.float() - mask_from_poly_flip.float()).sum())
-            self.assertEqual(mask_flip, mask_from_poly_flip)
+            self.assertTrue(torch.equal(mask_flip, mask_from_poly_flip))
     
     def test_resize(self):
         new_size = (600, 500)
         mask_from_poly_resize = self.polygon.resize(new_size).convert('mask')
         mask_resize = self.mask.resize(new_size).convert('mask')
         print('diff resize: ', torch.abs(mask_from_poly_resize.float() - mask_resize.float()).sum())
-        self.assertEqual(mask_from_poly_resize, mask_resize)
+        self.assertTrue(torch.equal(mask_from_poly_resize, mask_resize))
 
 if __name__ == "__main__":
-    run_tests()
+    unittest.main()
