@@ -3,6 +3,7 @@
 
 import glob
 import os
+import copy
 
 import torch
 from setuptools import find_packages
@@ -32,7 +33,7 @@ def get_extensions():
                           os.path.join(extensions_dir, "cpu", "ROIAlign_cpu.cpp")]
     custom_ops_sources_cuda = [os.path.join(extensions_dir, "cuda", "nms.cu"),
                                os.path.join(extensions_dir, "cuda", "ROIAlign_cuda.cu")]
-
+    custom_ops_libraries = ["opencv_core", "opencv_imgproc", "opencv_imgcodecs"]
     extra_compile_args = {"cxx": []}
     define_macros = []
 
@@ -63,9 +64,10 @@ def get_extensions():
         extension(
             "maskrcnn_benchmark.lib.custom_ops",
             sources=custom_ops_sources,
-            include_dirs=include_dirs,
-            define_macros=define_macros,
-            extra_compile_args=extra_compile_args,
+            include_dirs=copy.deepcopy(include_dirs),
+            define_macros=copy.deepcopy(define_macros),
+            extra_compile_args=copy.deepcopy(extra_compile_args),
+            libraries=custom_ops_libraries
         ),
     ]
 
@@ -85,7 +87,6 @@ class build(distutils.command.build.build):
     sub_commands = distutils.command.build.build.sub_commands + [
         ('rename_custom_ops_lib', lambda self: True),
     ]
-
 
 setup(
     name="maskrcnn_benchmark",
