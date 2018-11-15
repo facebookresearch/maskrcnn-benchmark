@@ -2,9 +2,7 @@
 # (See https://github.com/chainer/chainercv/blob/master/chainercv/evaluations/eval_detection_voc.py)
 from __future__ import division
 
-import itertools
 import os
-import torch
 from collections import defaultdict
 import numpy as np
 from maskrcnn_benchmark.structures.bounding_box import BoxList
@@ -24,13 +22,15 @@ def do_voc_evaluation(dataset, predictions, output_folder, logger):
         prediction = prediction.resize((image_width, image_height))
         pred_boxlists.append(prediction)
 
-        ann = dataset.anns[original_id]
-        gt_boxes = ann['boxes']
-        gt_labels = ann['labels']
+        gt_boxes, gt_labels, gt_difficulties = dataset.get_filtered_targets(original_id)
         gt_boxlist = BoxList(gt_boxes, image_size=(image_width, image_height))
-        gt_boxlist.add_field('labels', torch.as_tensor(gt_labels))
+        gt_boxlist.add_field('labels', gt_labels)
+        gt_boxlist.add_field('difficulties', gt_difficulties)
         gt_boxlists.append(gt_boxlist)
-    result = eval_detection_voc(pred_boxlists=pred_boxlists, gt_boxlists=gt_boxlists, use_07_metric=True)
+    result = eval_detection_voc(pred_boxlists=pred_boxlists,
+                                gt_boxlists=gt_boxlists,
+                                iou_thresh=0.5,
+                                use_07_metric=True)
     result_str = 'mAP: {:.4f}\n'.format(result['map'])
     for i, ap in enumerate(result['ap']):
         if i == 0:  # skip background
@@ -64,31 +64,23 @@ def eval_detection_voc(pred_boxlists,
     return {'ap': ap, 'map': np.nanmean(ap)}
 
 
-def calc_detection_voc_prec_rec(gt_boxlists, pred_boxlists, gt_difficults=None, iou_thresh=0.5):
+def calc_detection_voc_prec_rec(gt_boxlists, pred_boxlists, iou_thresh=0.5):
     """Calculate precision and recall based on evaluation code of PASCAL VOC.
     This function calculates precision and recall of
     predicted bounding boxes obtained from a dataset which has :math:`N`
     images.
     The code is based on the evaluation code used in PASCAL VOC Challenge.
    """
-
-    if gt_difficults is None:
-        gt_difficults = itertools.repeat(None)
-    else:
-        gt_difficults = iter(gt_difficults)
-
     n_pos = defaultdict(int)
     score = defaultdict(list)
     match = defaultdict(list)
-    for gt_boxlist, pred_boxlist, gt_difficult in zip(gt_boxlists, pred_boxlists, gt_difficults):
+    for gt_boxlist, pred_boxlist in zip(gt_boxlists, pred_boxlists):
         pred_bbox = pred_boxlist.bbox.numpy()
         pred_label = pred_boxlist.get_field('labels').numpy()
         pred_score = pred_boxlist.get_field('scores').numpy()
         gt_bbox = gt_boxlist.bbox.numpy()
-        gt_label = gt_boxlist.get_field('labels').numpy()
-
-        if gt_difficult is None:
-            gt_difficult = np.zeros(gt_bbox.shape[0], dtype=bool)
+        gt_label = gt_boxlist.get_field('labels')
+        gt_difficult = gt_boxlist.get_field('difficulties')
 
         for l in np.unique(np.concatenate((pred_label, gt_label)).astype(int)):
             pred_mask_l = pred_label == l

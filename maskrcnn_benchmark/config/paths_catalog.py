@@ -47,7 +47,10 @@ class DatasetCatalog(object):
             args = dict(
                 data_dir=os.path.join(data_dir, attrs[0]),
                 split=attrs[1],
-                use_difficult=False,
+                # Default behavior here is when evaluating (using test split),
+                # consider difficult objects as TP. But when training, just remove the
+                # difficult objects. You can change this flag as your need.
+                use_difficult='test' in name,
             )
             return dict(
                 factory="PascalVOC",
