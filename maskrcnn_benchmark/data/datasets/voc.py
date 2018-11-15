@@ -1,6 +1,7 @@
 import os
 import time
 
+import numpy as np
 import torch
 import torch.utils.data as data
 from PIL import Image
@@ -52,15 +53,12 @@ class PascalVOC(data.Dataset):
             xml = etree.fromstring(xml_str)
             data = self._recursive_parse_xml_to_dict(xml)['annotation']
             self.anns[img_id] = {
-                'boxes': [[int(obj['bndbox']['xmin']),
-                           int(obj['bndbox']['ymin']),
-                           int(obj['bndbox']['xmax']),
-                           int(obj['bndbox']['ymax'])]
-                          for obj in data['object']
-                          if self.use_difficult or int(obj['difficult']) == 0],
-                'labels': [VOC_BBOX_LABEL_NAMES.index(obj['name'])
-                           for obj in data['object']
-                           if self.use_difficult or int(obj['difficult']) == 0],
+                'boxes': np.array([[int(obj['bndbox']['xmin']),
+                                    int(obj['bndbox']['ymin']),
+                                    int(obj['bndbox']['xmax']),
+                                    int(obj['bndbox']['ymax'])] for obj in data['object']]),
+                'labels': np.array([VOC_BBOX_LABEL_NAMES.index(obj['name']) for obj in data['object']]),
+                'difficulties': np.array([bool(int(obj['difficult'])) for obj in data['object']]),
                 'info': data['size']
             }
         print('Done (t={:0.2f}s)'.format(time.time() - tic))
@@ -74,20 +72,33 @@ class PascalVOC(data.Dataset):
     def __getitem__(self, index):
         img_id = self.ids[index]
         img = Image.open(os.path.join(self.imgs_dir, '%s.jpg' % img_id)).convert('RGB')
-        ann = self.anns[img_id]
-        boxes = ann['boxes']
-        labels = ann['labels']
 
-        boxes = torch.as_tensor(boxes).reshape(-1, 4)  # guard against no boxes
+        boxes, labels, _ = self.get_filtered_targets(img_id)
         target = BoxList(boxes, img.size, mode="xyxy")
-        classes = torch.tensor(labels)
-        target.add_field("labels", classes)
+        target.add_field("labels", torch.tensor(labels))
 
         target = target.clip_to_image(remove_empty=True)
         if self.transforms is not None:
             img, target = self.transforms(img, target)
 
         return img, target, index
+
+    def get_filtered_targets(self, img_id):
+        ann = self.anns[img_id]
+        boxes = ann['boxes']
+        labels = ann['labels']
+        difficulties = ann['difficulties']
+        if not self.use_difficult:  # filter difficult objects
+            mask = np.logical_not(difficulties)
+            boxes = boxes[mask]
+            labels = labels[mask]
+            difficulties = difficulties[mask]
+
+        # guard against zero object
+        boxes = boxes.reshape((-1, 4))
+        labels = labels.reshape((-1,))
+        difficulties = difficulties.reshape((-1,))
+        return boxes, labels, difficulties
 
     @staticmethod
     def map_class_id_to_class_name(class_id):
