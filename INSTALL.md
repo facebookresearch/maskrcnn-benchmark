@@ -56,12 +56,12 @@ python setup.py build develop
 # MACOSX_DEPLOYMENT_TARGET=10.9 CC=clang CXX=clang++ python setup.py build develop
 ```
 
-### Option 2: Docker Image (Requires CUDA, Linux Only)
+### Option 2: Docker Image (Requires CUDA, Linux only)
 
-Build image with defaults (`CUDA_VERSION=9.0`, `CUDNN_VERSION=7`):
+Build image with defaults (`CUDA=9.0`, `CUDNN=7`):
 
     nvidia-docker build -t maskrcnn-benchmark docker/
     
 Build image with other CUDA and CUDNN versions:
 
-    nvidia-docker build -t --build-arg CUDA_VERSION=9.2 --build-arg CUDNN_VERSION=7 maskrcnn-benchmark docker/ 
+    nvidia-docker build -t --build-arg CUDA=9.2 --build-arg CUDNN=7 maskrcnn-benchmark docker/ 
