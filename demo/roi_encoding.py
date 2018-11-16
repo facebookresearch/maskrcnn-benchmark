@@ -60,7 +60,7 @@ class ImageLoader(object):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base_path", "--base_path", help="Base path for images", required=True)
+    parser.add_argument("--base_path", "--base_path", help="Base path for images", default="/home/esoroush/tmp/imgs")#, required=True)
     parser.add_argument("--extension", help="Extensions of images", default="jpg")
     parser.add_argument("--batch_size", help="Batch size", default=5, type=int)
     parser.add_argument("--max_num_bbox", help="Maximum number of object bounding boxes for each image", default=36, type=int)

@@ -8,6 +8,8 @@ from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
 from maskrcnn_benchmark.structures.image_list import to_image_list
 from maskrcnn_benchmark.modeling.roi_heads.mask_head.inference import Masker
 
+def hook(module, input, output):
+            setattr(module, "_value_hook", output)
 
 class COCODemo(object):
     # COCO categories for pretty print
@@ -108,6 +110,13 @@ class COCODemo(object):
         self.model.eval()
         self.device = torch.device(cfg.MODEL.DEVICE)
         self.model.to(self.device)
+        
+
+        for n, m in self.model.named_modules():
+            if n == "roi_heads":
+                m.register_forward_hook(hook)
+
+        
         self.min_image_size = min_image_size
 
         checkpointer = DetectronCheckpointer(cfg, self.model)
@@ -370,7 +379,10 @@ class COCODemo(object):
         image_list = image_list.to(self.device)
         # compute predictions
         with torch.no_grad():
-            predictions, features = self.model(image_list, return_features=True)
+            predictions = self.model(image_list)
+            for n, m in self.model.named_modules():
+                if n == "roi_heads":
+                    features = m._value_hook[0]
         predictions = [o.to(self.cpu_device) for o in predictions]
         features = [o.to(self.cpu_device).unsqueeze(0) for o in features]
         detection_bboxes=[]
@@ -379,12 +391,12 @@ class COCODemo(object):
             # reshape prediction (a BoxList) into the original image size
             prediction = prediction.resize((width, height))
             detection_bbox = self.select_top_predictions(prediction)
-
+            max_proposals=self.cfg.MODEL.RPN.FPN_POST_NMS_TOP_N_TEST
             if len(detection_bbox.extra_fields['orig_inds'])>0:
-                encoding_features = torch.cat([features[1000*ind+i] for i in detection_bbox.extra_fields['orig_inds']], dim=0)
-                encoding_features = torch.cat([torch.mean(torch.cat(features[1000*ind:1000*ind+1000]), dim=0, keepdim=True), encoding_features])
+                encoding_features = torch.cat([features[max_proposals*ind+i] for i in detection_bbox.extra_fields['orig_inds']], dim=0)
+                encoding_features = torch.cat([torch.mean(torch.cat(features[max_proposals*ind:max_proposals*ind+max_proposals]), dim=0, keepdim=True), encoding_features])
             else:
-                encoding_features = torch.mean(torch.cat(features[1000*ind:1000*ind+1000]), dim=0, keepdim=True)
+                encoding_features = torch.mean(torch.cat(features[max_proposals*ind:max_proposals*ind+max_proposals]), dim=0, keepdim=True)
             detection_bbox.add_field("encoding_features", encoding_features)
             detection_bboxes.append(detection_bbox)
         return detection_bboxes

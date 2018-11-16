@@ -30,20 +30,18 @@ class GeneralizedRCNN(nn.Module):
         self.rpn = build_rpn(cfg)
         self.roi_heads = build_roi_heads(cfg)
 
-    def forward(self, images, targets=None, return_features=False):
+    def forward(self, images, targets=None):
         """
         Arguments:
             images (list[Tensor] or ImageList): images to be processed
             targets (list[BoxList]): ground-truth boxes present in the image (optional)
-            return_features (Bool): Determines wheter return the features
 
         Returns:
             result (list[BoxList] or dict[Tensor]): the output from the model.
                 During training, it returns a dict[Tensor] which contains the losses.
                 During testing, it returns list[BoxList] contains additional fields
-                like `scores`, `labels` and `mask` (for Mask R-CNN models).
-                If return_features is True, it also returns the encoded features as (list[Tensor])
-                where for each image its shape is [1000,1024].
+                like `scores`, `labels` and `mask` (for Mask R-CNN models), 
+                and `orig_inds' for preserving indices of filtered bboxes.
 
         """
         if self.training and targets is None:
@@ -64,7 +62,4 @@ class GeneralizedRCNN(nn.Module):
             losses.update(detector_losses)
             losses.update(proposal_losses)
             return losses
-        if return_features:
-            return result, x
-        else:
-            return result
+        return result
