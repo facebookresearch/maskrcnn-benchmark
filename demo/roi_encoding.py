@@ -14,7 +14,7 @@ import h5py
 
 
 join_path=lambda x: os.path.join(os.path.dirname(__file__),x)
-config_file = join_path("../configs/caffe2/e2e_faster_rcnn_R_50_FPN_1x_caffe2.yaml")
+config_file = join_path("../configs/caffe2/e2e_faster_rcnn_X_101_32x8d_FPN_1x_caffe2.yaml")
 
 # update the config options with the config file
 cfg.merge_from_file(config_file)
@@ -60,7 +60,7 @@ class ImageLoader(object):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base_path", "--base_path", help="Base path for images", default="/home/esoroush/tmp/imgs")#, required=True)
+    parser.add_argument("--base_path", "--base_path", help="Base path for images", required=True)
     parser.add_argument("--extension", help="Extensions of images", default="jpg")
     parser.add_argument("--batch_size", help="Batch size", default=5, type=int)
     parser.add_argument("--max_num_bbox", help="Maximum number of object bounding boxes for each image", default=36, type=int)
