@@ -16,7 +16,7 @@ We provide a convenience function `to_image_list` that accepts a few different
 input types, including a list of tensors, and returns an `ImageList` object.
 
 ```python
-from maskrnn_benchmark.structures.image_list import to_image_list
+from maskrcnn_benchmark.structures.image_list import to_image_list
 
 images = [torch.rand(3, 100, 200), torch.rand(3, 150, 170)]
 batched_images = to_image_list(images)
@@ -39,7 +39,7 @@ for each bounding box, such as labels, visibility, probability scores etc.
 
 Here is an example on how to create a `BoxList` from a list of coordinates:
 ```python
-from maskrcnn_baseline.structures.bounding_box import BoxList, FLIP_LEFT_RIGHT
+from maskrcnn_benchmark.structures.bounding_box import BoxList, FLIP_LEFT_RIGHT
 
 width = 100
 height = 200
@@ -49,7 +49,7 @@ boxes = [
   [10, 10, 50, 50]
 ]
 # create a BoxList with 3 boxes
-bbox = BoxList(boxes, size=(width, height), mode='xyxy')
+bbox = BoxList(boxes, image_size=(width, height), mode='xyxy')
 
 # perform some box transformations, has similar API as PIL.Image
 bbox_scaled = bbox.resize((width * 2, height * 3))

@@ -426,3 +426,6 @@ def inference(
     check_expected_results(results, expected_results, expected_results_sigma_tol)
     if output_folder:
         torch.save(results, os.path.join(output_folder, "coco_results.pth"))
+        
+    return results, coco_results, predictions
+

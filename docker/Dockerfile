@@ -52,7 +52,4 @@ RUN git clone https://github.com/facebookresearch/maskrcnn-benchmark.git \
  && cd maskrcnn-benchmark \
  && python setup.py build develop
 
-# install tensorboardX
-RUN pip install tensorflow tensorboardX
-
 WORKDIR /maskrcnn-benchmark

@@ -18,6 +18,7 @@ from torch import nn
 
 from maskrcnn_benchmark.layers import FrozenBatchNorm2d
 from maskrcnn_benchmark.layers import Conv2d
+from maskrcnn_benchmark.utils.registry import Registry
 
 
 # ResNet stage specification
@@ -34,22 +35,22 @@ StageSpec = namedtuple(
 # Standard ResNet models
 # -----------------------------------------------------------------------------
 # ResNet-50 (including all stages)
-ResNet50StagesTo5 = (
+ResNet50StagesTo5 = tuple(
     StageSpec(index=i, block_count=c, return_features=r)
     for (i, c, r) in ((1, 3, False), (2, 4, False), (3, 6, False), (4, 3, True))
 )
 # ResNet-50 up to stage 4 (excludes stage 5)
-ResNet50StagesTo4 = (
+ResNet50StagesTo4 = tuple(
     StageSpec(index=i, block_count=c, return_features=r)
     for (i, c, r) in ((1, 3, False), (2, 4, False), (3, 6, True))
 )
 # ResNet-50-FPN (including all stages)
-ResNet50FPNStagesTo5 = (
+ResNet50FPNStagesTo5 = tuple(
     StageSpec(index=i, block_count=c, return_features=r)
     for (i, c, r) in ((1, 3, True), (2, 4, True), (3, 6, True), (4, 3, True))
 )
 # ResNet-101-FPN (including all stages)
-ResNet101FPNStagesTo5 = (
+ResNet101FPNStagesTo5 = tuple(
     StageSpec(index=i, block_count=c, return_features=r)
     for (i, c, r) in ((1, 3, True), (2, 4, True), (3, 23, True), (4, 3, True))
 )
@@ -290,30 +291,15 @@ class StemWithFixedBatchNorm(nn.Module):
         return x
 
 
-_TRANSFORMATION_MODULES = {"BottleneckWithFixedBatchNorm": BottleneckWithFixedBatchNorm}
+_TRANSFORMATION_MODULES = Registry({
+    "BottleneckWithFixedBatchNorm": BottleneckWithFixedBatchNorm
+})
 
-_STEM_MODULES = {"StemWithFixedBatchNorm": StemWithFixedBatchNorm}
+_STEM_MODULES = Registry({"StemWithFixedBatchNorm": StemWithFixedBatchNorm})
 
-_STAGE_SPECS = {
+_STAGE_SPECS = Registry({
     "R-50-C4": ResNet50StagesTo4,
     "R-50-C5": ResNet50StagesTo5,
     "R-50-FPN": ResNet50FPNStagesTo5,
     "R-101-FPN": ResNet101FPNStagesTo5,
-}
-
-
-def register_transformation_module(module_name, module):
-    _register_generic(_TRANSFORMATION_MODULES, module_name, module)
-
-
-def register_stem_module(module_name, module):
-    _register_generic(_STEM_MODULES, module_name, module)
-
-
-def register_stage_spec(stage_spec_name, stage_spec):
-    _register_generic(_STAGE_SPECS, stage_spec_name, stage_spec)
-
-
-def _register_generic(module_dict, module_name, module):
-    assert module_name not in module_dict
-    module_dict[module_name] = module
+})

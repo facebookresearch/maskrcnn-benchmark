@@ -23,7 +23,7 @@ source activate maskrcnn_benchmark
 # this installs the right pip and dependencies for the fresh python
 conda install ipython
 
-# maskrnn_benchmark and coco api dependencies
+# maskrcnn_benchmark and coco api dependencies
 pip install ninja yacs cython matplotlib
 
 # follow PyTorch installation in https://pytorch.org/get-started/locally/
