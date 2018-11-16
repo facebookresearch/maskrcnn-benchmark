@@ -99,7 +99,7 @@ In order to be able to run it on fewer GPUs, there are a few possibilities:
 **1. Run the following without modifications**
 
 ```bash
-python /path_to_maskrnn_benchmark/tools/train_net.py --config-file "/path/to/config/file.yaml"
+python /path_to_maskrcnn_benchmark/tools/train_net.py --config-file "/path/to/config/file.yaml"
 ```
 This should work out of the box and is very similar to what we should do for multi-GPU training.
 But the drawback is that it will use much more GPU memory. The reason is that we set in the

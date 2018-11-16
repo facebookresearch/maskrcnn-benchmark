@@ -3,20 +3,23 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from maskrcnn_benchmark.modeling import registry
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 from .loss import make_rpn_loss_evaluator
 from .anchor_generator import make_anchor_generator
 from .inference import make_rpn_postprocessor
 
 
+@registry.RPN_HEADS.register("SingleConvRPNHead")
 class RPNHead(nn.Module):
     """
     Adds a simple RPN Head with classification and regression heads
     """
 
-    def __init__(self, in_channels, num_anchors):
+    def __init__(self, cfg, in_channels, num_anchors):
         """
         Arguments:
+            cfg              : config
             in_channels (int): number of channels of the input feature
             num_anchors (int): number of anchors to be predicted
         """
@@ -57,7 +60,10 @@ class RPNModule(torch.nn.Module):
         anchor_generator = make_anchor_generator(cfg)
 
         in_channels = cfg.MODEL.BACKBONE.OUT_CHANNELS
-        head = RPNHead(in_channels, anchor_generator.num_anchors_per_location()[0])
+        rpn_head = registry.RPN_HEADS[cfg.MODEL.RPN.RPN_HEAD]
+        head = rpn_head(
+            cfg, in_channels, anchor_generator.num_anchors_per_location()[0]
+        )
 
         rpn_box_coder = BoxCoder(weights=(1.0, 1.0, 1.0, 1.0))
 
