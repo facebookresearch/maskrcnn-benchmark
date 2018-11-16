@@ -44,6 +44,7 @@ def do_train(
     device,
     checkpoint_period,
     arguments,
+    tb_logger=None
 ):
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
     logger.info("Start training")
@@ -71,6 +72,11 @@ def do_train(
         loss_dict_reduced = reduce_loss_dict(loss_dict)
         losses_reduced = sum(loss for loss in loss_dict_reduced.values())
         meters.update(loss=losses_reduced, **loss_dict_reduced)
+
+        if tb_logger:
+            tb_logger.add_scalar('loss', losses_reduced, iteration)
+            for key, value in loss_dict_reduced.items():
+                tb_logger.add_scalar(key, value, iteration)
 
         optimizer.zero_grad()
         losses.backward()
