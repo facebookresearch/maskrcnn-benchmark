@@ -3,15 +3,9 @@ ARG CUDNN="7"
 
 FROM nvidia/cuda:${CUDA}-cudnn${CUDNN}-devel-ubuntu16.04
 
-ARG CUDA="9.0"
-ENV NCCL="2.3.7-1+cuda${CUDA}"
-
 # install basics
 RUN apt-get update -y \
- && apt-get install -y git curl ca-certificates bzip2 cmake tree htop bmon iotop g++ \
- && apt-get install -y --no-install-recommends \
-    libnccl2=${NCCL} \
-    libnccl-dev=${NCCL}
+ && apt-get install -y git curl ca-certificates bzip2 cmake tree htop bmon iotop g++
 
 # Install Miniconda
 RUN curl -so /miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh \
