@@ -353,3 +353,38 @@ class COCODemo(object):
             )
 
         return image
+
+    def extract_encoding_features(self, original_images):
+        """
+        Arguments:
+            original_image (List(np.ndarray)): a list of images as returned by OpenCV
+
+        Returns:
+            detection_bbox (List(BoxList)): the detected objects list. With corresponding features as additional fields in `encoding_features`
+        """
+        # apply pre-processing to image
+        image = [self.transforms(original_image) for original_image in original_images]
+        # convert to an ImageList, padded so that it is divisible by
+        # cfg.DATALOADER.SIZE_DIVISIBILITY
+        image_list = to_image_list(image, self.cfg.DATALOADER.SIZE_DIVISIBILITY)
+        image_list = image_list.to(self.device)
+        # compute predictions
+        with torch.no_grad():
+            predictions, features = self.model(image_list, return_features=True)
+        predictions = [o.to(self.cpu_device) for o in predictions]
+        features = [o.to(self.cpu_device).unsqueeze(0) for o in features]
+        detection_bboxes=[]
+        for ind, prediction in enumerate(predictions):
+            height, width = original_images[ind].shape[:-1]
+            # reshape prediction (a BoxList) into the original image size
+            prediction = prediction.resize((width, height))
+            detection_bbox = self.select_top_predictions(prediction)
+
+            if len(detection_bbox.extra_fields['orig_inds'])>0:
+                encoding_features = torch.cat([features[1000*ind+i] for i in detection_bbox.extra_fields['orig_inds']], dim=0)
+                encoding_features = torch.cat([torch.mean(torch.cat(features[1000*ind:1000*ind+1000]), dim=0, keepdim=True), encoding_features])
+            else:
+                encoding_features = torch.mean(torch.cat(features[1000*ind:1000*ind+1000]), dim=0, keepdim=True)
+            detection_bbox.add_field("encoding_features", encoding_features)
+            detection_bboxes.append(detection_bbox)
+        return detection_bboxes
