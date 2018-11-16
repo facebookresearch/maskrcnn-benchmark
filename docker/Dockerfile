@@ -1,11 +1,17 @@
-ARG CUDA_VERSION=9.0
-ARG CUDNN_VERSION=7
+ARG CUDA="9.0"
+ARG CUDNN="7"
 
-FROM nvidia/cuda:${CUDA_VERSION}-cudnn${CUDNN_VERSION}-devel-ubuntu16.04
+FROM nvidia/cuda:${CUDA}-cudnn${CUDNN}-devel-ubuntu16.04
+
+ARG CUDA="9.0"
+ENV NCCL="2.3.7-1+cuda${CUDA}"
 
 # install basics
 RUN apt-get update -y \
- && apt-get install -y git curl ca-certificates bzip2 cmake tree htop bmon iotop g++
+ && apt-get install -y git curl ca-certificates bzip2 cmake tree htop bmon iotop g++ \
+ && apt-get install -y --no-install-recommends \
+    libnccl2=${NCCL} \
+    libnccl-dev=${NCCL}
 
 # Install Miniconda
 RUN curl -so /miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh \
@@ -45,5 +51,8 @@ RUN git clone https://github.com/cocodataset/cocoapi.git \
 RUN git clone https://github.com/facebookresearch/maskrcnn-benchmark.git \
  && cd maskrcnn-benchmark \
  && python setup.py build develop
+
+# install tensorboardX
+RUN pip install tensorflow tensorboardX
 
 WORKDIR /maskrcnn-benchmark
