@@ -5,11 +5,9 @@ FROM nvidia/cuda:${CUDA}-cudnn${CUDNN}-devel-ubuntu16.04
 
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
 
-RUN apt-get update -y && apt-get install -y apt-utils
-
 # install basics
 RUN apt-get update -y \
- && apt-get install -y git curl ca-certificates bzip2 cmake tree htop bmon iotop g++
+ && apt-get install -y apt-utils git curl ca-certificates bzip2 cmake tree htop bmon iotop g++
 
 # Install Miniconda
 RUN curl -so /miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh \
