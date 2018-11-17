@@ -3,6 +3,10 @@ ARG CUDNN="7"
 
 FROM nvidia/cuda:${CUDA}-cudnn${CUDNN}-devel-ubuntu16.04
 
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+
+RUN apt-get update -y && apt-get install -y apt-utils
+
 # install basics
 RUN apt-get update -y \
  && apt-get install -y git curl ca-certificates bzip2 cmake tree htop bmon iotop g++
