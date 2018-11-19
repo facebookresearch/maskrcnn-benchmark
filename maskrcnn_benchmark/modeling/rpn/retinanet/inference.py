@@ -135,10 +135,7 @@ class RetinaNetPostProcessor(torch.nn.Module):
         for l, (a, o, b) in enumerate(zip(anchors, box_cls, box_regression)):
             sampled_boxes.append(
                 self.forward_for_single_feature_map(
-                    a,
-                    o,
-                    b,
-                    self.pre_nms_thresh if l < num_levels-1 else 0.0,
+                    a, o, b, self.pre_nms_thresh
                 )
             )
 
@@ -179,21 +176,34 @@ class RetinaNetPostProcessor(torch.nn.Module):
                 )
                 result.append(boxlist_for_class)
 
-            result = cat_boxlist(result)
-            number_of_detections = len(result)
+            if len(result):
+                result = cat_boxlist(result)
+                number_of_detections = len(result)
 
-            # Limit to max_per_image detections **over all classes**
-            if number_of_detections > self.fpn_post_nms_top_n > 0:
-                cls_scores = result.get_field("scores")
-                image_thresh, _ = torch.kthvalue(
-                    cls_scores.cpu(),
-                    number_of_detections - self.fpn_post_nms_top_n + 1
+                # Limit to max_per_image detections **over all classes**
+                if number_of_detections > self.fpn_post_nms_top_n > 0:
+                    cls_scores = result.get_field("scores")
+                    image_thresh, _ = torch.kthvalue(
+                        cls_scores.cpu(),
+                        number_of_detections - self.fpn_post_nms_top_n + 1
+                    )
+                    keep = cls_scores >= image_thresh.item()
+                    keep = torch.nonzero(keep).squeeze(1)
+                    result = result[keep]
+                results.append(result)
+
+            else:
+                device = boxlist.bbox.device
+                empty_boxlist = BoxList(
+                    torch.zeros(1, 4).to(device), boxlist.size
                 )
-                keep = cls_scores >= image_thresh.item()
-                keep = torch.nonzero(keep).squeeze(1)
-                result = result[keep]
-            results.append(result)
-
+                empty_boxlist.add_field(
+                    "labels", torch.LongTensor([1]).to(device)
+                )
+                empty_boxlist.add_field(
+                    "scores", torch.Tensor([0.01]).to(device)
+                )
+                results.append(empty_boxlist)
         return results
 
 

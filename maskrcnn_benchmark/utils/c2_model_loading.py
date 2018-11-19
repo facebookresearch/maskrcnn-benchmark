@@ -6,6 +6,7 @@ from collections import OrderedDict
 import torch
 
 from maskrcnn_benchmark.utils.model_serialization import load_state_dict
+from maskrcnn_benchmark.utils.registry import Registry
 
 
 def _rename_basic_resnet_weights(layer_keys):
@@ -135,11 +136,20 @@ _C2_STAGE_NAMES = {
     "R-101": ["1.2", "2.3", "3.22", "4.2"],
 }
 
-def load_c2_format(cfg, f):
-    # TODO make it support other architectures
+C2_FORMAT_LOADER = Registry()
+
+
+@C2_FORMAT_LOADER.register("R-50-C4")
+@C2_FORMAT_LOADER.register("R-50-FPN")
+@C2_FORMAT_LOADER.register("R-101-FPN")
+def load_resnet_c2_format(cfg, f):
     state_dict = _load_c2_pickled_weights(f)
     conv_body = cfg.MODEL.BACKBONE.CONV_BODY
     arch = conv_body.replace("-C4", "").replace("-FPN", "")
     stages = _C2_STAGE_NAMES[arch]
     state_dict = _rename_weights_for_resnet(state_dict, stages)
     return dict(model=state_dict)
+
+
+def load_c2_format(cfg, f):
+    return C2_FORMAT_LOADER[cfg.MODEL.BACKBONE.CONV_BODY](cfg, f)
