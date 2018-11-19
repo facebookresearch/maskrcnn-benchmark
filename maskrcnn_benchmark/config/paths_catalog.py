@@ -5,7 +5,7 @@ import os
 
 
 class DatasetCatalog(object):
-    DATA_DIR = "datasets"
+    DATA_DIR = "datasets" if "DATA_DIR" not in os.environ else os.environ["DATA_DIR"]
 
     DATASETS = {
         "coco_2014_train": (
