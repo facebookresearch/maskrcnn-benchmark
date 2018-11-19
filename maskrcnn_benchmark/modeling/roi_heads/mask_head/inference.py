@@ -132,7 +132,7 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
 
     # Resize mask
     mask = mask.to(torch.float32)
-    mask = F.interpolate(mask, size=(h, w), mode='bilinear')
+    mask = F.interpolate(mask, size=(h, w), mode='bilinear', align_corners=False)
     mask = mask[0][0]
 
     if thresh >= 0:
@@ -188,7 +188,7 @@ class Masker(object):
         # If not we should make it compatible.
         results = []
         for mask, box in zip(masks, boxes):
-            assert mask.shape[0] == box.bbox.shape[0], "Number of objects should be the same."
+            assert mask.shape[0] == len(box), "Number of objects should be the same."
             result = self.forward_single_image(mask, box)
             results.append(result)
         return results
