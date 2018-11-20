@@ -65,3 +65,8 @@ Build image with defaults (`CUDA=9.0`, `CUDNN=7`):
 Build image with other CUDA and CUDNN versions:
 
     nvidia-docker build -t --build-arg CUDA=9.2 --build-arg CUDNN=7 maskrcnn-benchmark docker/ 
+    
+Build image with built-in jupyter notebook:
+
+    nvidia-docker build -t maskrcnn-benchmark-jupyter docker/Dockerfile-jupyter/
+    nvidia-docker run -td -p 8888:8888 -e PASSWORD=<password> maskrcnn-benchmark-jupyter #command to run
