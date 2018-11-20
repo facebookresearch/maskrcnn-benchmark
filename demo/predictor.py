@@ -211,7 +211,8 @@ class COCODemo(object):
             # if we have masks, paste the masks in the right position
             # in the image, as defined by the bounding boxes
             masks = prediction.get_field("mask")
-            masks = self.masker(masks, prediction)
+            # always single image is passed at a time
+            masks = self.masker([masks], [prediction])[0]
             prediction.add_field("mask", masks)
         return prediction
 
