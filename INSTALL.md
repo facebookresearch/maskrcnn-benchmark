@@ -68,5 +68,5 @@ Build image with other CUDA and CUDNN versions:
     
 Build image with built-in jupyter notebook:
 
-    nvidia-docker build -t maskrcnn-benchmark-jupyter docker/Dockerfile-jupyter/
+    nvidia-docker build -t maskrcnn-benchmark-jupyter docker/docker-jupyter/
     nvidia-docker run -td -p 8888:8888 -e PASSWORD=<password> maskrcnn-benchmark-jupyter #command to run
