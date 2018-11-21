@@ -195,6 +195,18 @@ If you have issues running or compiling this code, we have compiled a list of co
 [TROUBLESHOOTING.md](TROUBLESHOOTING.md). If your issue is not present there, please feel
 free to open a new issue.
 
+## Citations
+Please consider citing this project in your publications if it helps your research. The following is a BibTeX reference. The BibTeX entry requires the `url` LaTeX package.
+```
+@misc{massa2018mrcnn,
+author = {Massa, Francisco and Girshick, Ross},
+title = {{maskrnn-benchmark: Fast, modular reference implementation of Instance Segmentation and Object Detection algorithms in PyTorch}},
+year = {2018},
+howpublished = {\url{https://github.com/facebookresearch/maskrcnn-benchmark}},
+note = {Accessed: [Insert date here]}
+}
+```
+
 ## License
 
 maskrcnn-benchmark is released under the MIT license. See [LICENSE](LICENSE) for additional details.
