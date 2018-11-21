@@ -73,7 +73,10 @@ def do_train(
         meters.update(loss=losses_reduced, **loss_dict_reduced)
 
         optimizer.zero_grad()
-        losses.backward()
+        # Note: If mixed precision is not used, this ends up doing nothing
+        # Otherwise apply loss scaling for mixed-precision recipe
+        with optimizer.scale_loss(losses) as scaled_losses:
+            scaled_losses.backward()
         optimizer.step()
 
         batch_time = time.time() - end

@@ -111,11 +111,16 @@ def expand_masks(mask, padding):
     pad2 = 2 * padding
     scale = float(M + pad2) / M
     padded_mask = mask.new_zeros((N, 1, M + pad2, M + pad2))
+
     padded_mask[:, :, padding:-padding, padding:-padding] = mask
     return padded_mask, scale
 
 
 def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
+    # Need to work on the CPU, where fp16 isn't supported - cast to float to avoid this
+    mask = mask.float()
+    box = box.float()
+
     padded_mask, scale = expand_masks(mask[None], padding=padding)
     mask = padded_mask[0, 0]
     box = expand_boxes(box[None], scale)[0]

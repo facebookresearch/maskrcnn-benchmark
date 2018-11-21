@@ -25,6 +25,14 @@ from maskrcnn_benchmark.utils.imports import import_file
 from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
 
+# See if we can use apex.DistributedDataParallel instead of the torch default,
+# and enable mixed-precision via apex.amp
+try:
+    from apex.parallel import DistributedDataParallel as DDP
+    from apex import amp
+except ImportError:
+    print('Use APEX for better performance via apex.amp and apex.DistributedDataParallel')
+
 
 def train(cfg, local_rank, distributed):
     model = build_detection_model(cfg)
@@ -33,6 +41,11 @@ def train(cfg, local_rank, distributed):
 
     optimizer = make_optimizer(cfg, model)
     scheduler = make_lr_scheduler(cfg, optimizer)
+
+    # Wrap the optimizer for fp16 training
+    use_mixed_precision = cfg.SOLVER.MIXED_PRECISION
+    amp_handle = amp.init(enabled=use_mixed_precision, verbose=False)
+    optimizer = amp_handle.wrap_optimizer(optimizer)
 
     if distributed:
         model = torch.nn.parallel.DistributedDataParallel(

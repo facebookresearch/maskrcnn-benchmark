@@ -254,6 +254,9 @@ _C.SOLVER.CHECKPOINT_PERIOD = 2500
 # see 2 images per batch
 _C.SOLVER.IMS_PER_BATCH = 16
 
+# Whether or not to use mixed-precision (via apex.amp)
+_C.SOLVER.MIXED_PRECISION = False
+
 # ---------------------------------------------------------------------------- #
 # Specific test options
 # ---------------------------------------------------------------------------- #

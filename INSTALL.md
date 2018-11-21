@@ -42,6 +42,12 @@ git clone https://github.com/cocodataset/cocoapi.git
 cd cocoapi/PythonAPI
 python setup.py build_ext install
 
+# install apex
+cd ~github
+git clone https://github.com/NVIDIA/apex.git
+cd apex
+python setup.py install --cuda_ext --cpp_ext
+
 # install PyTorch Detection
 cd ~/github
 git clone https://github.com/facebookresearch/maskrcnn-benchmark.git
