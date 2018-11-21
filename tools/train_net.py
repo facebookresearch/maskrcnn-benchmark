@@ -9,8 +9,6 @@ from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:sk
 
 import argparse
 import os
-import time
-from datetime import datetime
 
 import torch
 
@@ -27,6 +25,7 @@ from maskrcnn_benchmark.utils.comm import synchronize, get_rank
 from maskrcnn_benchmark.utils.imports import import_file
 from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
+from maskrcnn_benchmark.utils.tensorboard import get_tensorboard_writer
 
 
 def train(cfg, local_rank, distributed, use_tensorboard=False):
@@ -46,19 +45,9 @@ def train(cfg, local_rank, distributed, use_tensorboard=False):
 
     tb_logger = None
     if use_tensorboard:
-        try:
-            from tensorboardX import SummaryWriter
-            timestamp = datetime.fromtimestamp(time.time()).strftime('%Y%m%d-%H:%M')
-            tb_logger = SummaryWriter('logs/maskrcnn-{}'.format(timestamp))
-        except ImportError:
-            raise ImportError(
-                'To use tensorboard please install tensorboardX '
-                '[ pip install tensorflow tensorboardX ].'
-            )
+        tb_logger = get_tensorboard_writer(local_rank, distributed)
 
-    arguments = {}
-    arguments["iteration"] = 0
-
+    arguments = {"iteration": 0}
     output_dir = cfg.OUTPUT_DIR
 
     save_to_disk = get_rank() == 0
