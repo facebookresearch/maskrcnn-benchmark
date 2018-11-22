@@ -30,8 +30,10 @@ ENV CONDA_AUTO_UPDATE_CONDA=false
 RUN conda install -y ipython
 RUN pip install ninja yacs cython matplotlib
 
-# Install PyTorch 1.0 Nightly
-RUN conda install -y pytorch-nightly -c pytorch && conda clean -ya
+# Install PyTorch 1.0 Nightly and OpenCV
+RUN conda install -y pytorch-nightly -c pytorch \
+ && conda install -y opencv -c menpo \
+ && conda clean -ya
 
 # Install TorchVision master
 RUN git clone https://github.com/pytorch/vision.git \
