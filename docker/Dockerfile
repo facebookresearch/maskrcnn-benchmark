@@ -27,7 +27,7 @@ ENV PATH=$CONDA_PREFIX/bin:$PATH
 ENV CONDA_AUTO_UPDATE_CONDA=false
 
 RUN conda install ipython
-RUN pip install ninja yacs cython matplotlib
+RUN pip install ninja yacs cython matplotlib tensorboardX
 
 # Install PyTorch 1.0 Nightly
 RUN conda install pytorch-nightly -c pytorch && conda clean -ya
