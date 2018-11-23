@@ -1,11 +1,12 @@
+from maskrcnn_benchmark.data import datasets
+
 from .coco import coco_evaluation
 from .voc import voc_evaluation
 
 
-def evaluate(dataset_name, dataset, predictions, output_folder, **kwargs):
+def evaluate(dataset, predictions, output_folder, **kwargs):
     """evaluate dataset using different methods based on dataset type.
     Args:
-        dataset_name: Dataset's name, used to select evaluation method.
         dataset: Dataset object
         predictions(list[BoxList]): each item in the list represents the
             prediction results for one image.
@@ -20,9 +21,10 @@ def evaluate(dataset_name, dataset, predictions, output_folder, **kwargs):
         output_folder=output_folder,
         **kwargs
     )
-    if 'coco' in dataset_name:
+    if isinstance(dataset, datasets.COCODataset):
         return coco_evaluation(**args)
-    elif 'voc' in dataset_name:
+    elif isinstance(dataset, datasets.PascalVOCDataset):
         return voc_evaluation(**args)
     else:
-        raise NotImplementedError('Unsupported dataset type %s.' % dataset_name)
+        dataset_name = dataset.__class__.__name__
+        raise NotImplementedError('Unsupported dataset type {}.'.format(dataset_name))
