@@ -7,7 +7,7 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
 
 # install basics
 RUN apt-get update -y \
- && apt-get install -y apt-utils git curl ca-certificates bzip2 cmake tree htop bmon iotop g++ vim
+ && apt-get install -y apt-utils git curl ca-certificates bzip2 cmake tree htop bmon iotop g++
 
 # Install Miniconda
 RUN curl -so /miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh \
@@ -30,8 +30,10 @@ ENV CONDA_AUTO_UPDATE_CONDA=false
 RUN conda install -y ipython
 RUN pip install ninja yacs cython matplotlib jupyter
 
-# Install PyTorch 1.0 Nightly
-RUN conda install -y pytorch-nightly -c pytorch && conda clean -ya
+# Install PyTorch 1.0 Nightly and OpenCV
+RUN conda install -y pytorch-nightly -c pytorch \
+ && conda install -y opencv -c menpo \
+ && conda clean -ya
 
 WORKDIR /root
 
