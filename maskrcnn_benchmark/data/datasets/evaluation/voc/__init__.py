@@ -1,6 +1,6 @@
 import logging
 
-from .voc_eval import eval_detection_voc, do_voc_evaluation
+from .voc_eval import do_voc_evaluation
 
 
 def voc_evaluation(dataset,

@@ -10,6 +10,8 @@ from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 
 
 def do_voc_evaluation(dataset, predictions, output_folder, logger):
+    # TODO need to make the use_07_metric format available
+    # for the user to choose
     pred_boxlists = []
     gt_boxlists = []
     for image_id, prediction in enumerate(predictions):
