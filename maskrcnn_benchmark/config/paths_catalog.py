@@ -23,7 +23,9 @@ class DatasetCatalog(object):
         ),
         "voc_2007_trainval": ("voc/VOC2007", 'trainval'),
         "voc_2007_test": ("voc/VOC2007", 'test'),
+        "voc_2012_train": ("voc/VOC2012", 'train'),
         "voc_2012_trainval": ("voc/VOC2012", 'trainval'),
+        "voc_2012_val": ("voc/VOC2012", 'val'),
         "voc_2012_test": ("voc/VOC2012", 'test'),
 
     }
@@ -47,13 +49,9 @@ class DatasetCatalog(object):
             args = dict(
                 data_dir=os.path.join(data_dir, attrs[0]),
                 split=attrs[1],
-                # Default behavior here is when evaluating (using test split),
-                # consider difficult objects as TP. But when training, just remove the
-                # difficult objects. You can change this flag as your need.
-                use_difficult='test' in name,
             )
             return dict(
-                factory="PascalVOC",
+                factory="PascalVOCDataset",
                 args=args,
             )
         raise RuntimeError("Dataset not available: {}".format(name))

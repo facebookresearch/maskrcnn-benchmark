@@ -14,7 +14,6 @@ def do_voc_evaluation(dataset, predictions, output_folder, logger):
     gt_boxlists = []
     for image_id, prediction in enumerate(predictions):
         img_info = dataset.get_img_info(image_id)
-        original_id = dataset.id_to_img_map[image_id]
         if len(prediction) == 0:
             continue
         image_width = img_info['width']
@@ -22,10 +21,7 @@ def do_voc_evaluation(dataset, predictions, output_folder, logger):
         prediction = prediction.resize((image_width, image_height))
         pred_boxlists.append(prediction)
 
-        gt_boxes, gt_labels, gt_difficulties = dataset.get_filtered_targets(original_id)
-        gt_boxlist = BoxList(gt_boxes, image_size=(image_width, image_height))
-        gt_boxlist.add_field('labels', gt_labels)
-        gt_boxlist.add_field('difficulties', gt_difficulties)
+        gt_boxlist = dataset.get_groundtruth(image_id)
         gt_boxlists.append(gt_boxlist)
     result = eval_detection_voc(pred_boxlists=pred_boxlists,
                                 gt_boxlists=gt_boxlists,
@@ -79,8 +75,8 @@ def calc_detection_voc_prec_rec(gt_boxlists, pred_boxlists, iou_thresh=0.5):
         pred_label = pred_boxlist.get_field('labels').numpy()
         pred_score = pred_boxlist.get_field('scores').numpy()
         gt_bbox = gt_boxlist.bbox.numpy()
-        gt_label = gt_boxlist.get_field('labels')
-        gt_difficult = gt_boxlist.get_field('difficulties')
+        gt_label = gt_boxlist.get_field('labels').numpy()
+        gt_difficult = gt_boxlist.get_field('difficult').numpy()
 
         for l in np.unique(np.concatenate((pred_label, gt_label)).astype(int)):
             pred_mask_l = pred_label == l
