@@ -18,33 +18,34 @@ def do_voc_evaluation(dataset, predictions, output_folder, logger):
         img_info = dataset.get_img_info(image_id)
         if len(prediction) == 0:
             continue
-        image_width = img_info['width']
+        image_width = img_info["width"]
         image_height = img_info["height"]
         prediction = prediction.resize((image_width, image_height))
         pred_boxlists.append(prediction)
 
         gt_boxlist = dataset.get_groundtruth(image_id)
         gt_boxlists.append(gt_boxlist)
-    result = eval_detection_voc(pred_boxlists=pred_boxlists,
-                                gt_boxlists=gt_boxlists,
-                                iou_thresh=0.5,
-                                use_07_metric=True)
-    result_str = 'mAP: {:.4f}\n'.format(result['map'])
-    for i, ap in enumerate(result['ap']):
+    result = eval_detection_voc(
+        pred_boxlists=pred_boxlists,
+        gt_boxlists=gt_boxlists,
+        iou_thresh=0.5,
+        use_07_metric=True,
+    )
+    result_str = "mAP: {:.4f}\n".format(result["map"])
+    for i, ap in enumerate(result["ap"]):
         if i == 0:  # skip background
             continue
-        result_str += '{:<16}: {:.4f}\n'.format(dataset.map_class_id_to_class_name(i), ap)
+        result_str += "{:<16}: {:.4f}\n".format(
+            dataset.map_class_id_to_class_name(i), ap
+        )
     logger.info(result_str)
     if output_folder:
-        with open(os.path.join(output_folder, 'result.txt'), 'w') as fid:
+        with open(os.path.join(output_folder, "result.txt"), "w") as fid:
             fid.write(result_str)
     return result
 
 
-def eval_detection_voc(pred_boxlists,
-                       gt_boxlists,
-                       iou_thresh=0.5,
-                       use_07_metric=False):
+def eval_detection_voc(pred_boxlists, gt_boxlists, iou_thresh=0.5, use_07_metric=False):
     """Evaluate on voc dataset.
     Args:
         pred_boxlists(list[BoxList]): pred boxlist, has labels and scores fields.
@@ -54,12 +55,14 @@ def eval_detection_voc(pred_boxlists,
     Returns:
         dict represents the results
     """
-    assert len(gt_boxlists) == len(pred_boxlists), 'Length of gt and pred lists need to be same.'
-    prec, rec = calc_detection_voc_prec_rec(pred_boxlists=pred_boxlists,
-                                            gt_boxlists=gt_boxlists,
-                                            iou_thresh=iou_thresh)
+    assert len(gt_boxlists) == len(
+        pred_boxlists
+    ), "Length of gt and pred lists need to be same."
+    prec, rec = calc_detection_voc_prec_rec(
+        pred_boxlists=pred_boxlists, gt_boxlists=gt_boxlists, iou_thresh=iou_thresh
+    )
     ap = calc_detection_voc_ap(prec, rec, use_07_metric=use_07_metric)
-    return {'ap': ap, 'map': np.nanmean(ap)}
+    return {"ap": ap, "map": np.nanmean(ap)}
 
 
 def calc_detection_voc_prec_rec(gt_boxlists, pred_boxlists, iou_thresh=0.5):
@@ -74,11 +77,11 @@ def calc_detection_voc_prec_rec(gt_boxlists, pred_boxlists, iou_thresh=0.5):
     match = defaultdict(list)
     for gt_boxlist, pred_boxlist in zip(gt_boxlists, pred_boxlists):
         pred_bbox = pred_boxlist.bbox.numpy()
-        pred_label = pred_boxlist.get_field('labels').numpy()
-        pred_score = pred_boxlist.get_field('scores').numpy()
+        pred_label = pred_boxlist.get_field("labels").numpy()
+        pred_score = pred_boxlist.get_field("scores").numpy()
         gt_bbox = gt_boxlist.bbox.numpy()
-        gt_label = gt_boxlist.get_field('labels').numpy()
-        gt_difficult = gt_boxlist.get_field('difficult').numpy()
+        gt_label = gt_boxlist.get_field("labels").numpy()
+        gt_difficult = gt_boxlist.get_field("difficult").numpy()
 
         for l in np.unique(np.concatenate((pred_label, gt_label)).astype(int)):
             pred_mask_l = pred_label == l
@@ -107,7 +110,10 @@ def calc_detection_voc_prec_rec(gt_boxlists, pred_boxlists, iou_thresh=0.5):
             pred_bbox_l[:, 2:] += 1
             gt_bbox_l = gt_bbox_l.copy()
             gt_bbox_l[:, 2:] += 1
-            iou = boxlist_iou(BoxList(pred_bbox_l, gt_boxlist.size), BoxList(gt_bbox_l, gt_boxlist.size)).numpy()
+            iou = boxlist_iou(
+                BoxList(pred_bbox_l, gt_boxlist.size),
+                BoxList(gt_bbox_l, gt_boxlist.size),
+            ).numpy()
             gt_index = iou.argmax(axis=1)
             # set -1 if there is no matching ground truth
             gt_index[iou.max(axis=1) < iou_thresh] = -1
@@ -186,7 +192,7 @@ def calc_detection_voc_ap(prec, rec, use_07_metric=False):
         if use_07_metric:
             # 11 point metric
             ap[l] = 0
-            for t in np.arange(0., 1.1, 0.1):
+            for t in np.arange(0.0, 1.1, 0.1):
                 if np.sum(rec[l] >= t) == 0:
                     p = 0
                 else:
