@@ -69,22 +69,11 @@ class RetinaNetPostProcessor(torch.nn.Module):
 
         # results = [[] for _ in range(N)]
         candidate_inds = box_cls > pre_nms_thresh
-        """
-        if candidate_inds.sum().item() == 0:
-            empty_boxlists = []
-            for a in anchors:
-                empty_boxlist = BoxList(torch.Tensor(0, 4).to(device), a.size)
-                empty_boxlist.add_field(
-                    "labels", torch.LongTensor([]).to(device))
-                empty_boxlist.add_field(
-                    "scores", torch.Tensor([]).to(device))
-                empty_boxlists.append(empty_boxlist)
-            return empty_boxlists
-        """
 
         pre_nms_top_n = candidate_inds.view(N, -1).sum(1)
         pre_nms_top_n = pre_nms_top_n.clamp(max=self.pre_nms_top_n)
 
+        results = []
         for per_box_cls, per_box_regression, per_pre_nms_top_n, \
         per_candidate_inds, per_anchors in zip(
             box_cls,
@@ -165,8 +154,6 @@ class RetinaNetPostProcessor(torch.nn.Module):
             # TODO remove hardcoded 81
             for j in range(1, 81):
                 inds = (labels == j).nonzero().view(-1)
-                # if len(inds) == 0:
-                #     continue
 
                 scores_j = scores[inds]
                 boxes_j = boxes[inds, :].view(-1, 4)
@@ -184,7 +171,6 @@ class RetinaNetPostProcessor(torch.nn.Module):
                 )
                 result.append(boxlist_for_class)
 
-            # if len(result):
             result = cat_boxlist(result)
             number_of_detections = len(result)
 
@@ -199,21 +185,6 @@ class RetinaNetPostProcessor(torch.nn.Module):
                 keep = torch.nonzero(keep).squeeze(1)
                 result = result[keep]
             results.append(result)
-
-            """
-            else:
-                device = boxlist.bbox.device
-                empty_boxlist = BoxList(
-                    torch.zeros(1, 4).to(device), boxlist.size
-                )
-                empty_boxlist.add_field(
-                    "labels", torch.LongTensor([1]).to(device)
-                )
-                empty_boxlist.add_field(
-                    "scores", torch.Tensor([0.01]).to(device)
-                )
-                results.append(empty_boxlist)
-            """
         return results
 
 
