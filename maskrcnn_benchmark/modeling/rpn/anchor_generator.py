@@ -58,7 +58,7 @@ class AnchorGenerator(nn.Module):
             cell_anchors = [
                 generate_anchors(
                     anchor_stride,
-                    size if type(size) is tuple else (size,),
+                    size if isinstance(size, (tuple, list)) else (size,),
                     aspect_ratios
                 ).float()
                 for anchor_stride, size in zip(anchor_strides, sizes)
