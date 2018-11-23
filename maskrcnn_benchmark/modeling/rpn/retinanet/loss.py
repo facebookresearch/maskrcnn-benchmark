@@ -20,6 +20,7 @@ class RetinaNetLossComputation(object):
     This class computes the RetinaNet loss.
     """
 
+    # TODO see if we can remove the cfg
     def __init__(self, cfg, proposal_matcher, box_coder):
         """
         Arguments:
@@ -28,15 +29,19 @@ class RetinaNetLossComputation(object):
         """
         self.proposal_matcher = proposal_matcher
         self.box_coder = box_coder
-        self.num_classes = cfg.MODEL.RETINANET.NUM_CLASSES -1
+        # TODO infer num_classes at runtime and use
+        # the functional interface
+        self.num_classes = cfg.MODEL.RETINANET.NUM_CLASSES - 1
         self.box_cls_loss_func = SigmoidFocalLoss(
-            self.num_classes,
+            # self.num_classes,
             cfg.MODEL.RETINANET.LOSS_GAMMA,
             cfg.MODEL.RETINANET.LOSS_ALPHA
         )
         self.bbox_reg_weight = cfg.MODEL.RETINANET.BBOX_REG_WEIGHT
         self.bbox_reg_beta = cfg.MODEL.RETINANET.BBOX_REG_BETA
 
+    # TODO exactly equal to FastRCNNLossComputation
+    # make base class?
     def match_targets_to_anchors(self, anchor, target):
         match_quality_matrix = boxlist_iou(target, anchor)
         matched_idxs = self.proposal_matcher(match_quality_matrix)
@@ -49,6 +54,8 @@ class RetinaNetLossComputation(object):
         matched_targets.add_field("matched_idxs", matched_idxs)
         return matched_targets
 
+    # TODO exactly equal to FastRCNNLossComputation
+    # make base class?
     def prepare_targets(self, anchors, targets):
         labels = []
         regression_targets = []
@@ -58,6 +65,7 @@ class RetinaNetLossComputation(object):
             )
 
             matched_idxs = matched_targets.get_field("matched_idxs")
+            # TODO don't need the clone
             labels_per_image = matched_targets.get_field("labels").clone()
 
             # Background (negative examples)
@@ -80,6 +88,8 @@ class RetinaNetLossComputation(object):
 
         return labels, regression_targets
 
+    # TODO there is similarities with RPNLossComputation and
+    # FastRCNNLossComputation. Can we reduce code duplication?
     def __call__(self, anchors, box_cls, box_regression, targets):
         """
         Arguments:
@@ -95,18 +105,20 @@ class RetinaNetLossComputation(object):
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]
         labels, regression_targets = self.prepare_targets(anchors, targets)
 
-        num_layers = len(box_cls)
         box_cls_flattened = []
         box_regression_flattened = []
         # for each feature level, permute the outputs to make them be in the
         # same format as the labels. Note that the labels are computed for
         # all feature levels concatenated, so we keep the same representation
         # for the box_cls and the box_regression
+        # TODO can we make some helper functions
         for box_cls_per_level, box_regression_per_level in zip(
             box_cls, box_regression
         ):
-            N, A, H, W = box_cls_per_level.shape
-            C = self.num_classes
+            N, AxC, H, W = box_cls_per_level.shape
+            Ax4 = box_regression_per_level.shape[1]
+            A = Ax4 // 4
+            C = AxC // A
             box_cls_per_level = box_cls_per_level.view(N, -1, C, H, W)
             box_cls_per_level = box_cls_per_level.permute(0, 3, 4, 1, 2)
             box_cls_per_level = box_cls_per_level.reshape(N, -1, C)
@@ -123,22 +135,21 @@ class RetinaNetLossComputation(object):
 
         labels = torch.cat(labels, dim=0)
         regression_targets = torch.cat(regression_targets, dim=0)
-        pos_inds = labels > 0
+        pos_inds = torch.nonzero(labels > 0).squeeze(1)
 
         retinanet_regression_loss = smooth_l1_loss(
             box_regression[pos_inds],
             regression_targets[pos_inds],
             beta=self.bbox_reg_beta,
             size_average=False,
-        ) / (pos_inds.sum() * 4)
-        retinanet_regression_loss *= self.bbox_reg_weight
+        ) / (pos_inds.numel() * 4) * self.bbox_reg_weight
 
         labels = labels.int()
 
-        retinanet_cls_loss =self.box_cls_loss_func(
+        retinanet_cls_loss = self.box_cls_loss_func(
             box_cls,
             labels
-        ) / ((labels > 0).sum() + N)
+        ) / (pos_inds.numel() + N)  # TODO why the N?
 
         return retinanet_cls_loss, retinanet_regression_loss
 

@@ -53,8 +53,8 @@ class RetinaNetPostProcessor(torch.nn.Module):
         """
         device = box_cls.device
         N, _, H, W = box_cls.shape
-        A = int(box_regression.size(1) / 4)
-        C = int(box_cls.size(1) / A)
+        A = box_regression.size(1) // 4
+        C = box_cls.size(1) // A
 
         # put in the same format as anchors
         box_cls = box_cls.view(N, -1, C, H, W).permute(0, 3, 4, 1, 2)
@@ -67,8 +67,9 @@ class RetinaNetPostProcessor(torch.nn.Module):
 
         num_anchors = A * H * W
 
-        results = [[] for _ in range(N)]
+        # results = [[] for _ in range(N)]
         candidate_inds = box_cls > pre_nms_thresh
+        """
         if candidate_inds.sum().item() == 0:
             empty_boxlists = []
             for a in anchors:
@@ -79,25 +80,28 @@ class RetinaNetPostProcessor(torch.nn.Module):
                     "scores", torch.Tensor([]).to(device))
                 empty_boxlists.append(empty_boxlist)
             return empty_boxlists
-
+        """
 
         pre_nms_top_n = candidate_inds.view(N, -1).sum(1)
         pre_nms_top_n = pre_nms_top_n.clamp(max=self.pre_nms_top_n)
 
-        for batch_idx, (per_box_cls, per_box_regression, per_pre_nms_top_n, \
-        per_candidate_inds, per_anchors) in enumerate(zip(
+        for per_box_cls, per_box_regression, per_pre_nms_top_n, \
+        per_candidate_inds, per_anchors in zip(
             box_cls,
             box_regression,
             pre_nms_top_n,
             candidate_inds,
-            anchors)):
+            anchors):
 
             # Sort and select TopN
+            # TODO most of this can be made out of the loop for
+            # all images
             per_box_cls = per_box_cls[per_candidate_inds]
             per_candidate_nonzeros = per_candidate_inds.nonzero()
             per_box_loc = per_candidate_nonzeros[:, 0]
             per_class = per_candidate_nonzeros[:, 1]
             per_class += 1
+            # TODO maybe run this unconditionally?
             if per_candidate_inds.sum().item() > per_pre_nms_top_n.item():
                 per_box_cls, top_k_indices = \
                         per_box_cls.topk(per_pre_nms_top_n, sorted=False)
@@ -114,10 +118,11 @@ class RetinaNetPostProcessor(torch.nn.Module):
             boxlist.add_field("scores", per_box_cls)
             boxlist = boxlist.clip_to_image(remove_empty=False)
             boxlist = remove_small_boxes(boxlist, self.min_size)
-            results[batch_idx] = boxlist
+            results.append(boxlist)
 
         return results
 
+    # TODO almost exactly the same as RPNPostProcessor
     def forward(self, anchors, box_cls, box_regression, targets=None):
         """
         Arguments:
@@ -145,6 +150,8 @@ class RetinaNetPostProcessor(torch.nn.Module):
 
         return boxlists
 
+    # TODO very similar to filter_results from PostProcessor
+    # but filter_results is per image
     def select_over_all_levels(self, boxlists):
         num_images = len(boxlists)
         results = []
@@ -155,10 +162,11 @@ class RetinaNetPostProcessor(torch.nn.Module):
             boxlist = boxlists[i]
             result = []
             # skip the background
+            # TODO remove hardcoded 81
             for j in range(1, 81):
                 inds = (labels == j).nonzero().view(-1)
-                if len(inds) == 0:
-                    continue
+                # if len(inds) == 0:
+                #     continue
 
                 scores_j = scores[inds]
                 boxes_j = boxes[inds, :].view(-1, 4)
@@ -176,22 +184,23 @@ class RetinaNetPostProcessor(torch.nn.Module):
                 )
                 result.append(boxlist_for_class)
 
-            if len(result):
-                result = cat_boxlist(result)
-                number_of_detections = len(result)
+            # if len(result):
+            result = cat_boxlist(result)
+            number_of_detections = len(result)
 
-                # Limit to max_per_image detections **over all classes**
-                if number_of_detections > self.fpn_post_nms_top_n > 0:
-                    cls_scores = result.get_field("scores")
-                    image_thresh, _ = torch.kthvalue(
-                        cls_scores.cpu(),
-                        number_of_detections - self.fpn_post_nms_top_n + 1
-                    )
-                    keep = cls_scores >= image_thresh.item()
-                    keep = torch.nonzero(keep).squeeze(1)
-                    result = result[keep]
-                results.append(result)
+            # Limit to max_per_image detections **over all classes**
+            if number_of_detections > self.fpn_post_nms_top_n > 0:
+                cls_scores = result.get_field("scores")
+                image_thresh, _ = torch.kthvalue(
+                    cls_scores.cpu(),
+                    number_of_detections - self.fpn_post_nms_top_n + 1
+                )
+                keep = cls_scores >= image_thresh.item()
+                keep = torch.nonzero(keep).squeeze(1)
+                result = result[keep]
+            results.append(result)
 
+            """
             else:
                 device = boxlist.bbox.device
                 empty_boxlist = BoxList(
@@ -204,6 +213,7 @@ class RetinaNetPostProcessor(torch.nn.Module):
                     "scores", torch.Tensor([0.01]).to(device)
                 )
                 results.append(empty_boxlist)
+            """
         return results
 
 
