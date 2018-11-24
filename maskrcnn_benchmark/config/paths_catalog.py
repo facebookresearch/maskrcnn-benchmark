@@ -2,7 +2,7 @@
 """Centralized catalog of paths."""
 
 import os
-
+from . import cfg
 
 class DatasetCatalog(object):
     DATA_DIR = "datasets"
@@ -21,18 +21,77 @@ class DatasetCatalog(object):
             "coco/val2014",
             "coco/annotations/instances_valminusminival2014.json",
         ),
-        "voc_2007_trainval": ("voc/VOC2007", 'trainval'),
-        "voc_2007_test": ("voc/VOC2007", 'test'),
-        "voc_2012_train": ("voc/VOC2012", 'train'),
-        "voc_2012_trainval": ("voc/VOC2012", 'trainval'),
-        "voc_2012_val": ("voc/VOC2012", 'val'),
-        "voc_2012_test": ("voc/VOC2012", 'test'),
-
+        #"voc_2007_trainval": ("voc/VOC2007/JPEGImages", 'trainval'),
+        "voc_2007_test": (
+            "voc/VOC2007/JPEGImages",
+            'test'),
+        "voc_2012_train": (
+            "voc/VOC2012/JPEGImages",
+            'voc/VOC2012/annotations/voc_2012_train.json'),
+        # "voc_2012_trainval": (
+        #     "voc/VOC2012/JPEGImages", 'trainval'),
+        "voc_2012_val": (
+            "voc/VOC2012/JPEGImages",
+            'voc/VOC2012/annotations/voc_2012_val.json'),
+        "voc_2012_test": (
+            "voc/VOC2012/JPEGImages",
+            'voc/VOC2012/annotations/voc_2012_test.json'),
     }
+
+#     def evaluate_masks(dataset, all_boxes, all_segms, output_dir):
+#     """Evaluate instance segmentation."""
+#     logger.info('Evaluating segmentations')
+#     not_comp = not cfg.TEST.COMPETITION_MODE
+#     if _use_json_dataset_evaluator(dataset):
+#         coco_eval = json_dataset_evaluator.evaluate_masks(
+#             dataset,
+#             all_boxes,
+#             all_segms,
+#             output_dir,
+#             use_salt=not_comp,
+#             cleanup=not_comp
+#         )
+#         mask_results = _coco_eval_to_mask_results(coco_eval)
+#     elif _use_cityscapes_evaluator(dataset):
+#         cs_eval = cs_json_dataset_evaluator.evaluate_masks(
+#             dataset,
+#             all_boxes,
+#             all_segms,
+#             output_dir,
+#             use_salt=not_comp,
+#             cleanup=not_comp
+#         )
+#         mask_results = _cs_eval_to_mask_results(cs_eval)
+#     else:
+#         raise NotImplementedError(
+#             'No evaluator for dataset: {}'.format(dataset.name)
+#         )
+#     return OrderedDict([(dataset.name, mask_results)])
+
+#    def _use_json_dataset_evaluator(dataset):
+#        """Check if the dataset uses the general json dataset evaluator."""
+#        return dataset.name.find('coco_') > -1 or cfg.TEST.FORCE_JSON_DATASET_EVAL
+#    if _use_json_dataset_evaluator(dataset):
+#    def voc_info(json_dataset):
+#       year = json_dataset.name[4:8]
+#       image_set = json_dataset.name[9:]
+#       devkit_path = get_devkit_dir(json_dataset.name)
+#       assert os.path.exists(devkit_path), \
+#         'Devkit directory {} not found'.format(devkit_path)
+#       anno_path = os.path.join(
+#         devkit_path, 'VOC' + year, 'Annotations', '{:s}.xml')
+#       image_set_path = os.path.join(
+#         devkit_path, 'VOC' + year, 'ImageSets', 'Main', image_set + '.txt')
+#       return dict(
+#         year=year,
+#         image_set=image_set,
+#         devkit_path=devkit_path,
+#         anno_path=anno_path,
+#         image_set_path=image_set_path)
 
     @staticmethod
     def get(name):
-        if "coco" in name:
+        if "coco" in name or cfg.FORCE_USE_JSON_ANNOTATION:
             data_dir = DatasetCatalog.DATA_DIR
             attrs = DatasetCatalog.DATASETS[name]
             args = dict(
@@ -48,7 +107,7 @@ class DatasetCatalog(object):
             attrs = DatasetCatalog.DATASETS[name]
             args = dict(
                 data_dir=os.path.join(data_dir, attrs[0]),
-                split=attrs[1],
+                split=attrs[0][9:],
             )
             return dict(
                 factory="PascalVOCDataset",

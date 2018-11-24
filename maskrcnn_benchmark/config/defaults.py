@@ -11,7 +11,7 @@ from yacs.config import CfgNode as CN
 # corresponding name will be post-fixed by a _TRAIN for a training parameter,
 # or _TEST for a test-specific parameter.
 # For example, the number of images during training will be
-# IMAGES_PER_BATCH_TRAIN, while the number of images for testing will be
+# IMAGES_PER_BATCH_TRAIN, while the `number of images for testing will be
 # IMAGES_PER_BATCH_TEST
 
 # -----------------------------------------------------------------------------
@@ -60,6 +60,11 @@ _C.DATASETS = CN()
 _C.DATASETS.TRAIN = ()
 # List of the dataset names for testing, as present in paths_catalog.py
 _C.DATASETS.TEST = ()
+
+# Evaluate detections with the COCO json dataset eval code even if it's not the
+# evaluation code for the dataset (e.g. evaluate PASCAL VOC results using the
+# COCO API to get COCO style AP on PASCAL VOC)
+_C.DATASETS.FORCE_USE_JSON_ANNOTATION = True
 
 # -----------------------------------------------------------------------------
 # DataLoader
@@ -272,3 +277,4 @@ _C.TEST.IMS_PER_BATCH = 8
 _C.OUTPUT_DIR = "."
 
 _C.PATHS_CATALOG = os.path.join(os.path.dirname(__file__), "paths_catalog.py")
+
