@@ -10,7 +10,6 @@ from maskrcnn_benchmark.structures.image_list import to_image_list
 
 from ..backbone import build_backbone
 from ..rpn.rpn import build_rpn
-from ..rpn.retinanet.retinanet import build_retinanet
 from ..roi_heads.roi_heads import build_roi_heads
 
 
@@ -28,12 +27,8 @@ class GeneralizedRCNN(nn.Module):
         super(GeneralizedRCNN, self).__init__()
 
         self.backbone = build_backbone(cfg)
-        if cfg.MODEL.RETINANET_ON:
-            self.rpn = build_retinanet(cfg)
-            self.roi_heads = []
-        else:
-            self.rpn = build_rpn(cfg)
-            self.roi_heads = build_roi_heads(cfg)
+        self.rpn = build_rpn(cfg)
+        self.roi_heads = build_roi_heads(cfg)
 
     def forward(self, images, targets=None):
         """
