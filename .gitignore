@@ -28,3 +28,8 @@ dist/
 # project dirs
 /datasets
 /models
+
+checkpoints
+*checkpoint
+log.txt
+inference/*

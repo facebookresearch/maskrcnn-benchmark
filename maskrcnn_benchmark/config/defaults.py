@@ -23,6 +23,7 @@ _C = CN()
 _C.MODEL = CN()
 _C.MODEL.RPN_ONLY = False
 _C.MODEL.MASK_ON = False
+_C.MODEL.VERTEX_ON = False
 _C.MODEL.DEVICE = "cuda"
 _C.MODEL.META_ARCHITECTURE = "GeneralizedRCNN"
 
@@ -197,6 +198,15 @@ _C.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR = True
 # Whether or not resize and translate masks to the input image.
 _C.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS = False
 _C.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS_THRESHOLD = 0.5
+
+# NEW: Added for vertex head
+_C.MODEL.ROI_VERTEX_HEAD = CN()
+_C.MODEL.ROI_VERTEX_HEAD.FEATURE_EXTRACTOR = "ResNet50Conv5ROIFeatureExtractor"
+# _C.MODEL.ROI_VERTEX_HEAD.POOLER_SCALES = (1.0 / 16,)
+_C.MODEL.ROI_VERTEX_HEAD.RESOLUTION = 28
+_C.MODEL.ROI_VERTEX_HEAD.SHARE_BOX_FEATURE_EXTRACTOR = True
+_C.MODEL.ROI_VERTEX_HEAD.CONV_LAYERS = (256)
+# _C.MODEL.ROI_VERTEX_HEAD.MLP_HEAD_DIM = 1024
 
 # ---------------------------------------------------------------------------- #
 # ResNe[X]t options (ResNets = {ResNet, ResNeXt}
