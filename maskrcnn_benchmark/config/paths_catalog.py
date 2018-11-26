@@ -21,21 +21,30 @@ class DatasetCatalog(object):
             "coco/val2014",
             "coco/annotations/instances_valminusminival2014.json",
         ),
-        #"voc_2007_trainval": ("voc/VOC2007/JPEGImages", 'trainval'),
+        "voc_2007_train": (
+            "voc/VOC2007/JPEGImages",
+            "voc/VOC2007/annotations/pascal_train2007.json"),
         "voc_2007_test": (
             "voc/VOC2007/JPEGImages",
-            'test'),
+            "voc/VOC2007/annotations/pascal_test2007.json"),
         "voc_2012_train": (
             "voc/VOC2012/JPEGImages",
-            'voc/VOC2012/annotations/voc_2012_train.json'),
-        # "voc_2012_trainval": (
-        #     "voc/VOC2012/JPEGImages", 'trainval'),
+            "voc/VOC2012/annotations/pascal_train2012.json"),
         "voc_2012_val": (
             "voc/VOC2012/JPEGImages",
-            'voc/VOC2012/annotations/voc_2012_val.json'),
+            "voc/VOC2012/annotations/pascal_val2012.json"),
         "voc_2012_test": (
             "voc/VOC2012/JPEGImages",
-            'voc/VOC2012/annotations/voc_2012_test.json'),
+            "voc/VOC2012/annotations/pascal_test2012.json"),
+        "cityscapes_fine_instanceonly_seg_train": (
+            "cityscapes/images",
+            "cityscapes/annotations/instancesonly_filtered_gtFine_train.json"),
+        "cityscapes_fine_instanceonly_seg_val": (
+            "cityscapes/images",
+            "cityscapes/annotations/instancesonly_filtered_gtFine_val.json"),
+        "cityscapes_fine_instanceonly_seg_test": (
+            "cityscapes/images",
+            "cityscapes/annotations/instancesonly_filtered_gtFine_test.json")
     }
 
     @staticmethod
