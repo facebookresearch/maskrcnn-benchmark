@@ -31,7 +31,7 @@ try:
     from apex.parallel import DistributedDataParallel as DDP
     from apex import amp
 except ImportError:
-    print('Use APEX for better performance via apex.amp and apex.DistributedDataParallel')
+    raise ImportError('Use APEX for better performance via apex.amp and apex.DistributedDataParallel')
 
 
 def train(cfg, local_rank, distributed):
@@ -42,9 +42,11 @@ def train(cfg, local_rank, distributed):
     optimizer = make_optimizer(cfg, model)
     scheduler = make_lr_scheduler(cfg, optimizer)
 
-    # Wrap the optimizer for fp16 training
-    use_mixed_precision = cfg.SOLVER.MIXED_PRECISION
-    amp_handle = amp.init(enabled=use_mixed_precision, verbose=False)
+    # Initialize mixed-precision training
+    use_mixed_precision = cfg.DTYPE == "float16"
+    amp_handle = amp.init(enabled=use_mixed_precision, verbose=cfg.AMP_VERBOSE)
+
+    # wrap the optimizer for mixed precision
     optimizer = amp_handle.wrap_optimizer(optimizer)
 
     if distributed:

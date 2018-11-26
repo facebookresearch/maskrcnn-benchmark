@@ -254,9 +254,6 @@ _C.SOLVER.CHECKPOINT_PERIOD = 2500
 # see 2 images per batch
 _C.SOLVER.IMS_PER_BATCH = 16
 
-# Whether or not to use mixed-precision (via apex.amp)
-_C.SOLVER.MIXED_PRECISION = False
-
 # ---------------------------------------------------------------------------- #
 # Specific test options
 # ---------------------------------------------------------------------------- #
@@ -275,3 +272,13 @@ _C.TEST.IMS_PER_BATCH = 8
 _C.OUTPUT_DIR = "."
 
 _C.PATHS_CATALOG = os.path.join(os.path.dirname(__file__), "paths_catalog.py")
+
+# ---------------------------------------------------------------------------- #
+# Precision options
+# ---------------------------------------------------------------------------- #
+
+# Precision of input, allowable: (float32, float16)
+_C.DTYPE = "float32"
+
+# Enable verbosity in apex.amp
+_C.AMP_VERBOSE = False
