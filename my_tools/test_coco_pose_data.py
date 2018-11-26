@@ -45,6 +45,16 @@ data_loader = torch.utils.data.DataLoader(
 # model.to(device)
 
 for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
-	pass
+	t1 = targets[0]
+	m1 = t1.get_field("masks")
+	polygons = [x for x in m1]
+	p1 = polygons[0]
+	proposal = [0,0,100,100]
+	cropped_p1 = p1.crop(proposal)
+	resized_p1 = cropped_p1.resize((50,50))
+	mask = resized_p1.convert('mask')
+	mask_np = mask.numpy()
     # images = images.to(device)
     # targets = [target.to(device) for target in targets]
+
+
