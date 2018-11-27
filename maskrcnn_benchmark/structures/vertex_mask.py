@@ -53,7 +53,6 @@ class VertexMask(object):
         self.vertex_centers = vertex_centers # self._generate_vertex_centers()
         self.size = size
 
-    """TODO"""
     def transpose(self, method):
         # print("TRANSPOSE")
         if method not in (FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM):
@@ -67,7 +66,6 @@ class VertexMask(object):
             flipped = flip_top_bottom(self.vertex_centers) 
 
         return VertexMask(flipped, size=self.size)
-    """TODO END"""
 
     def resize(self, size, *args, **kwargs):
         # print("RESIZE")
