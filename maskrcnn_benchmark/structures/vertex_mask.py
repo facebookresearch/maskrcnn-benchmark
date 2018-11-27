@@ -11,7 +11,7 @@ FLIP_TOP_BOTTOM = 1
 TORCH_VERSION = torch.__version__
 TORCH_VERSION_MAJOR, TORCH_VERSION_MINOR = TORCH_VERSION.split(".")[:2]
 
-from maskrcnn_benchmark.structures.segmentation_mask import Polygons
+# from maskrcnn_benchmark.structures.segmentation_mask import Polygons
 
 class VertexMask(object):
     """
@@ -22,18 +22,19 @@ class VertexMask(object):
     def __init__(self, vertex_centers, size):
         # assert isinstance(polygons, list) and len(polygons) > 0 and isinstance(polygons[0], Polygons)
         # assert isinstance(vertex_centers, np.ndarray) and vertex_centers.shape[:2][::-1] == size  # size is (W,H)
-        # assert vertex_centers.shape[-1] == 3
         # self.polygons = self.polygons
-        assert isinstance(vertex_centers, torch.Tensor) and vertex_centers.shape[:2][::-1] == size  # size is (W,H)
+        """
+        vertex_centers: tensor of shape (N,W,H,3)
+        """
+        assert isinstance(vertex_centers, torch.Tensor) and vertex_centers.shape[1:3][::-1] == size  # size is (W,H)
+        assert vertex_centers.shape[-1] == 3
         
         self.vertex_centers = vertex_centers # self._generate_vertex_centers()
         self.size = size
 
-    def _generate_vertex_centers(self, meta):
-        pass
-
     """TODO"""
     def transpose(self, method):
+        print("TRANPOSE")
         if method not in (FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM):
             raise NotImplementedError(
                 "Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented"
@@ -45,13 +46,15 @@ class VertexMask(object):
         return SegmentationMask(flipped, size=self.size)
 
     def resize(self, size, *args, **kwargs):
-        scaled = []
+        print("RESIZE")
+        scaled = self.vertex_centers # TODO
         # for polygon in self.polygons:
         #     scaled.append(polygon.resize(size, *args, **kwargs))
         return VertexMask(scaled, size=size)
     """TODO END"""
 
     def crop(self, box):
+        print("CROP")
         w, h = box[2] - box[0], box[3] - box[1]
         cropped_centers = self.vertex_centers[:, box[1] : box[3], box[0] : box[2]]
         return VertexMask(cropped_centers, size=(w, h))
@@ -85,4 +88,4 @@ class VertexMask(object):
         return s
 
 if __name__ == '__main__':
-	pass
+    pass
