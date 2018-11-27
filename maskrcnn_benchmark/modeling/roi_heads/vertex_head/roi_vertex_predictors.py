@@ -60,6 +60,6 @@ class VertexRCNNC4Predictor(nn.Module):
 
 # _ROI_VERTEX_PREDICTOR = {"VertexRCNNC4Predictor": VertexRCNNC4Predictor}
 
-def make_roi_mask_predictor(cfg):
+def make_roi_vertex_predictor(cfg):
     # func = _ROI_VERTEX_PREDICTOR[cfg.MODEL.ROI_VERTEX_HEAD.PREDICTOR]
     return VertexRCNNC4Predictor(cfg)

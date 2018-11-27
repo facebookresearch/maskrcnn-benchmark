@@ -109,6 +109,7 @@ def test(cfg, model, distributed):
 def main():
     parser = argparse.ArgumentParser(description="PyTorch Object Detection Training")
     parser.add_argument(
+        "-cfg",
         "--config-file",
         default="",
         metavar="FILE",

@@ -13,6 +13,8 @@ class DatasetCatalog(object):
             "coco/annotations/instances_train2014.json",
         ),
         "coco_2014_val": ("coco/val2014", "coco/annotations/instances_val2014.json"),
+        "coco_2014_debug": ("coco/val2014", "coco/annotations/instances_debug2014.json"),
+        "cocopose_2014_debug": ("LOV/data", "LOV/coco_lov_debug.json"),
         "coco_2014_minival": (
             "coco/val2014",
             "coco/annotations/instances_minival2014.json",
@@ -39,8 +41,9 @@ class DatasetCatalog(object):
                 root=os.path.join(data_dir, attrs[0]),
                 ann_file=os.path.join(data_dir, attrs[1]),
             )
+            factory = "COCODataset" if "cocopose" not in name else "COCOPoseDataset"
             return dict(
-                factory="COCODataset",
+                factory=factory,
                 args=args,
             )
         elif "voc" in name:
