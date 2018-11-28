@@ -194,6 +194,9 @@ _C.MODEL.ROI_MASK_HEAD.MLP_HEAD_DIM = 1024
 _C.MODEL.ROI_MASK_HEAD.CONV_LAYERS = (256, 256, 256, 256)
 _C.MODEL.ROI_MASK_HEAD.RESOLUTION = 14
 _C.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR = True
+# Whether or not resize and translate masks to the input image.
+_C.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS = False
+_C.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS_THRESHOLD = 0.5
 
 # ---------------------------------------------------------------------------- #
 # ResNe[X]t options (ResNets = {ResNet, ResNeXt}

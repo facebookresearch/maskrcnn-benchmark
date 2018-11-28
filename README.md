@@ -83,6 +83,8 @@ ln -s /path_to_coco_dataset/annotations datasets/coco/annotations
 ln -s /path_to_coco_dataset/train2014 datasets/coco/train2014
 ln -s /path_to_coco_dataset/test2014 datasets/coco/test2014
 ln -s /path_to_coco_dataset/val2014 datasets/coco/val2014
+# for pascal voc dataset:
+ln -s /path_to_VOCdevkit_dir datasets/voc
 ```
 
 You can also configure your own paths to the datasets.
@@ -194,6 +196,18 @@ should currently follow the cocoApi for now.
 If you have issues running or compiling this code, we have compiled a list of common issues in
 [TROUBLESHOOTING.md](TROUBLESHOOTING.md). If your issue is not present there, please feel
 free to open a new issue.
+
+## Citations
+Please consider citing this project in your publications if it helps your research. The following is a BibTeX reference. The BibTeX entry requires the `url` LaTeX package.
+```
+@misc{massa2018mrcnn,
+author = {Massa, Francisco and Girshick, Ross},
+title = {{maskrnn-benchmark: Fast, modular reference implementation of Instance Segmentation and Object Detection algorithms in PyTorch}},
+year = {2018},
+howpublished = {\url{https://github.com/facebookresearch/maskrcnn-benchmark}},
+note = {Accessed: [Insert date here]}
+}
+```
 
 ## License
 
