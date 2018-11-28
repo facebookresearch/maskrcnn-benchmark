@@ -22,7 +22,7 @@ MODEL:
     NUM_CLASSES: 21
 DATASETS:
   TRAIN: ("cityscapes_fine_instanceonly_seg_train",)
-  TEST: ("cityscapes_fine_instanceonly_seg_test",)
+  TEST: ("cityscapes_fine_instanceonly_seg_val",)
 DATALOADER:
   SIZE_DIVISIBILITY: 32
 SOLVER:

@@ -88,22 +88,24 @@ class PascalVOCDataset(torch.utils.data.Dataset):
         boxes = []
         gt_classes = []
         difficult_boxes = []
+        TO_REMOVE = 1
+        
         for obj in target.iter("object"):
             difficult = int(obj.find("difficult").text) == 1
             if not self.keep_difficult and difficult:
                 continue
             name = obj.find("name").text.lower().strip()
             bb = obj.find("bndbox")
+            # Make pixel indexes 0-based
+            # Refer to "https://github.com/rbgirshick/py-faster-rcnn/blob/master/lib/datasets/pascal_voc.py#L208-L211"
+            box = [
+                bb.find("xmin").text, 
+                bb.find("ymin").text, 
+                bb.find("xmax").text, 
+                bb.find("ymax").text,
+            ]
             bndbox = tuple(
-                map(
-                    int,
-                    [
-                        bb.find("xmin").text,
-                        bb.find("ymin").text,
-                        bb.find("xmax").text,
-                        bb.find("ymax").text,
-                    ],
-                )
+                map(lambda x: x - TO_REMOVE, list(map(int, box)))
             )
 
             boxes.append(bndbox)
