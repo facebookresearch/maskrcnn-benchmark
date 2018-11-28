@@ -6,7 +6,6 @@ from . import cfg
 
 class DatasetCatalog(object):
     DATA_DIR = "datasets"
-
     DATASETS = {
         "coco_2014_train": (
             "coco/train2014",
@@ -24,6 +23,9 @@ class DatasetCatalog(object):
         "voc_2007_train": (
             "voc/VOC2007/JPEGImages",
             "voc/VOC2007/annotations/pascal_train2007.json"),
+        "voc_2007_val": (
+            "voc/VOC2007/JPEGImages",
+            "voc/VOC2007/annotations/pascal_val2007.json"),
         "voc_2007_test": (
             "voc/VOC2007/JPEGImages",
             "voc/VOC2007/annotations/pascal_test2007.json"),
@@ -65,7 +67,7 @@ class DatasetCatalog(object):
             attrs = DatasetCatalog.DATASETS[name]
             args = dict(
                 data_dir=os.path.join(data_dir, attrs[0]),
-                split=attrs[0][9:],
+                split=name[9:],
             )
             return dict(
                 factory="PascalVOCDataset",

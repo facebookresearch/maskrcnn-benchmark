@@ -41,7 +41,7 @@ class PascalVOCDataset(torch.utils.data.Dataset):
     )
 
     def __init__(self, data_dir, split, use_difficult=False, transforms=None):
-        self.root = data_dir
+        self.root = data_dir[:-10]  # strip "JPEGImages"
         self.image_set = split
         self.keep_difficult = use_difficult
         self.transforms = transforms
