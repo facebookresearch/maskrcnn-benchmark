@@ -43,10 +43,6 @@ def train(cfg, local_rank, distributed, use_tensorboard=False):
             broadcast_buffers=False,
         )
 
-    tb_logger = None
-    if use_tensorboard:
-        tb_logger = get_tensorboard_writer(local_rank, distributed)
-
     arguments = {"iteration": 0}
     output_dir = cfg.OUTPUT_DIR
 
@@ -65,6 +61,8 @@ def train(cfg, local_rank, distributed, use_tensorboard=False):
     )
 
     checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
+    tensorboard_logdir = cfg.TENSORBOARD_LOGDIR
+    tensorboard_exp_name = cfg.TENSORBOARD_EXP_NAME
 
     do_train(
         model,
@@ -75,7 +73,9 @@ def train(cfg, local_rank, distributed, use_tensorboard=False):
         device,
         checkpoint_period,
         arguments,
-        tb_logger=tb_logger
+        tensorboard_logdir,
+        tensorboard_exp_name,
+        use_tensorboard=use_tensorboard
     )
 
     return model

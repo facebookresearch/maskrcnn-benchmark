@@ -36,8 +36,7 @@ class Checkpointer(object):
         if not self.save_to_disk:
             return
 
-        data = {}
-        data["model"] = self.model.state_dict()
+        data = {"model": self.model.state_dict()}
         if self.optimizer is not None:
             data["optimizer"] = self.optimizer.state_dict()
         if self.scheduler is not None:
