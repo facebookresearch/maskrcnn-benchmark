@@ -25,7 +25,6 @@ from maskrcnn_benchmark.utils.comm import synchronize, get_rank
 from maskrcnn_benchmark.utils.imports import import_file
 from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
-from maskrcnn_benchmark.utils.tensorboard import get_tensorboard_writer
 
 
 def train(cfg, local_rank, distributed, use_tensorboard=False):
