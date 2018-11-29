@@ -96,7 +96,7 @@ class TensorboardLogger(MetricLogger):
             return None
 
     def update(self, ** kwargs):
-        super(TensorboardLogger).update(**kwargs)
+        super(TensorboardLogger, self).update(**kwargs)
         if self.writer:
             for k, v in kwargs.items():
                 if isinstance(v, torch.Tensor):
