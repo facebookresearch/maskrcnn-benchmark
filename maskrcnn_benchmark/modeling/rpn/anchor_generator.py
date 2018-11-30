@@ -105,7 +105,6 @@ class AnchorGenerator(nn.Module):
         boxlist.add_field("visibility", inds_inside)
 
     def forward(self, image_list, feature_maps):
-        grid_height, grid_width = feature_maps[0].shape[-2:]
         grid_sizes = [feature_map.shape[-2:] for feature_map in feature_maps]
         anchors_over_all_feature_maps = self.grid_anchors(grid_sizes)
         anchors = []
