@@ -23,6 +23,8 @@ class CombinedROIHeads(torch.nn.ModuleDict):
         # TODO rename x to roi_box_features, if it doesn't increase memory consumption
         x, detections, loss_box = self.box(features, proposals, targets)
         losses.update(loss_box)
+
+        detections_list = [detections]
         if self.cfg.MODEL.MASK_ON:
             mask_features = features
             # optimization: during training, if we share the feature extractor between
@@ -34,8 +36,12 @@ class CombinedROIHeads(torch.nn.ModuleDict):
                 mask_features = x
             # During training, self.box() will return the unaltered proposals as "detections"
             # this makes the API consistent during training and testing
-            x, detections, loss_mask = self.mask(mask_features, detections, targets)
+            mask_x, mask_detections, loss_mask = self.mask(mask_features, detections, targets)
             losses.update(loss_mask)
+            detections_list.append(mask_detections)
+
+            if not self.training:
+                detections = mask_detections
 
         if self.cfg.MODEL.VERTEX_ON:
             vertex_features = features
@@ -44,8 +50,13 @@ class CombinedROIHeads(torch.nn.ModuleDict):
                 and self.cfg.MODEL.ROI_VERTEX_HEAD.SHARE_BOX_FEATURE_EXTRACTOR
             ):
                 vertex_features = x
-            x, detections, loss_vertex = self.vertex(vertex_features, detections, targets)
+            # use
+            vertex_x, vertex_detections, loss_vertex = self.vertex(vertex_features, detections, targets)
             losses.update(loss_vertex)
+            detections_list.append(vertex_detections)
+
+            if not self.training:
+                detections = vertex_detections
 
         return x, detections, losses
 

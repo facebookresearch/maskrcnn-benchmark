@@ -54,8 +54,8 @@ transforms = T.build_transforms(cfg, is_train)
 # root = "./datasets/coco/val2014"
 # ann_file = "./datasets/coco/annotations/instances_debug2014.json" 
 # dataset = coco.COCODataset(ann_file, root, remove_images_without_annotations, transforms)
-root = "../PoseCNN/data/LOV/data"
-ann_file = "../PoseCNN/coco_ycb_debug.json" 
+root = "./datasets/LOV/data"
+ann_file = "./datasets/LOV/coco_lov_debug.json"
 dataset = coco_pose.COCOPoseDataset(ann_file, root, remove_images_without_annotations, transforms)
 # dataset = coco.COCODataset(ann_file, root, remove_images_without_annotations, transforms)
 

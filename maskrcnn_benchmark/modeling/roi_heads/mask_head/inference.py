@@ -117,7 +117,7 @@ def expand_masks(mask, padding):
 
 def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
     padded_mask, scale = expand_masks(mask[None], padding=padding)
-    mask = padded_mask[0, 0]
+    mask = padded_mask
     box = expand_boxes(box[None], scale)[0]
     box = box.to(dtype=torch.int32)
 
@@ -137,12 +137,12 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
 
     if thresh >= 0:
         mask = mask > thresh
-    else:
-        # for visualization and debugging, we also
-        # allow it to return an unmodified mask
-        mask = (mask * 255).to(torch.uint8)
+    # else:
+    #     # for visualization and debugging, we also
+    #     # allow it to return an unmodified mask
+    #     mask = (mask * 255).to(torch.uint8)
 
-    im_mask = torch.zeros((im_h, im_w), dtype=torch.uint8)
+    im_mask = torch.zeros((im_h, im_w), dtype=torch.float32)
     x_0 = max(box[0], 0)
     x_1 = min(box[2] + 1, im_w)
     y_0 = max(box[1], 0)
@@ -153,6 +153,12 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
     ]
     return im_mask
 
+def paste_masks_in_image(masks, box, im_h, im_w, thresh=0.5, padding=1):
+    N = len(masks)
+    canvas = torch.zeros((N, im_h, im_w), dtype=torch.float32)
+    for ix,mask in enumerate(masks):
+        canvas[ix] = paste_mask_in_image(mask, box, im_h, im_w, thresh, padding)
+    return canvas
 
 class Masker(object):
     """
@@ -168,11 +174,11 @@ class Masker(object):
         boxes = boxes.convert("xyxy")
         im_w, im_h = boxes.size
         res = [
-            paste_mask_in_image(mask[0], box, im_h, im_w, self.threshold, self.padding)
+            paste_masks_in_image(mask, box, im_h, im_w, self.threshold, self.padding)
             for mask, box in zip(masks, boxes.bbox)
         ]
         if len(res) > 0:
-            res = torch.stack(res, dim=0)[:, None]
+            res = torch.stack(res, dim=0)#[:, None]
         else:
             res = masks.new_empty((0, 1, masks.shape[-2], masks.shape[-1]))
         return res

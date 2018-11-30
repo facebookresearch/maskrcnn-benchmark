@@ -1,4 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+import numpy as np
 import cv2
 import torch
 from torchvision import transforms as T
@@ -110,7 +111,7 @@ class COCODemo(object):
         self.model.to(self.device)
         self.min_image_size = min_image_size
 
-        checkpointer = DetectronCheckpointer(cfg, self.model)
+        checkpointer = DetectronCheckpointer(cfg, self.model, save_dir=cfg.OUTPUT_DIR)
         _ = checkpointer.load(cfg.MODEL.WEIGHT)
 
         self.transforms = self.build_transform()
@@ -177,7 +178,7 @@ class COCODemo(object):
             result = self.overlay_mask(result, top_predictions)
         result = self.overlay_class_names(result, top_predictions)
 
-        return result
+        return result, top_predictions
 
     def compute_prediction(self, original_image):
         """
@@ -208,13 +209,15 @@ class COCODemo(object):
         height, width = original_image.shape[:-1]
         prediction = prediction.resize((width, height))
 
-        if prediction.has_field("mask"):
-            # if we have masks, paste the masks in the right position
-            # in the image, as defined by the bounding boxes
-            masks = prediction.get_field("mask")
-            # always single image is passed at a time
-            masks = self.masker([masks], [prediction])[0]
-            prediction.add_field("mask", masks)
+        fields = ["mask"]#,"vertex"]
+        for field in fields:
+            if prediction.has_field(field):
+                # if we have masks, paste the masks in the right position
+                # in the image, as defined by the bounding boxes
+                masks = prediction.get_field(field)
+                # always single image is passed at a time
+                masks = self.masker([masks], [prediction])[0]
+                prediction.add_field(field, masks)
         return prediction
 
     def select_top_predictions(self, predictions):
@@ -280,6 +283,8 @@ class COCODemo(object):
                 It should contain the field `mask` and `labels`.
         """
         masks = predictions.get_field("mask").numpy()
+        if masks.dtype == np.float32 or masks.dtype == np.float64:
+            masks = (masks * 255).astype(np.uint8)
         labels = predictions.get_field("labels")
 
         colors = self.compute_colors_for_labels(labels).tolist()
@@ -355,3 +360,24 @@ class COCODemo(object):
             )
 
         return image
+
+class LOVDemo(COCODemo):
+    CATEGORIES = [
+        '__background__', '002_master_chef_can', '003_cracker_box', '004_sugar_box', '005_tomato_soup_can',
+         '006_mustard_bottle', \
+         '007_tuna_fish_can', '008_pudding_box', '009_gelatin_box', '010_potted_meat_can', '011_banana',
+         '019_pitcher_base', \
+         '021_bleach_cleanser', '024_bowl', '025_mug', '035_power_drill', '036_wood_block', '037_scissors',
+         '040_large_marker', \
+         '051_large_clamp', '052_extra_large_clamp', '061_foam_brick'
+    ]
+    def __init__(
+        self,
+        cfg,
+        confidence_threshold=0.7,
+        show_mask_heatmaps=False,
+        masks_per_dim=2,
+        min_image_size=224,
+    ):
+        super(LOVDemo, self).__init__(cfg, confidence_threshold, show_mask_heatmaps, masks_per_dim, min_image_size)
+

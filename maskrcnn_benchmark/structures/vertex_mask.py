@@ -75,15 +75,20 @@ class VertexMask(object):
 
     def crop(self, box):
         # print("CROP")
-        w, h = box[2] - box[0], box[3] - box[1]
-        cropped_centers = self.vertex_centers[:, :, box[1] : box[3], box[0] : box[2]]
+        bbox = torch.round(box).int()
+        w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        cropped_centers = self.vertex_centers[:, :, bbox[1] : bbox[3], bbox[0] : bbox[2]]
         return VertexMask(cropped_centers, size=(w, h))
+
+    @property
+    def data(self):
+        return self.vertex_centers
 
     def to(self, *args, **kwargs):
         return self
 
-    def __iter__(self):
-        return iter(self.vertex_centers)
+    # def __iter__(self):
+    #     return iter(self.vertex_centers)
 
     def __getitem__(self, item):
         if isinstance(item, int):

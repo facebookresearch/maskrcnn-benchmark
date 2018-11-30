@@ -75,7 +75,7 @@ class ROIMaskHead(torch.nn.Module):
 
         loss_mask = self.loss_evaluator(proposals, mask_logits, targets)
 
-        return x, all_proposals, dict(loss_mask=loss_mask)
+        return x, proposals, dict(loss_mask=loss_mask)
 
 
 def build_roi_mask_head(cfg):

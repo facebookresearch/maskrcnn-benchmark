@@ -38,7 +38,7 @@ def project_masks_on_boxes(vertex_masks, proposals, discretization_size):
         cropped_mask = vertex_mask.crop(proposal)
         scaled_mask = cropped_mask.resize((M, M))
         # mask = scaled_mask.convert(mode="mask")
-        masks.append(scaled_mask)
+        masks.append(scaled_mask.data[0])
     if len(masks) == 0:
         return torch.empty(0, dtype=torch.float32, device=device)
     return torch.stack(masks, dim=0).to(device, dtype=torch.float32)
@@ -48,7 +48,7 @@ def smooth_l1_loss_vertex(vertex_pred, vertex_targets, vertex_weights=None, sigm
 
     sigma_2 = sigma ** 2
     diff = vertex_pred - vertex_targets
-    if vertex_weights is not None or vertex_weights != 1:
+    if vertex_weights is not None and vertex_weights != 1:
         diff = torch.mul(vertex_weights, diff)
     abs_diff = torch.abs(diff)
     smoothL1_sign = (abs_diff < 1. / sigma_2).clone().float()
@@ -57,9 +57,9 @@ def smooth_l1_loss_vertex(vertex_pred, vertex_targets, vertex_weights=None, sigm
     # smoothL1_sign = tf.stop_gradient(tf.to_float(tf.less(abs_diff, 1. / sigma_2)))
     loss = torch.pow(diff, 2) * (sigma_2 / 2.) * smoothL1_sign \
             + (abs_diff - (0.5 / sigma_2)) * (1. - smoothL1_sign)
-    if vertex_weights is not None or vertex_weights != 1:
+    if vertex_weights is not None and vertex_weights != 1:
         loss = torch.div( torch.sum(loss), torch.sum(vertex_weights) + 1e-10 )
-    return loss
+    return loss.mean()
 
 
 class PoseRCNNLossComputation(object):
@@ -142,10 +142,17 @@ class PoseRCNNLossComputation(object):
         if vertex_targets.numel() == 0:
             return vertex_pred.sum() * 0
 
+        vp_size = vertex_pred.shape
+        N,C,H,W = vp_size
+        vp = vertex_pred.view(N,-1,3,H,W)
+        vp = vp[positive_inds, labels_pos]
         # mask_loss = F.binary_cross_entropy_with_logits(
         #     vertex_pred[positive_inds, labels_pos], mask_targets
         # )
-        vertex_loss = smooth_l1_loss_vertex(vertex_pred[positive_inds, labels_pos], vertex_targets) # TODO: add vertex_weights
+        # for pos_ind, label in zip(positive_inds, labels_pos):
+        #     vertex_pred.append(vertex_pred[pos_ind, label*3 : label*3+3])
+        # vertex_pred = torch.stack(masks, dim=0).to(device)
+        vertex_loss = smooth_l1_loss_vertex(vp, vertex_targets) # TODO: add vertex_weights
         return vertex_loss
 
 
