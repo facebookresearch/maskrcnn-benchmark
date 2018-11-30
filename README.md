@@ -47,7 +47,7 @@ We provide a helper class to simplify writing inference pipelines using pre-trai
 Here is how we would do it. Run this from the `demo` folder:
 ```python
 from maskrcnn_benchmark.config import cfg
-from demo.predictor import COCODemo
+from predictor import COCODemo
 
 config_file = "../configs/caffe2/e2e_mask_rcnn_R_50_FPN_1x_caffe2.yaml"
 
