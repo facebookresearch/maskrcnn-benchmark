@@ -53,7 +53,7 @@ class ROIVertexHead(torch.nn.Module):
 
         loss_vertex = self.loss_evaluator(proposals, pred_vertexes, targets)
 
-        return x, all_proposals, dict(loss_vertex=loss_vertex)
+        return x, proposals, dict(loss_vertex=loss_vertex)
 
 
 def build_roi_vertex_head(cfg):

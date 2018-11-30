@@ -141,7 +141,10 @@ def main():
             backend="nccl", init_method="env://"
         )
 
-    cfg.merge_from_file(args.config_file)
+    try:
+        cfg.merge_from_file(args.config_file)
+    except KeyError as e:
+        print(e)
     cfg.merge_from_list(args.opts)
     cfg.freeze()
 

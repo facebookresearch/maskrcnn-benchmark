@@ -38,7 +38,11 @@ class VertexPostProcessor(nn.Module):
         labels = [bbox.get_field("labels") for bbox in boxes]
         labels = torch.cat(labels)
         index = torch.arange(num_masks, device=labels.device)
-        vert_pred = vert_pred[index, labels][:, None]  # TODO: num_classes * 3
+
+        # vert_pred = vert_pred[index, labels][:, None]  #
+        N, C, H, W = vert_pred.shape
+        vert_pred = vert_pred.view(N,-1,3,H,W)
+        vert_pred = vert_pred[index, labels]
 
         boxes_per_image = [len(box) for box in boxes]
         vert_pred = vert_pred.split(boxes_per_image, dim=0)
