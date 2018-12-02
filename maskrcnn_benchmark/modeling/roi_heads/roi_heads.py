@@ -21,10 +21,10 @@ class CombinedROIHeads(torch.nn.ModuleDict):
     def forward(self, features, proposals, targets=None):
         losses = {}
         # TODO rename x to roi_box_features, if it doesn't increase memory consumption
-        x, detections, loss_box = self.box(features, proposals, targets)
+        x, bbox_pred, detections, loss_box = self.box(features, proposals, targets)
         losses.update(loss_box)
 
-        detections_list = [detections]
+        # detections_list = [detections]
         if self.cfg.MODEL.MASK_ON:
             mask_features = features
             # optimization: during training, if we share the feature extractor between
@@ -36,12 +36,11 @@ class CombinedROIHeads(torch.nn.ModuleDict):
                 mask_features = x
             # During training, self.box() will return the unaltered proposals as "detections"
             # this makes the API consistent during training and testing
-            mask_x, mask_detections, loss_mask = self.mask(mask_features, detections, targets)
+            x, mask_logits, detections, loss_mask = self.mask(mask_features, detections, targets)
             losses.update(loss_mask)
-            detections_list.append(mask_detections)
 
-            if not self.training:
-                detections = mask_detections
+            # if not self.training:
+            #     detections = mask_detections
 
         if self.cfg.MODEL.VERTEX_ON:
             vertex_features = features
@@ -51,12 +50,19 @@ class CombinedROIHeads(torch.nn.ModuleDict):
             ):
                 vertex_features = x
             # use
-            vertex_x, vertex_detections, loss_vertex = self.vertex(vertex_features, detections, targets)
+            x, vertex_pred, detections, loss_vertex = self.vertex(vertex_features, detections, targets)
             losses.update(loss_vertex)
-            detections_list.append(vertex_detections)
 
-            if not self.training:
-                detections = vertex_detections
+            # if not self.training:
+            #     detections = vertex_detections
+
+            if self.cfg.MODEL.POSE_ON:
+                # resize mask and vertexes to original resolution (resolution size can be found in
+                # detections/proposals var). mask out all values of the vertexes where mask value < 0.5
+                # possibly filter out masks where score < 0.9
+                # these will be our inputs to hough vote layer
+                pass
+
 
         return x, detections, losses
 
@@ -72,6 +78,9 @@ def build_roi_heads(cfg):
     if cfg.MODEL.VERTEX_ON:
         from .vertex_head.vertex_head import build_roi_vertex_head
         roi_heads.append(("vertex", build_roi_vertex_head(cfg)))
+        if cfg.MODEL.POSE_ON:
+            from .pose_head.pose_head import build_roi_pose_head
+            roi_heads.append(("pose", build_roi_pose_head(cfg)))
 
     # combine individual heads in a single module
     if roi_heads:

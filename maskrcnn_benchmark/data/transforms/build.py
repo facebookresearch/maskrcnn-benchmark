@@ -6,7 +6,7 @@ def build_transforms(cfg, is_train=True):
     if is_train:
         min_size = cfg.INPUT.MIN_SIZE_TRAIN
         max_size = cfg.INPUT.MAX_SIZE_TRAIN
-        flip_prob = 0.5  # cfg.INPUT.FLIP_PROB_TRAIN
+        flip_prob = cfg.INPUT.FLIP_PROB_TRAIN  # 0.5
     else:
         min_size = cfg.INPUT.MIN_SIZE_TEST
         max_size = cfg.INPUT.MAX_SIZE_TEST

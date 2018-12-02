@@ -1,5 +1,7 @@
 import torch
 
+import os
+
 import numpy as np
 
 import pycocotools.mask as mask_utils
@@ -44,6 +46,69 @@ class COCOPoseDataset(COCODataset):
     ):
         super(COCOPoseDataset, self).__init__(ann_file, root, remove_images_without_annotations, transforms)
 
+        # self.num_classes = len(self.json_category_id_to_contiguous_id)
+        categories = self.coco.cats
+        self._classes = ['__background'] + [categories[k]['name'] for k in categories]  # +1 for bg class
+        self.num_classes = len(self._classes)
+
+        extents_file = os.path.join(root, "../extents.txt")
+        symmetry_file = os.path.join(root, "../symmetry.txt")
+        models_dir = os.path.join(root, "../models")
+
+        # read symmetry file
+        self.symmetry = self._load_object_symmetry(symmetry_file)
+        self.symmetry = torch.tensor(self.symmetry)
+
+        # read points from models_dir
+        _, self.points = self._load_object_points(models_dir)
+        self.points = torch.tensor(self.points)
+        # maybe get 'extents' from points instead?
+
+        # read extents file
+        self.extents = self._load_object_extents(extents_file)
+        self.extents = torch.tensor(self.extents)
+
+
+    def _load_object_points(self, models_dir):
+
+        points = [[] for _ in range(self.num_classes)]
+        num = np.inf
+
+        for i in range(1, self.num_classes):
+            point_file = os.path.join(models_dir, self._classes[i], 'points.xyz')
+            # print point_file
+            assert os.path.exists(point_file), 'Path does not exist: {}'.format(point_file)
+            points[i] = np.loadtxt(point_file)
+            if points[i].shape[0] < num:
+                num = points[i].shape[0]
+
+        points_all = np.zeros((self.num_classes, num, 3), dtype=np.float32)
+        for i in range(1, self.num_classes):
+            points_all[i, :, :] = points[i][:num, :]
+
+        return points, points_all
+
+
+    def _load_object_extents(self, extent_file):
+
+        assert os.path.exists(extent_file), \
+                'Path does not exist: {}'.format(extent_file)
+
+        extents = np.zeros((self.num_classes, 3), dtype=np.float32)
+        extents[1:, :] = np.loadtxt(extent_file)
+
+        return extents
+
+    def _load_object_symmetry(self, symmetry_file):
+
+        assert os.path.exists(symmetry_file), \
+                'Path does not exist: {}'.format(symmetry_file)
+
+        symmetry = np.zeros((self.num_classes), dtype=np.float32)
+        symmetry[1:] = np.loadtxt(symmetry_file)
+
+        return symmetry
+
     def __getitem__(self, idx):
         img, anno = super(COCODataset, self).__getitem__(idx)
 
@@ -74,7 +139,7 @@ class COCOPoseDataset(COCODataset):
             z = np.log(pose[-1]) # z distance is the last value in the 3x4 transform matrix (index is -1 if matrix is a list)
             m = _get_mask_from_polygon(poly, img.size)
             vertex_centers.append(_generate_vertex_center_mask(m, center, z))
-        vertex_centers = torch.Tensor(vertex_centers)
+        vertex_centers = torch.tensor(vertex_centers)
         vertexes = VertexMask(vertex_centers, img.size)
         target.add_field("vertex", vertexes)
 
@@ -82,5 +147,9 @@ class COCOPoseDataset(COCODataset):
 
         if self.transforms is not None:
             img, target = self.transforms(img, target)
+
+        target.add_field("symmetry", self.symmetry)
+        target.add_field("extents", self.extents)
+        target.add_field("points", self.points)
 
         return img, target, idx        

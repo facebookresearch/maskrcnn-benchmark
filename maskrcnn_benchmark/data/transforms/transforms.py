@@ -40,22 +40,27 @@ class Resize(object):
             if max_original_size / min_original_size * size > max_size:
                 size = int(round(max_size * min_original_size / max_original_size))
 
+        im_scale = 1.0
         if (w <= h and w == size) or (h <= w and h == size):
-            return (h, w)
+            return (h, w), im_scale
 
         if w < h:
             ow = size
             oh = int(size * h / w)
+            im_scale = float(ow) / w
         else:
             oh = size
             ow = int(size * w / h)
+            im_scale = float(oh) / h
 
-        return (oh, ow)
+        return (oh, ow), im_scale
 
     def __call__(self, image, target):
-        size = self.get_size(image.size)
+        size, im_scale = self.get_size(image.size)
         image = F.resize(image, size)
         target = target.resize(image.size)
+        # target.im_scale = im_scale
+        target.add_field("scale", im_scale)
         return image, target
 
 

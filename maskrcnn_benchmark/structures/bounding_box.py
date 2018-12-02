@@ -120,7 +120,7 @@ class BoxList(object):
         bbox = BoxList(scaled_box, size, mode="xyxy")
         # bbox._copy_extra_fields(self)
         for k, v in self.extra_fields.items():
-            if not isinstance(v, torch.Tensor):
+            if not isinstance(v, torch.Tensor) and hasattr(v, 'resize'):
                 v = v.resize(size, *args, **kwargs)
             bbox.add_field(k, v)
 
@@ -159,7 +159,7 @@ class BoxList(object):
         bbox = BoxList(transposed_boxes, self.size, mode="xyxy")
         # bbox._copy_extra_fields(self)
         for k, v in self.extra_fields.items():
-            if not isinstance(v, torch.Tensor):
+            if not isinstance(v, torch.Tensor) and hasattr(v, 'transpose'):
                 v = v.transpose(method)
             bbox.add_field(k, v)
         return bbox.convert(self.mode)
@@ -187,7 +187,7 @@ class BoxList(object):
         bbox = BoxList(cropped_box, (w, h), mode="xyxy")
         # bbox._copy_extra_fields(self)
         for k, v in self.extra_fields.items():
-            if not isinstance(v, torch.Tensor):
+            if not isinstance(v, torch.Tensor) and hasattr(v, 'crop'):
                 v = v.crop(box)
             bbox.add_field(k, v)
         return bbox.convert(self.mode)

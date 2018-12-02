@@ -138,10 +138,11 @@ if __name__ == '__main__':
     model.eval()
     model.to(device)
 
-    image_dir = "./datasets/LOV/data/0000"
-    image_ext = "1-color.png"
-    for image_file in glob.glob("%s/*%s"%(image_dir, image_ext)):
+    image_dir = "./datasets/LOV/data/0002"
+    image_ext = "color.png"
+    for image_file in glob.glob("%s/*1-%s"%(image_dir, image_ext)):
         img = cv2.imread(image_file)
+        img = cv2.flip(img, 1)
         if img is None:
             print("Could not find %s"%(image_file))
             continue
@@ -171,27 +172,44 @@ if __name__ == '__main__':
         thresh = 0.5
 
         cv2.imshow("img", img)
+
+        label_mask = np.zeros((height, width), dtype=np.float32)
+        vertex_pred = np.zeros((len(CLASSES)*3, height, width), dtype=np.float32)
+
         for bbox, mask, vert, label in zip(bboxes, masks, verts, labels):
+
             mask = paste_mask_on_image(mask, bbox, height, width, thresh=thresh)
             cv2.imshow("mask", mask)
+
+            label_mask[mask==1] = label
 
             _, contours, hierarchy = cv2.findContours(
                 mask.astype(np.uint8) * 255, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
             )
-            img = cv2.drawContours(img, contours, -1, get_random_color(), 3)
+            color = get_random_color()
+            img = cv2.drawContours(img, contours, -1, color, 3)
             img = cv2.putText(img, CLASSES[label], tuple(bbox[:2]), cv2.FONT_HERSHEY_COMPLEX, 1.0, (0,255,0))
 
             cx = paste_mask_on_image(vert[0], bbox, height, width)
             cx[mask!=1] = 0
+            vertex_pred[label * 3, :, :] = cx
             cv2.imshow("centers x", normalize(cx, -1, 1))
 
             cy = paste_mask_on_image(vert[1], bbox, height, width)
             cy[mask!=1] = 0
+            vertex_pred[label * 3 + 1, :, :] = cy
             cv2.imshow("centers y", normalize(cy, -1, 1))
 
-            cz = np.exp(paste_mask_on_image(vert[2], bbox, height, width))
+            cz = paste_mask_on_image(vert[2], bbox, height, width)
             cz[mask!=1] = 0
-            cv2.imshow("centers z", normalize(cz, 0, 6))
+            vertex_pred[label * 3 + 2, :, :] = cz
+            cv2.imshow("centers z", normalize(np.exp(cz), 0, 6))
 
             cv2.imshow("img", img)
             cv2.waitKey(0)
+
+            # np.stack(())
+        label_mask = np.expand_dims(label_mask, axis=0)
+        vertex_pred = np.expand_dims(vertex_pred, axis=0)
+        np.save(image_file.replace("color.png", "label2d_mrcnn.npy"), label_mask)
+        np.save(image_file.replace("color.png", "vert_pred_mrcnn.npy"), vertex_pred)
