@@ -54,8 +54,12 @@ class FPN(nn.Module):
         for feature, inner_block, layer_block in zip(
             x[:-1][::-1], self.inner_blocks[:-1][::-1], self.layer_blocks[:-1][::-1]
         ):
-            inner_top_down = F.interpolate(last_inner, scale_factor=2, mode="nearest")
             inner_lateral = getattr(self, inner_block)(feature)
+            if inner_lateral.shape[-2:] != last_inner.shape[-2:]:
+                # TODO: could also give size instead of
+                inner_top_down = F.interpolate(last_inner, size=inner_lateral.shape[:-2], mode="nearest")
+            else:
+                inner_top_down = last_inner
             # TODO use size instead of scale to make it robust to different sizes
             # inner_top_down = F.upsample(last_inner, size=inner_lateral.shape[-2:],
             # mode='bilinear', align_corners=False)

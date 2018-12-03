@@ -7,7 +7,21 @@ from maskrcnn_benchmark.modeling import registry
 
 from . import fpn as fpn_module
 from . import resnet
+from . import mobilenet
 
+
+@registry.BACKBONES.register("MobileNetV2-FPN")
+def build_mobilenet_backbone(cfg):
+    body = mobilenet.MobileNetV2(cfg)
+    in_channels_stage2 = cfg.MODEL.MOBILENET.OUT_CHANNELS
+    out_channels = cfg.MODEL.BACKBONE.OUT_CHANNELS
+    fpn = fpn_module.FPN(
+        in_channels_list=in_channels_stage2,
+        out_channels=out_channels,
+        top_blocks=fpn_module.LastLevelMaxPool(),
+    )
+    model = nn.Sequential(OrderedDict([("body", body), ("fpn", fpn)]))
+    return model
 
 @registry.BACKBONES.register("R-50-C4")
 def build_resnet_backbone(cfg):
