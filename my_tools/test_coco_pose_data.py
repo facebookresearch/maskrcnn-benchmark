@@ -33,6 +33,16 @@ def visualize_vertex_centers(vertex_centers):
     cv2.imshow("center z", cz)
     # return vertex_centers#, vertex_weights
 
+CATEGORIES = [
+    '__background__', '002_master_chef_can', '003_cracker_box', '004_sugar_box', '005_tomato_soup_can',
+     '006_mustard_bottle', \
+     '007_tuna_fish_can', '008_pudding_box', '009_gelatin_box', '010_potted_meat_can', '011_banana',
+     '019_pitcher_base', \
+     '021_bleach_cleanser', '024_bowl', '025_mug', '035_power_drill', '036_wood_block', '037_scissors',
+     '040_large_marker', \
+     '051_large_clamp', '052_extra_large_clamp', '061_foam_brick'
+]
+
 shuffle = True
 is_distributed = False # gpus > 1
 images_per_batch = 2
@@ -76,7 +86,12 @@ FLIP_MODE = FLIP_LEFT_RIGHT
 for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
     print(targets)
 
+    for t1 in targets:
+        print(t1.get_field("scale"))
+
     for id in range(len(targets)):
+        t1 = targets[id]
+
         im1 = images.tensors[id]
         im_np = im1.numpy()
         im_np = np.transpose(im_np, [1,2,0])[:,:,::-1]  # C,H,W, to H,W,C, then RGB to BGR
@@ -84,9 +99,9 @@ for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
         h,w,_ = im_np.shape
         cv2.imshow("im", im_np)
 
-        t1 = targets[id]
         v_field = t1.get_field("vertex")
         m_field = t1.get_field("masks")
+        labels = t1.get_field('labels')
 
         # proposal = [w//4,h//4,w//4*3,h//4*3]
         # im_copy = cv2.rectangle(im_copy, tuple(proposal[:2]), tuple(proposal[2:]), (0,255,0), 2)
@@ -102,10 +117,12 @@ for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
         # m_field = m_field.transpose(FLIP_MODE)
 
         for ix,vc in enumerate(v_field):
+            label = labels[ix]
+            print("Label: %d, %s"%(label, CATEGORIES[label]))
             p = m_field.polygons[ix]
             m = p.convert('mask')
-            vc_np = np.transpose(vc.numpy(), [1,2,0])
-            visualize_vertex_centers(vc_np)
+            # vc_np = np.transpose(vc.numpy(), [1,2,0])
+            # visualize_vertex_centers(vc_np)
             # visualize_mask(m.numpy())
             m = m.numpy()  # uint8 format, 0-1
             m *= 255

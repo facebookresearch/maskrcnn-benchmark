@@ -87,11 +87,13 @@ class VertexMask(object):
     def to(self, *args, **kwargs):
         return self
 
-    # def __iter__(self):
-    #     return iter(self.vertex_centers)
+    def __iter__(self):
+        return iter(self.__getitem__(i) for i in range(len(self.vertex_centers)))
 
     def __getitem__(self, item):
         if isinstance(item, int):
+            if item >= len(self.vertex_centers):
+                raise IndexError
             selected_vertex = self.vertex_centers[item:item+1]
         elif isinstance(item, slice):
             selected_vertex = self.vertex_centers[item]
