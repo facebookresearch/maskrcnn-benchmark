@@ -130,13 +130,17 @@ class COCOPoseDataset(COCODataset):
         target.add_field("masks", seg_mask_instance)
 
         meta = [obj["meta"] for obj in anno]
+        poses = [obj["pose"] for obj in meta]
+
+        target.add_field("poses", torch.tensor(poses))
+
         assert len(meta) == len(polygons)
         # masks = [_get_mask_from_polygon(polygon, img.size) for polygon in seg_mask_instance.polygons]
         vertex_centers = []
         for ix, poly in enumerate(polygons):
             center = meta[ix]['center']
-            pose = meta[ix]['pose']
-            z = np.log(pose[-1]) # z distance is the last value in the 3x4 transform matrix (index is -1 if matrix is a list)
+            pose = poses[ix]
+            z = np.log(pose[-1]) # z distance is the last value in pose [qw,qx,qy,qz,x,y,z]
             m = _get_mask_from_polygon(poly, img.size)
             vertex_centers.append(_generate_vertex_center_mask(m, center, z))
         vertex_centers = torch.tensor(vertex_centers)

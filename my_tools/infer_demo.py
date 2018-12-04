@@ -138,11 +138,11 @@ if __name__ == '__main__':
     model.eval()
     model.to(device)
 
-    image_dir = "./datasets/LOV/data/0002"
+    image_dir = "./datasets/LOV/data/0000"
     image_ext = "color.png"
     for image_file in glob.glob("%s/*1-%s"%(image_dir, image_ext)):
         img = cv2.imread(image_file)
-        img = cv2.flip(img, 1)
+        # img = cv2.flip(img, 1)
         if img is None:
             print("Could not find %s"%(image_file))
             continue
