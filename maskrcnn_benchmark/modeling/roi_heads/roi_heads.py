@@ -17,6 +17,8 @@ class CombinedROIHeads(torch.nn.ModuleDict):
             self.mask.feature_extractor = self.box.feature_extractor
         if cfg.MODEL.VERTEX_ON and cfg.MODEL.ROI_VERTEX_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             self.vertex.feature_extractor = self.box.feature_extractor
+        if cfg.MODEL.POSE_ON and cfg.MODEL.ROI_POSE_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
+            self.pose.feature_extractor = self.box.feature_extractor
 
     def forward(self, features, proposals, targets=None):
         losses = {}
@@ -56,13 +58,21 @@ class CombinedROIHeads(torch.nn.ModuleDict):
             # if not self.training:
             #     detections = vertex_detections
 
-            if self.cfg.MODEL.POSE_ON:
-                # resize mask and vertexes to original resolution (resolution size can be found in
-                # detections/proposals var). mask out all values of the vertexes where mask value < 0.5
-                # possibly filter out masks where score < 0.9
-                # these will be our inputs to hough vote layer
-                pass
+        if self.cfg.MODEL.POSE_ON:
+            # resize mask and vertexes to original resolution (resolution size can be found in
+            # detections/proposals var). mask out all values of the vertexes where mask value < 0.5
+            # possibly filter out masks where score < 0.9
+            # these will be our inputs to hough vote layer
+            pose_features = features
 
+            if (
+                self.training
+                and self.cfg.MODEL.ROI_POSE_HEAD.SHARE_BOX_FEATURE_EXTRACTOR
+            ):
+                pose_features = x
+            # use
+            x, pose_pred, detections, loss_pose = self.pose(pose_features, detections, targets)
+            losses.update(loss_pose)
 
         return x, detections, losses
 
@@ -78,9 +88,9 @@ def build_roi_heads(cfg):
     if cfg.MODEL.VERTEX_ON:
         from .vertex_head.vertex_head import build_roi_vertex_head
         roi_heads.append(("vertex", build_roi_vertex_head(cfg)))
-        if cfg.MODEL.POSE_ON:
-            from .pose_head.pose_head import build_roi_pose_head
-            roi_heads.append(("pose", build_roi_pose_head(cfg)))
+    if cfg.MODEL.POSE_ON:
+        from .pose_head.pose_head import build_roi_pose_head
+        roi_heads.append(("pose", build_roi_pose_head(cfg)))
 
     # combine individual heads in a single module
     if roi_heads:
