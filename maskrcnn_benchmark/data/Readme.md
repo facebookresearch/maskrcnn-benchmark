@@ -1,13 +1,10 @@
 # Setting Up Datasets
 This file describes how to perform training on other datasets.
-We expect the annotations from other datasets are converted to COCO json format.
+
 Only Pascal VOC dataset can be loaded from its original format and be outputted to Pascal style results currently.
 
-In order to use COCO APIs to load and evaluae input datasets, you need to pass additional command line option DATASETS.FORCE_USE_JSON_ANNOTATION.
-
-e.g.
-
-`python tools/train_net.py --config-file "/path/to/config/file.yaml" DATASETS.FORCE_USE_JSON_ANNOTATION True`
+We expect the annotations from other datasets be converted to COCO json format, and
+the output will be in COCO-style. (i.e. AP, AP50, AP75, APs, APm, APl for bbox and segm)
 
 ## Creating Symlinks for PASCAL VOC
 
@@ -20,9 +17,9 @@ VOC<year>
 |  |_ ...
 |  |_ <im-N-name>.jpg
 |_ Annotations
-|  |_ pascal_train<year>.json
-|  |_ pascal_val<year>.json
-|  |_ pascal_test<year>.json
+|  |_ pascal_train<year>.json (optional)
+|  |_ pascal_val<year>.json (optional)
+|  |_ pascal_test<year>.json (optional)
 |  |_ <im-1-name>.xml
 |  |_ ...
 |  |_ <im-N-name>.xml
@@ -36,11 +33,10 @@ cd ~/github/maskrcnn-benchmark
 mkdir -p datasets/voc/VOC<year>
 ln -s /path/to/VOC<year> /datasets/voc/VOC<year>
 ```
+Example configuration files for PASCAL VOC could be found [here](https://github.com/facebookresearch/maskrcnn-benchmark/blob/master/configs/pascal_voc/).
 
 ### PASCAL VOC Annotations in COCO Format
-
-We expect PASCAL VOC annotations converted to COCO json format, 
-which are available for download [here](https://storage.googleapis.com/coco-dataset/external/PASCAL_VOC.zip)
+To output COCO-style evaluation result, PASCAL VOC annotations in COCO json format is required and could be downloaded from [here](https://storage.googleapis.com/coco-dataset/external/PASCAL_VOC.zip)
 via http://cocodataset.org/#external.
 
 ## Creating Symlinks for Cityscapes:
@@ -83,8 +79,10 @@ gtFine_trainvaltest
 cd ~/github
 git clone https://github.com/mcordts/cityscapesScripts.git
 cd cityscapesScripts
-cp ~/github/maskrcnn-benchmark/tool/instances2dict_with_polygons.py cityscapesscripts/evaluation
+cp ~/github/maskrcnn-benchmark/tool/cityscapes/instances2dict_with_polygons.py cityscapesscripts/evaluation
 python setup.py install
 cd ~/github/maskrcnn-benchmark
-python tools/convert_cityscapes_to_coco.py --datadir /path/to/gtFine_trainvaltest --outdir /path/to/cityscapes/annotations
+python tools/cityscapes/convert_cityscapes_to_coco.py --datadir /path/to/gtFine_trainvaltest --outdir /path/to/cityscapes/annotations
 ```
+
+Example configuration files for Cityscapes could be found [here](https://github.com/facebookresearch/maskrcnn-benchmark/blob/master/configs/cityscapes/).
