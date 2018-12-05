@@ -7,7 +7,7 @@ import torch
 from torch.distributed import deprecated as dist
 
 from maskrcnn_benchmark.utils.comm import get_world_size
-from maskrcnn_benchmark.utils.metric_logger import MetricLogger
+from maskrcnn_benchmark.utils.metric_logger import MetricLogger, TensorboardLogger
 
 
 def reduce_loss_dict(loss_dict):
@@ -44,10 +44,15 @@ def do_train(
     device,
     checkpoint_period,
     arguments,
+    tb_log_dir,
+    use_tensorboard=False
 ):
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
     logger.info("Start training")
-    meters = MetricLogger(delimiter="  ")
+    meters = TensorboardLogger(log_dir=tb_log_dir,
+                               start_iter=arguments['iteration'],
+                               delimiter="  ") \
+             if use_tensorboard else MetricLogger(delimiter="  ")
     max_iter = len(data_loader)
     start_iter = arguments["iteration"]
     model.train()
@@ -61,7 +66,7 @@ def do_train(
 
         images = images.to(device)
         targets = [target.to(device) for target in targets]
-        loss_dict = model(images, targets)
+        loss_dict, preds = model(images, targets)
 
         losses = sum(loss for loss in loss_dict.values())
 
@@ -77,11 +82,12 @@ def do_train(
         batch_time = time.time() - end
         end = time.time()
         meters.update(time=batch_time, data=data_time)
-
+            
         eta_seconds = meters.time.global_avg * (max_iter - iteration)
         eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
 
         if iteration % 20 == 0 or iteration == (max_iter - 1):
+            
             logger.info(
                 meters.delimiter.join(
                     [
@@ -101,6 +107,7 @@ def do_train(
             )
         if iteration % checkpoint_period == 0 and iteration > 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
+            meters.update_image(images.tensors[0], preds[0])
 
     checkpointer.save("model_{:07d}".format(iteration), **arguments)
     total_training_time = time.time() - start_training_time

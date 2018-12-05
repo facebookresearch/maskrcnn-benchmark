@@ -26,7 +26,7 @@ from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
 
 
-def train(cfg, local_rank, distributed):
+def train(cfg, local_rank, distributed, use_tensorboard=False):
     model = build_detection_model(cfg)
     device = torch.device(cfg.MODEL.DEVICE)
     model.to(device)
@@ -62,6 +62,7 @@ def train(cfg, local_rank, distributed):
     )
 
     checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
+    tensorboard_logdir = cfg.TENSORBOARD_LOGDIR
 
     do_train(
         model,
@@ -72,6 +73,8 @@ def train(cfg, local_rank, distributed):
         device,
         checkpoint_period,
         arguments,
+        tensorboard_logdir,
+        use_tensorboard=use_tensorboard
     )
 
     return model
@@ -123,6 +126,13 @@ def main():
         action="store_true",
     )
     parser.add_argument(
+        "--use_tensorboard",
+        dest="use_tensorboard",
+        help="Use tensorboardX logger",
+        action="store_true",
+        default=False
+    )
+    parser.add_argument(
         "opts",
         help="Modify config options using the command-line",
         default=None,
@@ -161,7 +171,8 @@ def main():
         logger.info(config_str)
     logger.info("Running with config:\n{}".format(cfg))
 
-    model = train(cfg, args.local_rank, args.distributed)
+    model = train(cfg=cfg, local_rank=args.local_rank, distributed=args.distributed,
+                  use_tensorboard=args.use_tensorboard)
 
     if not args.skip_test:
         test(cfg, model, args.distributed)

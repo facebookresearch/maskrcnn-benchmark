@@ -18,24 +18,7 @@ from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
 
 
-def main():
-    parser = argparse.ArgumentParser(description="PyTorch Object Detection Inference")
-    parser.add_argument(
-        "--config-file",
-        default="/private/home/fmassa/github/detectron.pytorch_v2/configs/e2e_faster_rcnn_R_50_C4_1x_caffe2.yaml",
-        metavar="FILE",
-        help="path to config file",
-    )
-    parser.add_argument("--local_rank", type=int, default=0)
-    parser.add_argument(
-        "opts",
-        help="Modify config options using the command-line",
-        default=None,
-        nargs=argparse.REMAINDER,
-    )
-
-    args = parser.parse_args()
-
+def pred_with_weight(args):
     num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else 1
     distributed = num_gpus > 1
 
@@ -59,34 +42,60 @@ def main():
 
     model = build_detection_model(cfg)
     model.to(cfg.MODEL.DEVICE)
+    
+    for weight in args.weights:
+        # skipping evaluations already performed
+        out_json = "{}/detections/{}.json".format(cfg.OUTPUT_DIR, weight.split('/')[-1].split('_')[-1].split('.')[0])
+        if os.path.exists(out_json):
+            print('skipping', out_json)
+            continue
+        checkpointer = DetectronCheckpointer(cfg, model)
+        _ = checkpointer.load(weight)
 
-    checkpointer = DetectronCheckpointer(cfg, model)
-    _ = checkpointer.load(cfg.MODEL.WEIGHT)
+        iou_types = ("bbox",)
+        if cfg.MODEL.MASK_ON:
+            iou_types = iou_types + ("segm",)
+        output_folders = [None] * len(cfg.DATASETS.TEST)
 
-    iou_types = ("bbox",)
-    if cfg.MODEL.MASK_ON:
-        iou_types = iou_types + ("segm",)
-    output_folders = [None] * len(cfg.DATASETS.TEST)
-    if cfg.OUTPUT_DIR:
-        dataset_names = cfg.DATASETS.TEST
-        for idx, dataset_name in enumerate(dataset_names):
-            output_folder = os.path.join(cfg.OUTPUT_DIR, "inference", dataset_name)
-            mkdir(output_folder)
-            output_folders[idx] = output_folder
-    data_loaders_val = make_data_loader(cfg, is_train=False, is_distributed=distributed)
-    for output_folder, data_loader_val in zip(output_folders, data_loaders_val):
-        inference(
-            model,
-            data_loader_val,
-            iou_types=iou_types,
-            box_only=cfg.MODEL.RPN_ONLY,
-            device=cfg.MODEL.DEVICE,
-            expected_results=cfg.TEST.EXPECTED_RESULTS,
-            expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
-            output_folder=output_folder,
-        )
-        synchronize()
+        if cfg.OUTPUT_DIR:
+            dataset_names = cfg.DATASETS.TEST
+            for idx, dataset_name in enumerate(dataset_names):
+                output_folder = cfg.OUTPUT_DIR
+                mkdir(output_folder)
+                output_folders[idx] = output_folder
+        data_loaders_val = make_data_loader(cfg, is_train=False, is_distributed=distributed)
+        for output_folder, data_loader_val in zip(output_folders, data_loaders_val):
+            inference(
+                model,
+                data_loader_val,
+                iou_types=iou_types,
+                box_only=cfg.MODEL.RPN_ONLY,
+                device=cfg.MODEL.DEVICE,
+                expected_results=cfg.TEST.EXPECTED_RESULTS,
+                expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
+                output_folder=output_folder,
+                name=weight.split('_')[-1].split('.')[0]
+            )
+            synchronize()
 
 
 if __name__ == "__main__":
-    main()
+    
+    parser = argparse.ArgumentParser(description="PyTorch Object Detection Inference")
+    parser.add_argument(
+        "--config-file",
+        default="/private/home/fmassa/github/detectron.pytorch_v2/configs/e2e_faster_rcnn_R_50_C4_1x_caffe2.yaml",
+        metavar="FILE",
+        help="path to config file",
+    )
+    parser.add_argument("--local_rank", type=int, default=0)
+    parser.add_argument(
+        "opts",
+        help="Modify config options using the command-line",
+        default=None,
+        nargs=argparse.REMAINDER,
+    )
+    parser.add_argument("--weights", type=str, nargs='+')
+    
+    args = parser.parse_args()
+    pred_with_weight(args)

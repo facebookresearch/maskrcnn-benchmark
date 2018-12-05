@@ -17,8 +17,8 @@ CLASS_TYPE_CONVERSION = {
 }
 
 TYPE_ID_CONVERSION = {
-    'person': 0,
-    'vehicle': 1
+    'person': 1,
+    'vehicle': 2
 }
 
 class Bdd100kDataset(Dataset):
@@ -82,3 +82,14 @@ class Bdd100kDataset(Dataset):
     def get_img_info(self, idx):
         img = Image.open(os.path.join(self.image_dir, self.image_paths[idx]))
         return {'width': img.width, 'height': img.height}
+        
+    # Get all gt labels. Used in evaluation.
+    def get_gt_labels(self):
+        
+        return self.labels
+        
+    
+    def get_classes_ids(self):
+        return TYPE_ID_CONVERSION;
+    
+    

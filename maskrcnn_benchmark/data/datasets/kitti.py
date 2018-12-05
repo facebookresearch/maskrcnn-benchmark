@@ -18,8 +18,8 @@ CLASS_TYPE_CONVERSION = {
 }
 
 TYPE_ID_CONVERSION = {
-    'person': 0,
-    'vehicle': 1
+    'person': 1,
+    'vehicle': 2
 }
 
 KITTI_MAX_WIDTH = 1242
@@ -55,7 +55,6 @@ class KittiDataset(Dataset):
         
 
     def __getitem__(self, idx):
-        
         # load image
         img = ToTensor()(Image.open(os.path.join(self.image_dir, self.image_paths[idx])))
         # padding
@@ -89,3 +88,44 @@ class KittiDataset(Dataset):
 
     def get_img_info(self, idx):
         return {'width': KITTI_MAX_WIDTH, 'height': KITTI_MAX_HEIGHT}
+        
+    # Get all gt labels. Used in evaluation.
+    def get_gt_labels(self):
+        
+        gt_labels = []
+        
+        for i, label_path in enumerate(self.label_paths):
+            gt_label = {
+                'name': self.image_paths[i],
+                'labels': [],
+            }
+            with open(os.path.join(self.label_dir, label_path)) as f:
+                labels = f.read().splitlines()
+                
+            for label in labels:
+                attributes = label.split(' ')
+                if attributes[0] in CLASS_TYPE_CONVERSION.keys():
+                    # TODO: further filter annotations if needed
+
+                    label_type = CLASS_TYPE_CONVERSION[attributes[0]]
+                    category = TYPE_ID_CONVERSION[label_type]
+                    box = [float(c) for c in attributes[4:8]]
+                    
+                    gt_label['labels'] += [{
+                        'category': category,
+                        'box2d': {
+                            'x1': box[0],
+                            'y1': box[1],
+                            'x2': box[2],
+                            'y2': box[3]
+                        }
+                    }]
+                    
+            gt_labels += [gt_label]
+        
+        return gt_labels
+
+
+    def get_classes_ids(self):
+        return TYPE_ID_CONVERSION;
+    

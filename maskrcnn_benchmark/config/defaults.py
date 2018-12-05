@@ -267,3 +267,5 @@ _C.TEST.IMS_PER_BATCH = 8
 _C.OUTPUT_DIR = "."
 
 _C.PATHS_CATALOG = os.path.join(os.path.dirname(__file__), "paths_catalog.py")
+
+_C.TENSORBOARD_LOGDIR = 'logs'
