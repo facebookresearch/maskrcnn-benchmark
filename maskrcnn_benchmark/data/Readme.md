@@ -3,14 +3,11 @@ This file describes how to perform training on other datasets.
 We expect the annotations from other datasets are converted to COCO json format.
 Only Pascal VOC dataset can be loaded from its original format and be outputted to Pascal style results currently.
 
-In order to use COCO APIs to load and evaluae input datasets, you need to pass additional command line option DATASETS.FORCE_USE_JSON_ANNOTATION and MODEL.ROI_BOX_HEAD.NUM_CLASSES.
+In order to use COCO APIs to load and evaluae input datasets, you need to pass additional command line option DATASETS.FORCE_USE_JSON_ANNOTATION.
 
 e.g.
 
-`python tools/train_net.py --config-file "/path/to/config/file.yaml" 
-DATASETS.FORCE_USE_JSON_ANNOTATION True 
-MODEL.ROI_BOX_HEAD.NUM_CLASSES <class number>`
-
+`python tools/train_net.py --config-file "/path/to/config/file.yaml" DATASETS.FORCE_USE_JSON_ANNOTATION True`
 
 ## Creating Symlinks for PASCAL VOC
 
@@ -23,9 +20,12 @@ VOC<year>
 |  |_ ...
 |  |_ <im-N-name>.jpg
 |_ Annotations
-|  |_ voc_<year>_train.json
-|  |_ voc_<year>_val.json
+|  |_ pascal_train<year>.json
+|  |_ pascal_val<year>.json
+|  |_ pascal_test<year>.json
+|  |_ <im-1-name>.xml
 |  |_ ...
+|  |_ <im-N-name>.xml
 |_ VOCdevkit<year>
 ```
 

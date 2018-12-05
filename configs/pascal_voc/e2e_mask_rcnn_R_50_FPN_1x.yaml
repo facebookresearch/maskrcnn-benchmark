@@ -19,7 +19,7 @@ MODEL:
     POOLER_SAMPLING_RATIO: 2
     FEATURE_EXTRACTOR: "FPN2MLPFeatureExtractor"
     PREDICTOR: "FPNPredictor"
-    NUM_CLASSES: 9
+    NUM_CLASSES: 21
   ROI_MASK_HEAD:
     POOLER_SCALES: (0.25, 0.125, 0.0625, 0.03125)
     FEATURE_EXTRACTOR: "MaskRCNNFPNFeatureExtractor"
@@ -30,8 +30,8 @@ MODEL:
     SHARE_BOX_FEATURE_EXTRACTOR: False
   MASK_ON: True
 DATASETS:
-  TRAIN: ("cityscapes_fine_instanceonly_seg_train",)
-  TEST: ("cityscapes_fine_instanceonly_seg_val",)
+  TRAIN: ("voc_2012_train",)
+  TEST: ("voc_2012_val",)
 DATALOADER:
   SIZE_DIVISIBILITY: 32
 SOLVER:

@@ -19,7 +19,7 @@ MODEL:
     POOLER_SAMPLING_RATIO: 2
     FEATURE_EXTRACTOR: "FPN2MLPFeatureExtractor"
     PREDICTOR: "FPNPredictor"
-    NUM_CLASSES: 21
+    NUM_CLASSES: 9
 DATASETS:
   TRAIN: ("cityscapes_fine_instanceonly_seg_train",)
   TEST: ("cityscapes_fine_instanceonly_seg_val",)

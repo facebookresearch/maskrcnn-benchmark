@@ -22,22 +22,22 @@ class DatasetCatalog(object):
         ),
         "voc_2007_train": (
             "voc/VOC2007/JPEGImages",
-            "voc/VOC2007/annotations/pascal_train2007.json"),
+            "voc/VOC2007/Annotations/pascal_train2007.json"),
         "voc_2007_val": (
             "voc/VOC2007/JPEGImages",
-            "voc/VOC2007/annotations/pascal_val2007.json"),
+            "voc/VOC2007/Annotations/pascal_val2007.json"),
         "voc_2007_test": (
             "voc/VOC2007/JPEGImages",
-            "voc/VOC2007/annotations/pascal_test2007.json"),
+            "voc/VOC2007/Annotations/pascal_test2007.json"),
         "voc_2012_train": (
             "voc/VOC2012/JPEGImages",
-            "voc/VOC2012/annotations/pascal_train2012.json"),
+            "voc/VOC2012/Annotations/pascal_train2012.json"),
         "voc_2012_val": (
             "voc/VOC2012/JPEGImages",
-            "voc/VOC2012/annotations/pascal_val2012.json"),
+            "voc/VOC2012/Annotations/pascal_val2012.json"),
         "voc_2012_test": (
             "voc/VOC2012/JPEGImages",
-            "voc/VOC2012/annotations/pascal_test2012.json"),
+            "voc/VOC2012/Annotations/pascal_test2012.json"),
         "cityscapes_fine_instanceonly_seg_train": (
             "cityscapes/images",
             "cityscapes/annotations/instancesonly_filtered_gtFine_train.json"),
