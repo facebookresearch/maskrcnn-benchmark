@@ -110,7 +110,8 @@ class COCODemo(object):
         self.model.to(self.device)
         self.min_image_size = min_image_size
 
-        checkpointer = DetectronCheckpointer(cfg, self.model)
+        save_dir = cfg.OUTPUT_DIR
+        checkpointer = DetectronCheckpointer(cfg, self.model, save_dir=save_dir)
         _ = checkpointer.load(cfg.MODEL.WEIGHT)
 
         self.transforms = self.build_transform()
