@@ -25,58 +25,62 @@ class DatasetCatalog(object):
         },
         "voc_2007_train": {
             "data_dir": "voc/VOC2007",
-            "img_dir": "voc/VOC2007/JPEGImages",
-            "ann_file": "voc/VOC2007/Annotations/pascal_train2007.json",
             "split": "train"
+        },
+        "voc_2007_train_cocostyle": {
+            "img_dir": "voc/VOC2007/JPEGImages",
+            "ann_file": "voc/VOC2007/Annotations/pascal_train2007.json"
         },
         "voc_2007_val": {
             "data_dir": "voc/VOC2007",
-            "img_dir": "voc/VOC2007/JPEGImages",
-            "ann_file": "voc/VOC2007/Annotations/pascal_val2007.json",
             "split": "val"
+        },
+        "voc_2007_val_cocostyle": {
+            "img_dir": "voc/VOC2007/JPEGImages",
+            "ann_file": "voc/VOC2007/Annotations/pascal_val2007.json"
         },
         "voc_2007_test": {
             "data_dir": "voc/VOC2007",
-            "img_dir": "voc/VOC2007/JPEGImages",
-            "ann_file": "voc/VOC2007/Annotations/pascal_test2007.json",
             "split": "test"
+        },
+        "voc_2007_test_cocostyle": {
+            "img_dir": "voc/VOC2007/JPEGImages",
+            "ann_file": "voc/VOC2007/Annotations/pascal_test2007.json"
         },
         "voc_2012_train": {
             "data_dir": "voc/VOC2012",
-            "img_dir": "voc/VOC2012/JPEGImages",
-            "ann_file": "voc/VOC2012/Annotations/pascal_train2012.json",
             "split": "train"
+        },
+        "voc_2012_train_cocostyle": {
+            "img_dir": "voc/VOC2012/JPEGImages",
+            "ann_file": "voc/VOC2012/Annotations/pascal_train2012.json"
         },
         "voc_2012_val": {
             "data_dir": "voc/VOC2012",
-            "img_dir": "voc/VOC2012/JPEGImages",
-            "ann_file": "voc/VOC2012/Annotations/pascal_val2012.json",
             "split": "val"
+        },
+        "voc_2012_val_cocostyle": {
+            "img_dir": "voc/VOC2012/JPEGImages",
+            "ann_file": "voc/VOC2012/Annotations/pascal_val2012.json"
         },
         "voc_2012_test": {
             "data_dir": "voc/VOC2012",
-            "img_dir": "voc/VOC2012/JPEGImages",
-            "ann_file": "voc/VOC2012/Annotations/pascal_test2012.json",
             "split": "test"
+            # PASCAL VOC2012 doesn't made the test annotations available, so there's no json annotation
         },
-        "cityscapes_fine_instanceonly_seg_train": {
+        "cityscapes_fine_instanceonly_seg_train_cocostyle": {
             "img_dir": "cityscapes/images",
             "ann_file": "cityscapes/annotations/instancesonly_filtered_gtFine_train.json"
         },
-        "cityscapes_fine_instanceonly_seg_val": {
+        "cityscapes_fine_instanceonly_seg_val_cocostyle": {
             "img_dir": "cityscapes/images",
             "ann_file": "cityscapes/annotations/instancesonly_filtered_gtFine_val.json"
         },
-        "cityscapes_fine_instanceonly_seg_test": {
+        "cityscapes_fine_instanceonly_seg_test_cocostyle": {
             "img_dir": "cityscapes/images",
             "ann_file": "cityscapes/annotations/instancesonly_filtered_gtFine_test.json"
         }
     }
-
-    coco_style_datasets = {
-        key + "_cocostyle": value for key, value in DATASETS.items() if "coco" not in key
-    }
-    DATASETS={**DATASETS, **coco_style_datasets}
 
     @staticmethod
     def get(name):
