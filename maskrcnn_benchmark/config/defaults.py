@@ -61,10 +61,6 @@ _C.DATASETS.TRAIN = ()
 # List of the dataset names for testing, as present in paths_catalog.py
 _C.DATASETS.TEST = ()
 
-# Use COCO API to load and evaluate input datasets, (e.g. Pascal VOC or Cityscapes)
-# and get COCO style AP on them
-_C.DATASETS.FORCE_USE_JSON_ANNOTATION = False
-
 # -----------------------------------------------------------------------------
 # DataLoader
 # -----------------------------------------------------------------------------

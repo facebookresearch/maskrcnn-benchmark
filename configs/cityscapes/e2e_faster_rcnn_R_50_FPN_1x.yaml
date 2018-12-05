@@ -21,8 +21,8 @@ MODEL:
     PREDICTOR: "FPNPredictor"
     NUM_CLASSES: 9
 DATASETS:
-  TRAIN: ("cityscapes_fine_instanceonly_seg_train",)
-  TEST: ("cityscapes_fine_instanceonly_seg_val",)
+  TRAIN: ("cityscapes_fine_instanceonly_seg_train_cocostyle",)
+  TEST: ("cityscapes_fine_instanceonly_seg_val_cocostyle",)
 DATALOADER:
   SIZE_DIVISIBILITY: 32
 SOLVER:
