@@ -2,7 +2,7 @@
 """Centralized catalog of paths."""
 
 import os
-from . import cfg
+
 
 class DatasetCatalog(object):
     DATA_DIR = "datasets"
