@@ -8,7 +8,7 @@ MODEL:
   ROI_BOX_HEAD:
     NUM_CLASSES: 21
 DATASETS:
-  TRAIN: ("voc_2007_trainval",)
+  TRAIN: ("voc_2007_train", "voc_2007_val")
   TEST: ("voc_2007_test",)
 SOLVER:
   BASE_LR: 0.004
