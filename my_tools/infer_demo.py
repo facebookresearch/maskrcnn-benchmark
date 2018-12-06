@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
     img_transformer = ImageTransformer(cfg)
 
-    model_file = "./checkpoints/lov_debug_res16/model_final.pth"
+    model_file = "./checkpoints/lov_debug_pose_res16/model_final.pth"
     # model_file = "./checkpoints/lov_debug_res14/model_0001000.pth"
 
     model = build_detection_model(cfg)
@@ -138,7 +138,7 @@ if __name__ == '__main__':
     model.eval()
     model.to(device)
 
-    image_dir = "./datasets/LOV/data/0000"
+    image_dir = "./datasets/LOV/data/0002"
     image_ext = "color.png"
     for image_file in glob.glob("%s/*1-%s"%(image_dir, image_ext)):
         img = cv2.imread(image_file)
@@ -165,6 +165,7 @@ if __name__ == '__main__':
         labels = predictions.get_field("labels").numpy() 
         verts = predictions.get_field("vertex").numpy()
         masks = predictions.get_field("mask").numpy().squeeze()
+        poses = predictions.get_field("pose").numpy()
         bboxes = predictions.bbox.numpy()
         bboxes = np.round(bboxes).astype(np.int32)
 
@@ -173,15 +174,17 @@ if __name__ == '__main__':
 
         cv2.imshow("img", img)
 
-        label_mask = np.zeros((height, width), dtype=np.float32)
-        vertex_pred = np.zeros((len(CLASSES)*3, height, width), dtype=np.float32)
+        N = len(masks)
+        label_mask = np.zeros((N, height, width), dtype=np.float32)
+        vertex_pred = np.zeros((N, 3, height, width), dtype=np.float32)
 
+        ix = 0
         for bbox, mask, vert, label in zip(bboxes, masks, verts, labels):
 
             mask = paste_mask_on_image(mask, bbox, height, width, thresh=thresh)
             cv2.imshow("mask", mask)
 
-            label_mask[mask==1] = label
+            label_mask[ix] = mask
 
             _, contours, hierarchy = cv2.findContours(
                 mask.astype(np.uint8) * 255, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
@@ -192,24 +195,28 @@ if __name__ == '__main__':
 
             cx = paste_mask_on_image(vert[0], bbox, height, width)
             cx[mask!=1] = 0
-            vertex_pred[label * 3, :, :] = cx
+            vertex_pred[ix, 0] = cx
             cv2.imshow("centers x", normalize(cx, -1, 1))
 
             cy = paste_mask_on_image(vert[1], bbox, height, width)
             cy[mask!=1] = 0
-            vertex_pred[label * 3 + 1, :, :] = cy
+            vertex_pred[ix, 1] = cy
             cv2.imshow("centers y", normalize(cy, -1, 1))
 
             cz = paste_mask_on_image(vert[2], bbox, height, width)
             cz[mask!=1] = 0
-            vertex_pred[label * 3 + 2, :, :] = cz
+            vertex_pred[ix, 2] = cz
             cv2.imshow("centers z", normalize(np.exp(cz), 0, 6))
 
             cv2.imshow("img", img)
             cv2.waitKey(0)
 
-            # np.stack(())
-        label_mask = np.expand_dims(label_mask, axis=0)
-        vertex_pred = np.expand_dims(vertex_pred, axis=0)
-        np.save(image_file.replace("color.png", "label2d_mrcnn.npy"), label_mask)
+            ix += 1
+
+        # #     # np.stack(())
+        # label_mask = np.expand_dims(label_mask, axis=0)
+        # vertex_pred = np.expand_dims(vertex_pred, axis=0)
+        np.save(image_file.replace("color.png", "labels_mrcnn.npy"), labels)
+        np.save(image_file.replace("color.png", "masks_mrcnn.npy"), label_mask)
         np.save(image_file.replace("color.png", "vert_pred_mrcnn.npy"), vertex_pred)
+        np.save(image_file.replace("color.png", "poses_mrcnn.npy"), poses)

@@ -49,11 +49,11 @@ class ROIPoseHead(torch.nn.Module):
 
         if not self.training:
             result = self.post_processor(pred_pose, proposals)
-            return x, result, {}
+            return x, pred_pose, result, {}
 
         loss_pose = self.loss_evaluator(proposals, pred_pose, targets)
 
-        return x, proposals, {} # dict(loss_pose=loss_pose)
+        return x, pred_pose, proposals, dict(loss_pose=loss_pose)
 
 
 def build_roi_pose_head(cfg):

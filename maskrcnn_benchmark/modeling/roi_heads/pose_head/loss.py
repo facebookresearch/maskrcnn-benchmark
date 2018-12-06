@@ -1,12 +1,11 @@
 import torch
 from torch.nn import functional as F
 
+from maskrcnn_benchmark.layers.ave_dist_loss import AverageDistanceLoss
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 from maskrcnn_benchmark.modeling.matcher import Matcher
 
 from maskrcnn_benchmark.modeling.utils import cat
-
-# TODO: AVERAGE DISTANCE LOSS
 
 class PoseRCNNLossComputation(object):
 
@@ -16,6 +15,7 @@ class PoseRCNNLossComputation(object):
             proposal_matcher (Matcher)
         """
         self.proposal_matcher = proposal_matcher
+        self.loss = AverageDistanceLoss(margin=0.01)
         # self.batch_size_per_image = batch_size_per_image
 
     def match_targets_to_proposals(self, proposal, target):
@@ -48,7 +48,7 @@ class PoseRCNNLossComputation(object):
             neg_inds = matched_idxs < 0 # Matcher.BELOW_LOW_THRESHOLD
             labels_per_image[neg_inds] = 0
 
-            poses = matched_targets.get_field("poses")
+            poses = matched_targets.get_field("poses")[:,:4]  # get q from pose field (qw,qx,qy,qz,x,y,z)
 
             labels.append(labels_per_image)
             pose_targets.append(poses)
@@ -83,8 +83,18 @@ class PoseRCNNLossComputation(object):
         pp = pose_pred.view(N, -1, 4)  # N,classes,4
         pp = pp[positive_inds, labels_pos]  # N,4
 
-        # TODO: add AVE DIST LOSS HERE, and possibly pose weights
-        pose_loss = 0  # ave_dist_loss(pp, pose_targets)
+        points = targets[0].get_field("points")
+        symmetry = targets[0].get_field("symmetry")
+
+        # import numpy as np
+        # np.save("poses_preds.npy", pp.detach().cpu().numpy())
+        # np.save("poses_targets.npy", pose_targets.detach().cpu().numpy())
+        # np.save("poses_labels.npy", labels_pos.detach().cpu().numpy())
+        # np.save("points.npy", points.cpu().numpy())
+        # np.save("symmetry.npy", symmetry.cpu().numpy())
+
+        POSE_W = 1.0
+        pose_loss = self.loss(pp, pose_targets, labels_pos, points, symmetry) * POSE_W
         return pose_loss
 
 

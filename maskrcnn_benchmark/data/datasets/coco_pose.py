@@ -57,15 +57,27 @@ class COCOPoseDataset(COCODataset):
 
         # read symmetry file
         self.symmetry = self._load_object_symmetry(symmetry_file)
-        self.symmetry = torch.tensor(self.symmetry)
+        is_symmetric = True
 
         # read points from models_dir
         _, self.points = self._load_object_points(models_dir)
-        self.points = torch.tensor(self.points)
         # maybe get 'extents' from points instead?
 
         # read extents file
         self.extents = self._load_object_extents(extents_file)
+
+        # set weights to points
+        point_blob = self.points.copy()
+        for i in range(1, self.num_classes):
+            # compute the rescaling factor for the points
+            weight = 2.0 / np.amax(self.extents[i, :])
+            weight = max(weight, 10.0)
+            if self.symmetry[i] > 0 and is_symmetric:
+                weight *= 4
+            point_blob[i, :, :] *= weight
+
+        self.symmetry = torch.tensor(self.symmetry)
+        self.points = torch.tensor(point_blob)
         self.extents = torch.tensor(self.extents)
 
 

@@ -5,18 +5,15 @@ import glob
 import os
 
 import torch
-from setuptools import find_packages
-from setuptools import setup
 from torch.utils.cpp_extension import CUDA_HOME
 from torch.utils.cpp_extension import CppExtension
 from torch.utils.cpp_extension import CUDAExtension
 
 requirements = ["torch", "torchvision"]
 
-
-def get_extensions():
+def get_extensions(extensions_dir, extension_name):
     this_dir = os.path.dirname(os.path.abspath(__file__))
-    extensions_dir = os.path.join(this_dir, "maskrcnn_benchmark", "csrc")
+    extensions_dir = os.path.join(this_dir, extensions_dir)
 
     main_file = glob.glob(os.path.join(extensions_dir, "*.cpp"))
     source_cpu = glob.glob(os.path.join(extensions_dir, "cpu", "*.cpp"))
@@ -45,7 +42,7 @@ def get_extensions():
 
     ext_modules = [
         extension(
-            "maskrcnn_benchmark._C",
+            extension_name,
             sources,
             include_dirs=include_dirs,
             define_macros=define_macros,
@@ -56,14 +53,27 @@ def get_extensions():
     return ext_modules
 
 
-setup(
-    name="maskrcnn_benchmark",
-    version="0.1",
-    author="fmassa",
-    url="https://github.com/facebookresearch/maskrcnn-benchmark",
-    description="object detection in pytorch",
-    packages=find_packages(exclude=("configs", "tests",)),
-    # install_requires=requirements,
-    ext_modules=get_extensions(),
-    cmdclass={"build_ext": torch.utils.cpp_extension.BuildExtension},
-)
+if __name__ == '__main__':
+    from setuptools import find_packages
+    from setuptools import setup
+
+    extensions_dir = "maskrcnn_benchmark/csrc"
+    extension_name = "maskrcnn_benchmark._C"
+    ext_modules = []
+    # ext_modules += get_extensions(extensions_dir, extension_name)
+
+    custom_extensions_dir = "maskrcnn_benchmark/csrc_custom"
+    custom_extension_name = "maskrcnn_benchmark._Custom"
+    ext_modules += get_extensions(custom_extensions_dir, custom_extension_name)
+    
+    setup(
+        name="maskrcnn_benchmark",
+        version="0.1",
+        # author="fmassa",
+        # url="https://github.com/facebookresearch/maskrcnn-benchmark",
+        description="object detection in pytorch",
+        packages=find_packages(exclude=("configs", "tests",)),
+        # install_requires=requirements,
+        ext_modules=ext_modules,
+        cmdclass={"build_ext": torch.utils.cpp_extension.BuildExtension},
+    )
