@@ -13,7 +13,7 @@ class PoseRCNNC4Predictor(nn.Module):
         res2_out_channels = cfg.MODEL.RESNETS.RES2_OUT_CHANNELS
         num_inputs = res2_out_channels * stage2_relative_factor
 
-        num_units = cfg.MODEL.ROI_POSE_HEAD.CONV_LAYERS[-1]
+        # num_units = cfg.MODEL.ROI_POSE_HEAD.CONV_LAYERS[-1]
 
         num_classes = cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES
 
