@@ -60,7 +60,7 @@ if __name__ == '__main__':
     extensions_dir = "maskrcnn_benchmark/csrc"
     extension_name = "maskrcnn_benchmark._C"
     ext_modules = []
-    # ext_modules += get_extensions(extensions_dir, extension_name)
+    ext_modules += get_extensions(extensions_dir, extension_name)
 
     custom_extensions_dir = "maskrcnn_benchmark/csrc_custom"
     custom_extension_name = "maskrcnn_benchmark._Custom"

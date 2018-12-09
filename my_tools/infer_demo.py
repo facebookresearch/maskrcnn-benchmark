@@ -292,7 +292,7 @@ if __name__ == '__main__':
             ix += 1
 
         vertex_pred = np.transpose(vertex_pred, [0,2,3,1])
-        rois, final_poses = hough_voting.forward(FT(labels), FT(label_mask), FT(vertex_pred), FT(extents), FT(poses), FT(K.flatten()))
+        rois, final_poses = hough_voting.forward(FT(labels), FT(label_mask), FT(vertex_pred), FT(extents), FT(poses), FT(K))
         final_poses = final_poses.cpu().numpy()
         rois = rois.cpu().numpy()
 

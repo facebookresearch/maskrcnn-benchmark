@@ -252,6 +252,7 @@ _C.MODEL.RESNETS.STEM_OUT_CHANNELS = 64
 # ---------------------------------------------------------------------------- #
 _C.SOLVER = CN()
 _C.SOLVER.MAX_ITER = 40000
+_C.SOLVER.OPTIMIZER = "SGD"
 
 _C.SOLVER.BASE_LR = 0.001
 _C.SOLVER.BIAS_LR_FACTOR = 2
