@@ -4,7 +4,7 @@ import logging
 import time
 
 import torch
-from torch.distributed import deprecated as dist
+import torch.distributed as dist
 
 from maskrcnn_benchmark.utils.comm import get_world_size
 from maskrcnn_benchmark.utils.metric_logger import MetricLogger
