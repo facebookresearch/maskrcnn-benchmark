@@ -2,8 +2,8 @@ from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.modeling.detector import build_detection_model
 from maskrcnn_benchmark.structures.image_list import to_image_list
 from maskrcnn_benchmark.layers.hough_voting import HoughVoting
-
-from torchvision import transforms as T
+from maskrcnn_benchmark.data.build import build_transforms
+from torchvision.transforms import functional as TVF
 
 import numpy as np
 from transforms3d.quaternions import quat2mat#, mat2quat
@@ -20,45 +20,40 @@ def load_model(model, f):
     print("Loaded %s"%(f))
 
 
+class PseudoTarget(object):
+    def __init__(self):
+        self.x = {}
+
+    def add_field(self, k, v):
+        self.x[k] = v
+
+    def get_field(self, k):
+        return self.x[k]
+
+    def resize(self, *args):
+        return self
+
+    def transpose(self, *args):
+        return self
+
 class ImageTransformer(object):
     def __init__(self, cfg):
         self.cfg = cfg.clone()
         self.transforms = self.build_transform()
 
     def build_transform(self):
-        cfg = self.cfg
-
-        # we are loading images with OpenCV, so we don't need to convert them
-        # to BGR, they are already! So all we need to do is to normalize
-        # by 255 if we want to convert to BGR255 format, or flip the channels
-        # if we want it to be in RGB in [0-1] range.
-        if cfg.INPUT.TO_BGR255:
-            to_bgr_transform = T.Lambda(lambda x: x * 255)
-        else:
-            to_bgr_transform = T.Lambda(lambda x: x[[2, 1, 0]])
-
-        normalize_transform = T.Normalize(
-            mean=cfg.INPUT.PIXEL_MEAN, std=cfg.INPUT.PIXEL_STD
-        )
-
-        transform = T.Compose(
-            [
-                T.ToPILImage(),
-                T.Resize(cfg.INPUT.MIN_SIZE_TEST),
-                T.ToTensor(),
-                to_bgr_transform,
-                normalize_transform,
-            ]
-        )
-        return transform
+        transforms = build_transforms(self.cfg, is_train=False)
+        return transforms
 
     def transform_image(self, original_image):
-        image = self.transforms(original_image)
+        target = PseudoTarget()
+        image = TVF.to_pil_image(original_image, mode=None)
+        image, target = self.transforms(image, target)
         # convert to an ImageList, padded so that it is divisible by
         # cfg.DATALOADER.SIZE_DIVISIBILITY
         image = image.unsqueeze(0)
         image_list = to_image_list(image, self.cfg.DATALOADER.SIZE_DIVISIBILITY)
-        return image_list
+        return image_list, [target.get_field('scale')]
 
 def select_top_predictions(predictions, confidence_threshold=0.7):
     """
@@ -228,10 +223,11 @@ if __name__ == '__main__':
 
         height, width = img.shape[:-1]
 
-        image_list = img_transformer.transform_image(img)
+        # Change BGR to RGB, since torchvision.transforms use PIL image (RGB default...)
+        image_list, image_scale_list = img_transformer.transform_image(img[:,:,::-1])
         image_list = image_list.to(device)
 
-        im_scale = 1.0  # TODO: Get im scale from image transformer
+        im_scale = image_scale_list[0]
         K = intrinsics * im_scale
 
         with torch.no_grad():
