@@ -13,6 +13,7 @@ import torch.nn.functional as F
 
 import glob
 import cv2
+import open3d
 
 def load_model(model, f):
     checkpoint = torch.load(f, map_location=torch.device("cpu"))
@@ -76,13 +77,13 @@ def select_top_predictions(predictions, confidence_threshold=0.7):
     _, idx = scores.sort(0, descending=True)
     return predictions[idx]
 
-def paste_mask_on_image(mask, box, im_h, im_w, thresh=None):
+def paste_mask_on_image(mask, box, im_h, im_w, thresh=None, interp=cv2.INTER_LINEAR):
     w = box[2] - box[0] + 1
     h = box[3] - box[1] + 1
     w = max(w, 1)
     h = max(h, 1)
 
-    resized = cv2.resize(mask, (w,h), interpolation=cv2.INTER_LINEAR)
+    resized = cv2.resize(mask, (w,h), interpolation=interp)
 
     if thresh is not None:#thresh >= 0:
         resized = resized > thresh
@@ -157,6 +158,95 @@ def vis_rois(im, rois):
 
     cv2.imshow("rois", img)
 
+def backproject_camera(im_depth, meta_data):
+
+    depth = im_depth.astype(np.float32, copy=True) / meta_data['factor_depth']
+
+    # get intrinsic matrix
+    K = meta_data['intrinsic_matrix']
+    K = np.matrix(K)
+    K = np.reshape(K,(3,3))
+    Kinv = np.linalg.inv(K)
+    # if cfg.FLIP_X:
+    #     Kinv[0, 0] = -1 * Kinv[0, 0]
+    #     Kinv[0, 2] = -1 * Kinv[0, 2]
+
+    # compute the 3D points        
+    width = depth.shape[1]
+    height = depth.shape[0]
+
+    # construct the 2D points matrix
+    x, y = np.meshgrid(np.arange(width), np.arange(height))
+    ones = np.ones((height, width), dtype=np.float32)
+    x2d = np.stack((x, y, ones), axis=2).reshape(width*height, 3)
+
+    # backprojection
+    R = Kinv * x2d.transpose()
+
+    # compute the 3D points
+    X = np.multiply(np.tile(depth.reshape(1, width*height), (3, 1)), R)
+
+    return np.array(X)
+
+
+def render_object_pose(im, depth, labels, meta_data, pose_data, points):
+    """
+    im: rgb image of the scene
+    depth: depth image of the scene
+    meta_data: dict({'intrinsic_matrix': K, 'factor_depth': })
+    pose_data: [{"name": "004_sugar_box", "pose": 3x4 or 4x4 matrix}, {...}, ]
+    """
+    if len(pose_data) == 0:
+        return 
+
+    rgb = im.copy()
+    if rgb.dtype == np.uint8:
+        rgb = rgb.astype(np.float32)[:,:,::-1] / 255
+
+    X = backproject_camera(depth, meta_data)
+    cloud_rgb = rgb # .astype(np.float32)[:,:,::-1] / 255
+    cloud_rgb = cloud_rgb.reshape((cloud_rgb.shape[0]*cloud_rgb.shape[1],3))
+    scene_cloud = open3d.PointCloud(); 
+    scene_cloud.points = open3d.Vector3dVector(X.T)
+    scene_cloud.colors = open3d.Vector3dVector(cloud_rgb)
+
+    if len(pose_data) == 0:
+        open3d.draw_geometries([scene_cloud])
+        return 
+
+    all_objects_cloud = open3d.PointCloud()
+    for ix,pd in enumerate(pose_data):
+        object_cls = labels[ix]
+        object_pose = pd
+        # object_cloud_file = osp.join(object_model_dir,object_name,"points.xyz")
+        object_pose_matrix4f = np.identity(4)
+        object_pose = np.array(object_pose)
+        if object_pose.shape == (4,4):
+            object_pose_matrix4f = object_pose
+        elif object_pose.shape == (3,4):
+            object_pose_matrix4f[:3,:] = object_pose
+        elif len(object_pose) == 7:
+            object_pose_matrix4f[:3,:3] = quat2mat(object_pose[:4])
+            object_pose_matrix4f[:3,-1] = object_pose[4:]
+        else:
+            print("[WARN]: Object pose for %s is not of shape (4,4) or (3,4) or 1-d quat (7), skipping..."%(object_name))
+            continue
+        # object_pose_T = object_pose[:,3]
+        # object_pose_R = object_pose[:,:3]
+
+        object_pts3d = points[object_cls] # read_xyz_file(object_cloud_file)
+        object_cloud = open3d.PointCloud(); 
+        object_cloud.points = open3d.Vector3dVector(object_pts3d)
+        pt_colors = np.zeros(object_pts3d.shape, np.float32)
+        pt_colors[:] = np.array(get_random_color()) / 255
+        object_cloud.colors = open3d.Vector3dVector(pt_colors)
+        object_cloud.transform(object_pose_matrix4f)
+        all_objects_cloud += object_cloud
+
+        # print("Showing %s"%(object_name))
+    open3d.draw_geometries([scene_cloud, all_objects_cloud])
+
+
 def build_hough_voting_layer():
     skip_pixels = 20
     inlier_threshold = 0.9
@@ -216,6 +306,8 @@ if __name__ == '__main__':
     # for image_file in glob.glob("%s/*1-%s"%(image_dir, image_ext)):
     for image_file in ["%s/%s-%s"%(image_dir, f, image_ext) for f in image_files]:
         img = cv2.imread(image_file)
+        depth = cv2.imread(image_file.replace(image_ext, "depth.png"), cv2.IMREAD_UNCHANGED)
+
         # img = cv2.flip(img, 1)
         if img is None:
             print("Could not find %s"%(image_file))
@@ -260,7 +352,6 @@ if __name__ == '__main__':
         for bbox, mask, vert, label, score in zip(bboxes, masks, verts, labels, scores):
 
             mask = paste_mask_on_image(mask, bbox, height, width, thresh=thresh)
-            cv2.imshow("mask", mask)
 
             label_mask[ix] = mask
 
@@ -274,22 +365,25 @@ if __name__ == '__main__':
             cx = paste_mask_on_image(vert[0], bbox, height, width)
             cx[mask!=1] = 0
             vertex_pred[ix, 0] = cx
-            cv2.imshow("centers x", normalize(cx, -1, 1))
 
             cy = paste_mask_on_image(vert[1], bbox, height, width)
             cy[mask!=1] = 0
             vertex_pred[ix, 1] = cy
-            cv2.imshow("centers y", normalize(cy, -1, 1))
 
-            cz = paste_mask_on_image(vert[2], bbox, height, width)
+            cz = paste_mask_on_image(vert[2], bbox, height, width, interp=cv2.INTER_NEAREST)
             cz[mask!=1] = 0
             vertex_pred[ix, 2] = cz
-            cv2.imshow("centers z", normalize(np.exp(cz), 0, 6))
-
-            cv2.imshow("masks", img_copy)
-            cv2.waitKey(0)
+            
+            # cv2.imshow("mask", mask)
+            # cv2.imshow("centers x", normalize(cx, -1, 1))
+            # cv2.imshow("centers y", normalize(cy, -1, 1))
+            # cv2.imshow("centers z", normalize(np.exp(cz), 0, 6))
+            # cv2.waitKey(0)
 
             ix += 1
+
+        cv2.imshow("masks", img_copy)
+        cv2.waitKey(0)
 
         vertex_pred = np.transpose(vertex_pred, [0,2,3,1])
         rois, final_poses = hough_voting.forward(FT(labels), FT(label_mask), FT(vertex_pred), FT(extents), FT(poses), FT(K))
@@ -300,11 +394,27 @@ if __name__ == '__main__':
         vis_pose(img, labels, final_poses, K, points)
         cv2.waitKey(0)
 
-        # #     # np.stack(())
-        # label_mask = np.expand_dims(label_mask, axis=0)
-        # vertex_pred = np.expand_dims(vertex_pred, axis=0)
-        np.save(image_file.replace("color.png", "labels_mrcnn.npy"), labels)
-        np.save(image_file.replace("color.png", "masks_mrcnn.npy"), label_mask)
-        np.save(image_file.replace("color.png", "vert_pred_mrcnn.npy"), vertex_pred)
-        np.save(image_file.replace("color.png", "poses_mrcnn.npy"), poses)
+        factor_depth = 10000
+        meta_data = {'intrinsic_matrix': K.tolist(), 'factor_depth': factor_depth}
+        depth_file = image_file.replace(image_ext, "depth.png")
+        depth = cv2.imread(depth_file, cv2.IMREAD_UNCHANGED)
+        if depth is None:
+            print("Could not find %s"%(depth_file))
+            continue
 
+        render_object_pose(img, depth, labels, meta_data, final_poses, points)
+
+
+        im_file_prefix = image_file.replace("color.png", "")
+        np.save("%s%s"%(im_file_prefix, "labels_mrcnn.npy"), labels)
+        np.save("%s%s"%(im_file_prefix, "masks_mrcnn.npy"), label_mask)
+        np.save("%s%s"%(im_file_prefix, "vert_pred_mrcnn.npy"), vertex_pred)
+        np.save("%s%s"%(im_file_prefix, "poses_mrcnn.npy"), poses)
+
+        import json
+        j_file = im_file_prefix + "pred_pose.json"
+        pose_data = [{"name": CLASSES[labels[ix]], "pose": p.tolist()} for ix, p in enumerate(final_poses)]
+        with open(j_file, "w") as f:
+            j_data = {"poses": pose_data, "meta": meta_data}
+            json.dump(j_data, f)
+            print("Saved pose data to %s"%(j_file))
