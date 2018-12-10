@@ -152,7 +152,8 @@ class PoseRCNNLossComputation(object):
         # for pos_ind, label in zip(positive_inds, labels_pos):
         #     vertex_pred.append(vertex_pred[pos_ind, label*3 : label*3+3])
         # vertex_pred = torch.stack(masks, dim=0).to(device)
-        vertex_loss = smooth_l1_loss_vertex(vp, vertex_targets) # TODO: add vertex_weights
+        # vertex_loss = smooth_l1_loss_vertex(vp, vertex_targets) # TODO: add vertex_weights
+        vertex_loss = smooth_l1_loss(vp, vertex_targets)
         return vertex_loss
 
 

@@ -2,6 +2,7 @@ import torch
 from torch.nn import functional as F
 
 from maskrcnn_benchmark.layers.ave_dist_loss import AverageDistanceLoss
+from maskrcnn_benchmark.layers.smooth_l1_loss import smooth_l1_loss
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 from maskrcnn_benchmark.modeling.matcher import Matcher
 
@@ -48,7 +49,10 @@ class PoseRCNNLossComputation(object):
             neg_inds = matched_idxs < 0 # Matcher.BELOW_LOW_THRESHOLD
             labels_per_image[neg_inds] = 0
 
-            poses = matched_targets.get_field("poses")[:,:4]  # get q from pose field (qw,qx,qy,qz,x,y,z)
+            poses = matched_targets.get_field("poses").clone()  # (qw,qx,qy,qz,x,y,z)
+            # poses = poses[:,:4]  # get q from pose field (qw,qx,qy,qz,x,y,z)
+            poses = poses[:,[0,1,2,3,-1]]
+            poses[:,-1] = torch.log(poses[:,-1])
 
             labels.append(labels_per_image)
             pose_targets.append(poses)
@@ -75,12 +79,12 @@ class PoseRCNNLossComputation(object):
         pose_targets = pose_targets[positive_inds]
         labels_pos = labels[positive_inds]
 
-        if pose_targets.numel() == 0:
+        if pose_targets.numel() == 0 or pose_pred.numel() == 0:
             return pose_pred.sum() * 0
 
-        vp_size = pose_pred.shape
-        N,C = vp_size
-        pp = pose_pred.view(N, -1, 4)  # N,classes,4
+        pp_size = pose_pred.shape
+        N,C = pp_size
+        pp = pose_pred.view(N, -1, 5)  # N,classes,4
         pp = pp[positive_inds, labels_pos]  # N,4
 
         points = targets[0].get_field("points")
@@ -93,8 +97,9 @@ class PoseRCNNLossComputation(object):
         # np.save("points.npy", points.cpu().numpy())
         # np.save("symmetry.npy", symmetry.cpu().numpy())
 
-        POSE_W = 1.0
-        pose_loss = self.loss(pp, pose_targets, labels_pos, points, symmetry) * POSE_W
+        POSE_W = 1.0 #2.0
+        pose_loss = self.loss(pp[:,:4].clone(), pose_targets[:,:4].clone(), labels_pos, points, symmetry) * POSE_W
+        pose_loss += smooth_l1_loss(pp[:,-1].clone(), pose_targets[:,-1].clone())
         return pose_loss
 
 

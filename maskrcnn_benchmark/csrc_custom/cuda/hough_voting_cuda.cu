@@ -100,7 +100,7 @@ __global__ void compute_arrays_kernel(const int nthreads, const int* labelmap,
   }
 }
 
-__global__ void compute_hough_kernel(const int nthreads, float* hough_space, float* hough_data, 
+__global__ void compute_hough_kernel(const int nthreads, float* hough_space, float* hough_data, const float* poses,
     const float* vertmap, const float* extents, const float* meta_data, const int* arrays, const int* array_size, 
     const int* class_indexes, const int height, const int width, const float inlierThreshold, const int skip_pixels) 
 {
@@ -139,7 +139,8 @@ __global__ void compute_hough_kernel(const int nthreads, float* hough_space, flo
       offset = n * height * width * VERTEX_CHANNELS + (y * width + x) * VERTEX_CHANNELS;
       float u = vertmap[offset];
       float v = vertmap[offset + 1];
-      float d = exp(vertmap[offset + 2]);
+      // float d = exp(vertmap[offset + 2]);
+      float d = exp(poses[n*5+4]);
 
       // vote
       if (angle_distance(cx, cy, x, y, u, v) > inlierThreshold)
@@ -159,37 +160,37 @@ __global__ void compute_hough_kernel(const int nthreads, float* hough_space, flo
     {
       distance /= hough_space[index];
 
-      float bb_width = -1;
-      float bb_height = -1;
-      for (int i = 0; i < size; i += skip_pixels)
-      {
-        int offset = n * height * width + i;
-        int location = arrays[offset];
-        int x = location % width;
-        int y = location / width;
+      // float bb_width = -1;
+      // float bb_height = -1;
+      // for (int i = 0; i < size; i += skip_pixels)
+      // {
+      //   int offset = n * height * width + i;
+      //   int location = arrays[offset];
+      //   int x = location % width;
+      //   int y = location / width;
 
-        // read the direction
-        offset = n * height * width * VERTEX_CHANNELS + (y * width + x) * VERTEX_CHANNELS;
-        float u = vertmap[offset];
-        float v = vertmap[offset + 1];
+      //   // read the direction
+      //   offset = n * height * width * VERTEX_CHANNELS + (y * width + x) * VERTEX_CHANNELS;
+      //   float u = vertmap[offset];
+      //   float v = vertmap[offset + 1];
 
-        // vote
-        if (angle_distance(cx, cy, x, y, u, v) > inlierThreshold)
-        {
-          project_box(cls, extents, s_meta_data, distance, 0.6, &threshold);
-          float dx = fabsf(x - cx);
-          float dy = fabsf(y - cy);
-          if (dx > bb_width && dx < threshold && dy < threshold)
-            bb_width = dx;
-          if (dy > bb_height && dx < threshold && dy < threshold)
-            bb_height = dy;
-        }
-      }
+      //   // vote
+      //   if (angle_distance(cx, cy, x, y, u, v) > inlierThreshold)
+      //   {
+      //     project_box(cls, extents, s_meta_data, distance, 0.6, &threshold);
+      //     float dx = fabsf(x - cx);
+      //     float dy = fabsf(y - cy);
+      //     if (dx > bb_width && dx < threshold && dy < threshold)
+      //       bb_width = dx;
+      //     if (dy > bb_height && dx < threshold && dy < threshold)
+      //       bb_height = dy;
+      //   }
+      // }
 
       int offset = n * height * width * 3 + 3 * (cy * width + cx);
       hough_data[offset] = distance;
-      hough_data[offset + 1] = 2 * bb_height;
-      hough_data[offset + 2] = 2 * bb_width;
+      // hough_data[offset + 1] = 2 * bb_height;
+      // hough_data[offset + 2] = 2 * bb_width;
     }
   }
 }
@@ -230,22 +231,22 @@ __global__ void compute_rois_kernel(const int nthreads, float* top_box, float* t
 
     int offset = ind * height * width * 3 + 3 * (y * width + x);
     float bb_distance = hough_data[offset];
-    float bb_height = hough_data[offset + 1];
-    float bb_width = hough_data[offset + 2];
+    // float bb_height = hough_data[offset + 1];
+    // float bb_width = hough_data[offset + 2];
 
     int roi_index = index; 
     top_box[roi_index * 7 + 0] = 0;
     top_box[roi_index * 7 + 1] = cls;
-    top_box[roi_index * 7 + 2] = x - bb_width * (0.5 + scale);
-    top_box[roi_index * 7 + 3] = y - bb_height * (0.5 + scale);
-    top_box[roi_index * 7 + 4] = x + bb_width * (0.5 + scale);
-    top_box[roi_index * 7 + 5] = y + bb_height * (0.5 + scale);
+    // top_box[roi_index * 7 + 2] = x - bb_width * (0.5 + scale);
+    // top_box[roi_index * 7 + 3] = y - bb_height * (0.5 + scale);
+    // top_box[roi_index * 7 + 4] = x + bb_width * (0.5 + scale);
+    // top_box[roi_index * 7 + 5] = y + bb_height * (0.5 + scale);
     top_box[roi_index * 7 + 6] = max_hs_idx;
     
-    top_pose[roi_index * 7 + 0] = poses[index*4];
-    top_pose[roi_index * 7 + 1] = poses[index*4+1];
-    top_pose[roi_index * 7 + 2] = poses[index*4+2];
-    top_pose[roi_index * 7 + 3] = poses[index*4+3];
+    top_pose[roi_index * 7 + 0] = poses[index*5];
+    top_pose[roi_index * 7 + 1] = poses[index*5+1];
+    top_pose[roi_index * 7 + 2] = poses[index*5+2];
+    top_pose[roi_index * 7 + 3] = poses[index*5+3];
     top_pose[roi_index * 7 + 4] = rx * bb_distance;
     top_pose[roi_index * 7 + 5] = ry * bb_distance;
     top_pose[roi_index * 7 + 6] = bb_distance;
@@ -315,7 +316,7 @@ int HoughVotingForwardLaucher(
   output_size = N * height * width;
   compute_hough_kernel<<<(output_size + kThreadsPerBlock - 1) / kThreadsPerBlock,
                        kThreadsPerBlock, 0, stream>>>(
-      output_size, hough_space, hough_data, vertmap, extents, meta_data,
+      output_size, hough_space, hough_data, poses, vertmap, extents, meta_data,
       arrays, array_sizes, labels, height, width, inlierThreshold, skip_pixels);
   cudaThreadSynchronize();
 

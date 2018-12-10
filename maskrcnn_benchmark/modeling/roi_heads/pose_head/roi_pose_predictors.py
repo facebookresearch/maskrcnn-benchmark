@@ -19,8 +19,9 @@ class PoseRCNNC4Predictor(nn.Module):
 
         # self.conv5_mask = Conv2d(num_inputs, num_units, 1, 1, 0)
         self.avgpool = nn.AvgPool2d(kernel_size=7, stride=7)
-        self.poses_fc1 = nn.Linear(num_inputs, 512)
-        self.poses_fc2 = nn.Linear(512, num_classes * 4)
+        self.poses_fc1 = nn.Linear(num_inputs, 1096)
+        self.poses_fc2 = nn.Linear(1096, 1096)
+        self.poses_fc3 = nn.Linear(1096, num_classes * 5)
 
         self._init_params()
 
@@ -32,6 +33,8 @@ class PoseRCNNC4Predictor(nn.Module):
         nn.init.constant_(self.poses_fc1.bias, 0)
         nn.init.normal_(self.poses_fc2.weight, mean=0, std=0.001)
         nn.init.constant_(self.poses_fc2.bias, 0)
+        nn.init.normal_(self.poses_fc3.weight, mean=0, std=0.001)
+        nn.init.constant_(self.poses_fc3.bias, 0)
 
     def forward(self, x):
         # x = F.relu(self.conv5_mask(x))
@@ -43,8 +46,13 @@ class PoseRCNNC4Predictor(nn.Module):
         fc1 = F.dropout(F.relu(fc1, inplace=True), 0.5, training=self.training)
         fc2 = self.poses_fc2(fc1)
         fc2 = F.normalize(fc2, p=2, dim=1)
+        fc2 = F.dropout(F.relu(fc2, inplace=True), 0.5, training=self.training)
+        fc3 = self.poses_fc3(fc2)
+        fc3 = F.normalize(fc3, p=2, dim=1)
+        # out = fc2.clone()
+        # out[:,:4] = F.normalize(fc2[:,:4], p=2, dim=1)
 
-        return torch.tanh(fc2)
+        return torch.tanh(fc3)
 
 
 def make_roi_pose_predictor(cfg):

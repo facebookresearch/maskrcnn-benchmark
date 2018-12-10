@@ -31,13 +31,16 @@ class PosePostProcessor(nn.Module):
         labels = torch.cat(labels)
         index = torch.arange(N, device=labels.device)
 
-        pose_pred = pose_pred.view(N,-1,4)  # N,Classes,4
+        results = []
+        if pose_pred.numel() == 0:
+            return results
+
+        pose_pred = pose_pred.view(N,-1,5)  # N,Classes,4
         pose_pred = pose_pred[index, labels]  # N,4
 
         boxes_per_image = [len(box) for box in boxes]
         pose_pred = pose_pred.split(boxes_per_image, dim=0)
 
-        results = []
         for pp, box in zip(pose_pred, boxes):
             bbox = BoxList(box.bbox, box.size, mode="xyxy")
             for field in box.fields():
