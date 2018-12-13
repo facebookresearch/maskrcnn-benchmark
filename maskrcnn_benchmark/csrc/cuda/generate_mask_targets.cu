@@ -399,7 +399,7 @@ at::Tensor generate_mask_targets_cuda(at::Tensor dense_vector, const std::vector
     auto d_poly_rel_idx = poly_rel_idx.cuda();
     auto stream = at::cuda::getCurrentCUDAStream();  
     
-    crop_and_scale_cuda_kernel<<<num_of_poly,256,0,stream.stream()>>>(d_dense_vector.data<double>(), 
+    crop_and_scale_cuda_kernel<<<num_of_poly, 256, 0, stream.stream()>>>(d_dense_vector.data<double>(), 
                                                                       d_per_anchor_poly_idx.data<int>(), 
                                                                       d_poly_rel_idx.data<int>(), 
                                                                       poly_count, 
@@ -409,7 +409,7 @@ at::Tensor generate_mask_targets_cuda(at::Tensor dense_vector, const std::vector
                                                                       
     //TODO: larger threads-per-block might be better here, because each CTA uses 32 KB of shmem,
     //and occupancy is likely shmem capacity bound                                                                                
-    rle_fr_poly_cuda_kernel<<<num_of_poly,256,0,stream.stream()>>>(d_dense_vector.data<double>(), 
+    rle_fr_poly_cuda_kernel<<<num_of_poly, 1024, 0, stream.stream()>>>(d_dense_vector.data<double>(), 
                                                                    d_poly_rel_idx.data<int>(), 
                                                                    M, M, 
                                                                    (uint*) d_cnts_t.data<int>(), 
@@ -421,12 +421,12 @@ at::Tensor generate_mask_targets_cuda(at::Tensor dense_vector, const std::vector
                                                                    (uint*) d_b_t.data<int>(), 
                                                                    d_num_of_counts_t.data<int>());
                                                                  
-    decode_rle_cuda_kernel<<<num_of_poly,256,0,stream.stream()>>>(d_num_of_counts_t.data<int>(), 
+    decode_rle_cuda_kernel<<<num_of_poly, 256, 0, stream.stream()>>>(d_num_of_counts_t.data<int>(), 
                                                                  (uint*) d_cnts_t.data<int>(), 
                                                                  M, M, 
                                                                  d_mask_t.data<byte>());
                                                                  
-    merge_masks_cuda_kernel<<<num_of_anchors,256,0,stream.stream()>>>(d_mask_t.data<byte>(), result.data<float>(), 
+    merge_masks_cuda_kernel<<<num_of_anchors, 256, 0, stream.stream()>>>(d_mask_t.data<byte>(), result.data<float>(), 
                                                                       M, d_per_anchor_poly_idx.data<int>(), 
                                                                       num_of_anchors); 
     return result;
