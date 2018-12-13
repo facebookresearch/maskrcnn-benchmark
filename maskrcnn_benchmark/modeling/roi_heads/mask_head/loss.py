@@ -29,7 +29,7 @@ def project_masks_on_boxes(segmentation_masks, proposals, discretization_size):
         segmentation_masks, proposals
     )    
     # CUDA implementation of RLE encoding needs to be fixed to support larger M
-    if device == 'cuda' and M < 32:
+    if proposals.bbox.is_cuda and M < 32:
         polygons_list=[]
         for poly_obj in segmentation_masks.polygons:
             polygons_per_instance=[]

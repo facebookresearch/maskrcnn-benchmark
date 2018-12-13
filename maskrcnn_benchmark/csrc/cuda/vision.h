@@ -51,3 +51,7 @@ at::Tensor generate_mask_targets_cuda(at::Tensor dense_vector,
                                       const std::vector<std::vector<at::Tensor>> polygons, 
                                       const at::Tensor anchors, 
                                       const int mask_size);                             
+
+at::Tensor box_iou_cuda(at::Tensor box1, at::Tensor box2);
+                                      
+                                      

@@ -3,7 +3,7 @@
 #include "ROIAlign.h"
 #include "ROIPool.h"
 #include "generate_mask_targets.h"
-
+#include "box_iou.h"
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("nms", &nms, "non-maximum suppression");
@@ -12,4 +12,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("roi_pool_forward", &ROIPool_forward, "ROIPool_forward");
   m.def("roi_pool_backward", &ROIPool_backward, "ROIPool_backward");
   m.def("generate_mask_targets", &generate_mask_targets, "generate_mask_targets");
+  m.def("box_iou", &box_iou, "box_iou");
 }
