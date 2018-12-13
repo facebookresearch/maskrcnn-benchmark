@@ -46,3 +46,8 @@ at::Tensor nms_cuda(const at::Tensor boxes, float nms_overlap_thresh);
 at::Tensor compute_flow_cuda(const at::Tensor& boxes,
                              const int height,
                              const int width);
+                            
+at::Tensor generate_mask_targets_cuda(at::Tensor dense_vector, 
+                                      const std::vector<std::vector<at::Tensor>> polygons, 
+                                      const at::Tensor anchors, 
+                                      const int mask_size);                             
