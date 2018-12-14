@@ -7,6 +7,7 @@ from maskrcnn_benchmark.modeling.detector import build_detection_model
 from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
 from maskrcnn_benchmark.structures.image_list import to_image_list
 from maskrcnn_benchmark.modeling.roi_heads.mask_head.inference import Masker
+from maskrcnn_benchmark import layers as L
 
 
 class COCODemo(object):
@@ -307,7 +308,7 @@ class COCODemo(object):
         """
         masks = predictions.get_field("mask")
         masks_per_dim = self.masks_per_dim
-        masks = torch.nn.functional.interpolate(
+        masks = L.interpolate(
             masks.float(), scale_factor=1 / masks_per_dim
         ).byte()
         height, width = masks.shape[-2:]
