@@ -121,13 +121,27 @@ __global__ void decode_rle_cuda_kernel(const int *num_of_cnts, uint *cnts, long 
     uint *scanned_buf = switch_buf == 0 ? shbuf2 : shbuf1;
        
     //find which bin pixel j falls into , which determines the pixel value
-    //TODO: run binary search instead for better perf
+    //use binary search
     for(int j = tid; j < h * w; j += block_jump){
         int bin = 0;
-        int k;
-        for(k = 0; k <= m; k++){
-            if(j < scanned_buf[k]) break;
-        }
+        int min_idx = 0;
+        int max_idx = m;
+        int mid_idx = m / 2;        
+        while(max_idx > min_idx){
+            if(j > scanned_buf[mid_idx]) {
+                min_idx = mid_idx+1; 
+                mid_idx = (min_idx + max_idx) / 2;
+            }
+            else if (j < scanned_buf[mid_idx]) {
+                max_idx = mid_idx; 
+                mid_idx = (min_idx + max_idx) / 2;
+            }
+            else {
+                mid_idx++; 
+                break;
+            }    
+        }         
+        int k = mid_idx;
         byte pixel = k % 2 == 0 ? 1 : 0;
         mask_ptr[j] = pixel; 
     }
