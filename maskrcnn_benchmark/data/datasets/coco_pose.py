@@ -2,6 +2,8 @@ import torch
 
 import os
 
+from PIL import Image
+
 import numpy as np
 
 import pycocotools.mask as mask_utils
@@ -13,12 +15,12 @@ from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
 from maskrcnn_benchmark.structures.vertex_mask import VertexMask
 
 
-def _generate_vertex_center_mask(label_mask, center, z):
+def _generate_vertex_center_mask(label_mask, center, depth=None):
     # c = np.zeros((2, 1), dtype=np.float32)
     # for ind, cls in enumerate(cls_i):
     c = np.expand_dims(center, axis=1) 
     h,w = label_mask.shape
-    vertex_centers = np.zeros((3,h,w),dtype=np.float32)  # channels first, as in pytorch convention
+    vertex_centers = np.zeros((3, h, w), dtype=np.float32)  # channels first, as in pytorch convention
     # z = pose[2, 3]
     y, x = np.where(label_mask == 1)
 
@@ -28,9 +30,11 @@ def _generate_vertex_center_mask(label_mask, center, z):
     # normalization
     R = R / N # np.divide(R, np.tile(N, (2,1)))
     # assignment
-    vertex_centers[0, y, x] = R[0,:]
-    vertex_centers[1, y, x] = R[1,:]
-    vertex_centers[2, y, x] = z
+    vertex_centers[0, y, x] = R[0, :]
+    vertex_centers[1, y, x] = R[1, :]
+    if depth is not None:
+        assert depth.shape == (h, w)
+        vertex_centers[2, y, x] = depth[y, x]
     return vertex_centers
 
 def _get_mask_from_polygon(polygons, im_size):
@@ -51,7 +55,7 @@ class COCOPoseDataset(COCODataset):
         self._classes = ['__background'] + [categories[k]['name'] for k in categories]  # +1 for bg class
         self.num_classes = len(self._classes)
 
-        extents_file = os.path.join(root, "../extents.txt")
+        # extents_file = os.path.join(root, "../extents.txt")
         symmetry_file = os.path.join(root, "../symmetry.txt")
         models_dir = os.path.join(root, "../models")
 
@@ -64,7 +68,9 @@ class COCOPoseDataset(COCODataset):
         # maybe get 'extents' from points instead?
 
         # read extents file
-        self.extents = self._load_object_extents(extents_file)
+        # self.extents = self._load_object_extents(extents_file)
+        # self.extents = np.zeros((len(self.points), 3))
+        self.extents = np.max(self.points,axis=1) - np.min(self.points,axis=1)
 
         # set weights to points
         point_blob = self.points.copy()
@@ -121,11 +127,43 @@ class COCOPoseDataset(COCODataset):
 
         return symmetry
 
+    def __get_item__(self, index):
+        """
+        Args:
+            index (int): Index
+
+        Returns:
+            tuple: Tuple (image, target). target is the object returned by ``coco.loadAnns``.
+        """
+        coco = self.coco
+        img_id = self.ids[index]
+        ann_ids = coco.getAnnIds(imgIds=img_id)
+        target = coco.loadAnns(ann_ids)
+
+        data = coco.loadImgs(img_id)[0]
+        img_path = os.path.join(self.root, data['file_name'])
+        img = Image.open(img_path).convert('RGB')
+
+        depth = None
+        if 'depth_file_name' in data:
+            depth_path = os.path.join(self.root, data['depth_file_name'])
+            depth = np.array(Image.open(depth_path)).astype(np.float32)
+            if 'factor_depth' in data:
+                depth = depth / float(data['factor_depth'])
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return img, target, depth
+
     def __getitem__(self, idx):
-        img, anno = super(COCODataset, self).__getitem__(idx)
+        img, anno, depth = self.__get_item__(idx)
 
         # filter crowd annotations
-        # TODO might be better to add an extra field
+
         anno = [obj for obj in anno if obj["iscrowd"] == 0]
 
         boxes = [obj["bbox"] for obj in anno]
@@ -151,10 +189,10 @@ class COCOPoseDataset(COCODataset):
         vertex_centers = []
         for ix, poly in enumerate(polygons):
             center = meta[ix]['center']
-            pose = poses[ix]
-            z = np.log(pose[-1]) # z distance is the last value in pose [qw,qx,qy,qz,x,y,z]
+            # pose = poses[ix]
+            # z = np.log(pose[-1]) # z distance is the last value in pose [qw,qx,qy,qz,x,y,z]
             m = _get_mask_from_polygon(poly, img.size)
-            vertex_centers.append(_generate_vertex_center_mask(m, center, z))
+            vertex_centers.append(_generate_vertex_center_mask(m, center, depth))
         vertex_centers = torch.tensor(vertex_centers)
         vertexes = VertexMask(vertex_centers, img.size)
         target.add_field("vertex", vertexes)
