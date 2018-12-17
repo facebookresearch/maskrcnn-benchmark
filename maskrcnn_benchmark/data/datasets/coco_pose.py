@@ -11,7 +11,7 @@ import pycocotools.mask as mask_utils
 from .coco import COCODataset
 
 from maskrcnn_benchmark.structures.bounding_box import BoxList
-from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
+from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask, Polygons
 from maskrcnn_benchmark.structures.vertex_mask import VertexMask
 
 
@@ -187,8 +187,9 @@ class COCOPoseDataset(COCODataset):
         assert len(meta) == len(polygons)
         # masks = [_get_mask_from_polygon(polygon, img.size) for polygon in seg_mask_instance.polygons]
         vertex_centers = []
+        centers = [m['center'] for m in meta]
         for ix, poly in enumerate(polygons):
-            center = meta[ix]['center']
+            center = centers[ix]
             # pose = poses[ix]
             # z = np.log(pose[-1]) # z distance is the last value in pose [qw,qx,qy,qz,x,y,z]
             m = _get_mask_from_polygon(poly, img.size)
@@ -196,6 +197,9 @@ class COCOPoseDataset(COCODataset):
         vertex_centers = torch.tensor(vertex_centers)
         vertexes = VertexMask(vertex_centers, img.size)
         target.add_field("vertex", vertexes)
+
+        centers = Polygons(centers, img.size, mode=None)
+        target.add_field("centers", centers)
 
         target = target.clip_to_image(remove_empty=True)
 
