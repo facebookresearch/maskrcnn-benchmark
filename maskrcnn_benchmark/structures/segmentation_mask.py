@@ -134,6 +134,20 @@ class Polygons(object):
             # TODO add squeeze?
             return mask
 
+    def __getitem__(self, item):
+        if isinstance(item, (int, slice)):
+            selected_polygons = [self.polygons[item]]
+        else:
+            # advanced indexing on a single dimension
+            selected_polygons = []
+            if isinstance(item, torch.Tensor) and item.dtype == torch.uint8:
+                item = item.nonzero()
+                item = item.squeeze(1) if item.numel() > 0 else item
+                item = item.tolist()
+            for i in item:
+                selected_polygons.append(self.polygons[i])
+        return Polygons(selected_polygons, size=self.size, mode=self.mode)
+
     def __repr__(self):
         s = self.__class__.__name__ + "("
         s += "num_polygons={}, ".format(len(self.polygons))
