@@ -83,8 +83,6 @@ ln -s /path_to_coco_dataset/annotations datasets/coco/annotations
 ln -s /path_to_coco_dataset/train2014 datasets/coco/train2014
 ln -s /path_to_coco_dataset/test2014 datasets/coco/test2014
 ln -s /path_to_coco_dataset/val2014 datasets/coco/val2014
-# for pascal voc dataset:
-ln -s /path_to_VOCdevkit_dir datasets/voc
 ```
 
 You can also configure your own paths to the datasets.
@@ -101,7 +99,7 @@ In order to be able to run it on fewer GPUs, there are a few possibilities:
 **1. Run the following without modifications**
 
 ```bash
-python /path_to_maskrcnn_benchmark/tools/train_net.py --config-file "/path/to/config/file.yaml"
+python /path_to_maskrnn_benchmark/tools/train_net.py --config-file "/path/to/config/file.yaml"
 ```
 This should work out of the box and is very similar to what we should do for multi-GPU training.
 But the drawback is that it will use much more GPU memory. The reason is that we set in the
@@ -152,7 +150,7 @@ from maskrcnn_benchmark.structures.bounding_box import BoxList
 class MyDataset(object):
     def __init__(self, ...):
         # as you would do normally
-    
+
     def __getitem__(self, idx):
         # load the image as a PIL Image
         image = ...
@@ -192,22 +190,16 @@ While the aforementioned example should work for training, we leverage the
 cocoApi for computing the accuracies during testing. Thus, test datasets
 should currently follow the cocoApi for now.
 
+## Finetuning from Detectron weights on custom datasets
+Create a script `tools/trim_detectron_model.py` like [here](https://gist.github.com/wangg12/aea194aa6ab6a4de088f14ee193fd968).
+You can decide which keys to be removed and which keys to be kept by modifying the script.
+
+Then you can simply point the converted model path in the config file by changing `MODEL.WEIGHT`.
+
 ## Troubleshooting
 If you have issues running or compiling this code, we have compiled a list of common issues in
 [TROUBLESHOOTING.md](TROUBLESHOOTING.md). If your issue is not present there, please feel
 free to open a new issue.
-
-## Citations
-Please consider citing this project in your publications if it helps your research. The following is a BibTeX reference. The BibTeX entry requires the `url` LaTeX package.
-```
-@misc{massa2018mrcnn,
-author = {Massa, Francisco and Girshick, Ross},
-title = {{maskrnn-benchmark: Fast, modular reference implementation of Instance Segmentation and Object Detection algorithms in PyTorch}},
-year = {2018},
-howpublished = {\url{https://github.com/facebookresearch/maskrcnn-benchmark}},
-note = {Accessed: [Insert date here]}
-}
-```
 
 ## License
 
