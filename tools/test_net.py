@@ -26,6 +26,13 @@ def main():
         metavar="FILE",
         help="path to config file",
     )
+    parser.add_argument(
+        "--load-pth",
+        default="",
+        metavar="FILE",
+        help="which .pth file to load for test, default is last_checkpoint",
+        type=str,
+    )
     parser.add_argument("--local_rank", type=int, default=0)
     parser.add_argument(
         "opts",
@@ -62,7 +69,10 @@ def main():
 
     output_dir = cfg.OUTPUT_DIR
     checkpointer = DetectronCheckpointer(cfg, model, save_dir=output_dir)
-    _ = checkpointer.load(cfg.MODEL.WEIGHT)
+    if args.load_pth:
+        _ = checkpointer.load_pth_file(args.load_pth)
+    else:
+        _ = checkpointer.load(cfg.MODEL.WEIGHT)
 
     iou_types = ("bbox",)
     if cfg.MODEL.MASK_ON:
