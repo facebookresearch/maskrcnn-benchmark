@@ -152,7 +152,7 @@ from maskrcnn_benchmark.structures.bounding_box import BoxList
 class MyDataset(object):
     def __init__(self, ...):
         # as you would do normally
-    
+
     def __getitem__(self, idx):
         # load the image as a PIL Image
         image = ...
@@ -191,6 +191,14 @@ For a full example of how the `COCODataset` is implemented, check [`maskrcnn_ben
 While the aforementioned example should work for training, we leverage the
 cocoApi for computing the accuracies during testing. Thus, test datasets
 should currently follow the cocoApi for now.
+
+## Finetuning from Detectron weights on custom datasets
+Create a script `tools/trim_detectron_model.py` like [here](https://gist.github.com/wangg12/aea194aa6ab6a4de088f14ee193fd968).
+You can decide which keys to be removed and which keys to be kept by modifying the script.
+
+Then you can simply point the converted model path in the config file by changing `MODEL.WEIGHT`.
+
+For further information, please refer to [#15](https://github.com/facebookresearch/maskrcnn-benchmark/issues/15).
 
 ## Troubleshooting
 If you have issues running or compiling this code, we have compiled a list of common issues in
