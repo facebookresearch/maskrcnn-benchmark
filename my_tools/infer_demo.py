@@ -107,6 +107,20 @@ def normalize(x, xmin=None, xmax=None):
 def get_random_color():
     return (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
 
+def get_2d_projected_points(points, intrinsic_matrix, M):
+    x3d = np.ones((4, len(points)), dtype=np.float32)
+    x3d[0, :] = points[:,0]
+    x3d[1, :] = points[:,1]
+    x3d[2, :] = points[:,2]
+
+    # projection
+    RT = M[:3,:]
+    x2d = np.matmul(intrinsic_matrix, np.matmul(RT, x3d))
+    x2d[0, :] = np.divide(x2d[0, :], x2d[2, :])
+    x2d[1, :] = np.divide(x2d[1, :], x2d[2, :])
+    x = np.transpose(x2d[:2,:], [1,0]).astype(np.int32)
+    return x
+
 def vis_pose(im, labels, poses, intrinsics, points):
 
     img = im.copy()
@@ -117,24 +131,14 @@ def vis_pose(im, labels, poses, intrinsics, points):
     for i in range(N):
         cls = labels[i]
         if cls > 0:
-            # extract 3D points
-            x3d = np.ones((4, points.shape[1]), dtype=np.float32)
-            x3d[0, :] = points[cls,:,0]
-            x3d[1, :] = points[cls,:,1]
-            x3d[2, :] = points[cls,:,2]
-
             # projection
             RT = np.zeros((3, 4), dtype=np.float32)
             RT[:3, :3] = quat2mat(poses[i, :4])
             RT[:, 3] = poses[i, 4:7]
-            x2d = np.matmul(intrinsics, np.matmul(RT, x3d))
-            x2d[0, :] = np.divide(x2d[0, :], x2d[2, :])
-            x2d[1, :] = np.divide(x2d[1, :], x2d[2, :])
+
+            proj_pts = get_2d_projected_points(points[cls], intrinsics, RT)
 
             color = colors[i]
-
-            proj_pts = x2d[:2].transpose()
-            proj_pts = np.round(proj_pts).astype(np.int32)
             for px in proj_pts:
                 img = cv2.circle(img, tuple(px), 1, (int(color[0]),int(color[1]),int(color[2])), -1)
 
@@ -189,6 +193,25 @@ def backproject_camera(im_depth, meta_data):
     return np.array(X)
 
 
+def render_predicted_depths(im, depth, vertex_pred, meta_data):
+    rgb = im.copy()
+    if rgb.dtype == np.uint8:
+        rgb = rgb.astype(np.float32)[:,:,::-1] / 255
+
+    X = backproject_camera(depth, meta_data)
+    cloud_rgb = rgb # .astype(np.float32)[:,:,::-1] / 255
+    cloud_rgb = cloud_rgb.reshape((cloud_rgb.shape[0]*cloud_rgb.shape[1],3))
+    scene_cloud = open3d.PointCloud()
+    scene_cloud.points = open3d.Vector3dVector(X.T)
+    scene_cloud.colors = open3d.Vector3dVector(cloud_rgb)
+
+    md = {'intrinsic_matrix': meta_data['intrinsic_matrix'], 'factor_depth': 1}
+    for vp in vertex_pred:
+        X = backproject_camera(vp[:, :, -1], md)
+        pred_cloud = open3d.PointCloud()
+        pred_cloud.points = open3d.Vector3dVector(X.T)
+        open3d.draw_geometries([scene_cloud, pred_cloud])
+
 def render_object_pose(im, depth, labels, meta_data, pose_data, points):
     """
     im: rgb image of the scene
@@ -206,7 +229,7 @@ def render_object_pose(im, depth, labels, meta_data, pose_data, points):
     X = backproject_camera(depth, meta_data)
     cloud_rgb = rgb # .astype(np.float32)[:,:,::-1] / 255
     cloud_rgb = cloud_rgb.reshape((cloud_rgb.shape[0]*cloud_rgb.shape[1],3))
-    scene_cloud = open3d.PointCloud(); 
+    scene_cloud = open3d.PointCloud()
     scene_cloud.points = open3d.Vector3dVector(X.T)
     scene_cloud.colors = open3d.Vector3dVector(cloud_rgb)
 
@@ -278,8 +301,28 @@ if __name__ == '__main__':
 
     img_transformer = ImageTransformer(cfg)
 
-    model_file = "./checkpoints/lov_debug_pose_res14/model_final.pth"
-    # model_file = "./checkpoints/lov_debug_res14/model_0001000.pth"
+    # model_file = "./checkpoints/lov_debug_pose_res14/model_final.pth"
+    # intrinsics = np.array([[1066.778, 0, 312.9869], [0, 1067.487, 241.3109], [0.0, 0.0, 1.0]])
+    # image_dir = "./datasets/LOV/data"
+    # points_file = "./datasets/LOV/points_all_orig.npy"  # TODO: CHANGE    
+    # image_files = ["0000/000001", "0001/000001", "0002/000001", "0003/000001", "0004/000001", "0005/000001", "0006/000001", "0007/000001", "0008/000001"]
+    # image_ext = "-color.png"
+    # depth_ext = "-depth.png"
+
+    model_file = "./checkpoints/fat_debug_res14/model_final.pth"
+    intrinsics = np.array([[768.1605834960938, 0.0, 480.0],[0.0, 768.1605834960938, 270.0],[0.0, 0.0, 1.0]])
+    image_dir = "./datasets/FAT/data"
+    points_file = "./datasets/FAT/points_all_orig.npy"  # TODO: CHANGE
+    image_files = ["mixed/temple_0/001362.left"]#,"mixed/temple_0/001822.right"]
+    image_ext = ".jpg"
+    depth_ext = ".depth.png"
+    
+    points = np.load(points_file)
+
+    assert len(points) == len(CLASSES)
+    extents = np.zeros((len(CLASSES), 3))
+    for ix in range(1,len(extents)):
+        extents[ix] = np.max(points[ix], axis=0) - np.min(points[ix],axis=0)
 
     # BASE MODEL
     model = build_detection_model(cfg)
@@ -290,23 +333,10 @@ if __name__ == '__main__':
     hough_voting = build_hough_voting_layer()
     hough_voting.eval()
     hough_voting.to(device)
-
-    intrinsics = np.array([[1066.778, 0, 312.9869], [0, 1067.487, 241.3109], [0.0, 0.0, 1.0]])
-    # T_intrinsics = FT(intrinsics)
-
-    image_dir = "./datasets/LOV/data"
-    points_file = "./datasets/LOV/points_all_orig.npy"  # TODO: CHANGE
-    points = np.load(points_file)
-
-    assert len(points) == len(CLASSES)
-    extents = np.max(points, axis=1) - np.min(points,axis=1)
-
-    image_files = ["0000/000001", "0001/000001", "0002/000001", "0003/000001", "0004/000001", "0005/000001", "0006/000001", "0007/000001", "0008/000001"]
-    image_ext = "color.png"
+    
     # for image_file in glob.glob("%s/*1-%s"%(image_dir, image_ext)):
-    for image_file in ["%s/%s-%s"%(image_dir, f, image_ext) for f in image_files]:
+    for image_file in ["%s/%s%s"%(image_dir, f, image_ext) for f in image_files]:
         img = cv2.imread(image_file)
-        depth = cv2.imread(image_file.replace(image_ext, "depth.png"), cv2.IMREAD_UNCHANGED)
 
         # img = cv2.flip(img, 1)
         if img is None:
@@ -320,7 +350,8 @@ if __name__ == '__main__':
         image_list = image_list.to(device)
 
         im_scale = image_scale_list[0]
-        K = intrinsics * im_scale
+        K = intrinsics# * im_scale  # not needed
+        # K[-1,-1] = 1
 
         with torch.no_grad():
             predictions = model(image_list)
@@ -396,25 +427,26 @@ if __name__ == '__main__':
 
         factor_depth = 10000
         meta_data = {'intrinsic_matrix': K.tolist(), 'factor_depth': factor_depth}
-        depth_file = image_file.replace(image_ext, "depth.png")
+        depth_file = image_file.replace(image_ext, depth_ext)
         depth = cv2.imread(depth_file, cv2.IMREAD_UNCHANGED)
         if depth is None:
             print("Could not find %s"%(depth_file))
             continue
 
+        # render_predicted_depths(img, depth, vertex_pred, meta_data)
         render_object_pose(img, depth, labels, meta_data, final_poses, points)
 
-
-        im_file_prefix = image_file.replace("color.png", "")
-        np.save("%s%s"%(im_file_prefix, "labels_mrcnn.npy"), labels)
-        np.save("%s%s"%(im_file_prefix, "masks_mrcnn.npy"), label_mask)
-        np.save("%s%s"%(im_file_prefix, "vert_pred_mrcnn.npy"), vertex_pred)
-        np.save("%s%s"%(im_file_prefix, "poses_mrcnn.npy"), poses)
-
-        import json
-        j_file = im_file_prefix + "pred_pose.json"
-        pose_data = [{"name": CLASSES[labels[ix]], "pose": p.tolist()} for ix, p in enumerate(final_poses)]
-        with open(j_file, "w") as f:
-            j_data = {"poses": pose_data, "meta": meta_data}
-            json.dump(j_data, f)
-            print("Saved pose data to %s"%(j_file))
+        #
+        # im_file_prefix = image_file.replace("color.png", "")
+        # np.save("%s%s"%(im_file_prefix, "labels_mrcnn.npy"), labels)
+        # np.save("%s%s"%(im_file_prefix, "masks_mrcnn.npy"), label_mask)
+        # np.save("%s%s"%(im_file_prefix, "vert_pred_mrcnn.npy"), vertex_pred)
+        # np.save("%s%s"%(im_file_prefix, "poses_mrcnn.npy"), poses)
+        #
+        # import json
+        # j_file = im_file_prefix + "pred_pose.json"
+        # pose_data = [{"name": CLASSES[labels[ix]], "pose": p.tolist()} for ix, p in enumerate(final_poses)]
+        # with open(j_file, "w") as f:
+        #     j_data = {"poses": pose_data, "meta": meta_data}
+        #     json.dump(j_data, f)
+        #     print("Saved pose data to %s"%(j_file))

@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 
 from transforms3d.quaternions import quat2mat#, mat2quat
+import open3d
 
 from maskrcnn_benchmark.config import cfg
 
@@ -38,6 +39,20 @@ def visualize_vertex_centers(vertex_centers):
 def get_random_color():
     return (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
 
+def get_2d_projected_points(points, intrinsic_matrix, M):
+    x3d = np.ones((4, len(points)), dtype=np.float32)
+    x3d[0, :] = points[:,0]
+    x3d[1, :] = points[:,1]
+    x3d[2, :] = points[:,2]
+
+    # projection
+    RT = M[:3,:]
+    x2d = np.matmul(intrinsic_matrix, np.matmul(RT, x3d))
+    x2d[0, :] = np.divide(x2d[0, :], x2d[2, :])
+    x2d[1, :] = np.divide(x2d[1, :], x2d[2, :])
+    x = np.transpose(x2d[:2,:], [1,0]).astype(np.int32)
+    return x
+
 
 def vis_pose(im, labels, poses, centers, intrinsics, points):
 
@@ -55,11 +70,6 @@ def vis_pose(im, labels, poses, centers, intrinsics, points):
         cls = labels[i]
         center = tuple(centers[i])
         if cls > 0:
-            # extract 3D points
-            x3d = np.ones((4, points.shape[1]), dtype=np.float32)
-            x3d[0, :] = points[cls,:,0]
-            x3d[1, :] = points[cls,:,1]
-            x3d[2, :] = points[cls,:,2]
 
             # projection
             RT = np.zeros((3, 4), dtype=np.float32)
@@ -68,14 +78,10 @@ def vis_pose(im, labels, poses, centers, intrinsics, points):
             rx = (center[0] - px) / fx
             ry = (center[1] - py) / fy
             RT[:, 3] = np.array([rx * dist, ry * dist, dist])
-            x2d = np.matmul(intrinsics, np.matmul(RT, x3d))
-            x2d[0, :] = np.divide(x2d[0, :], x2d[2, :])
-            x2d[1, :] = np.divide(x2d[1, :], x2d[2, :])
 
+            proj_pts = get_2d_projected_points(points[cls], intrinsics, RT)
             color = colors[i]
 
-            proj_pts = x2d[:2].transpose()
-            proj_pts = np.round(proj_pts).astype(np.int32)
             for pt in proj_pts:
                 img = cv2.circle(img, tuple(pt), 1, (int(color[0]),int(color[1]),int(color[2])), -1)
 
@@ -83,6 +89,19 @@ def vis_pose(im, labels, poses, centers, intrinsics, points):
             # plt.scatter(x2d[0, :], x2d[1, :], marker='o', color=np.divide(colors[cls], 255.0), s=10)
     cv2.imshow("proj points", img)
 
+def create_cloud(points, normals=[], colors=[], T=None):
+    cloud = open3d.PointCloud()
+    cloud.points = open3d.Vector3dVector(points)
+    if len(normals) > 0:
+        assert len(normals) == len(points)
+        cloud.normals = open3d.Vector3dVector(normals)
+    if len(colors) > 0:
+        assert len(colors) == len(points)
+        cloud.colors = open3d.Vector3dVector(colors)
+
+    if T is not None:
+        cloud.transform(T)
+    return cloud
 
 if __name__ == '__main__':
         
@@ -108,8 +127,8 @@ if __name__ == '__main__':
     is_train = 1
     remove_images_without_annotations = True
 
-    cfg.INPUT.MIN_SIZE_TRAIN = 240 * 1
-    cfg.INPUT.MAX_SIZE_TRAIN = 320 * 1
+    cfg.INPUT.MIN_SIZE_TRAIN = 240 * 2
+    cfg.INPUT.MAX_SIZE_TRAIN = 320 * 2
     cfg.INPUT.FLIP_PROB_TRAIN = 0
 
     # transforms = T.Compose([T.ToTensor()]) # T.build_transforms(cfg, is_train)
@@ -118,9 +137,12 @@ if __name__ == '__main__':
     # root = "/home/bot/hd/datasets/MSCOCO/val2014"
     # ann_file = "/home/bot/hd/datasets/MSCOCO/annotations/instances_debug2014.json"
     # dataset = coco.COCODataset(ann_file, root, remove_images_without_annotations, transforms)
-    root = "./datasets/LOV/data"
-    ann_file = "./datasets/LOV/coco_lov_debug.json"
-    points_file = "./datasets/LOV/points_all_orig.npy"  
+    # root = "./datasets/LOV/data"
+    # ann_file = "./datasets/LOV/coco_lov_debug.json"
+    # points_file = "./datasets/LOV/points_all_orig.npy"  
+    root = "./datasets/FAT/data"
+    ann_file = "./datasets/FAT/coco_fat_debug.json"
+    points_file = "./datasets/FAT/points_all_orig.npy"  
     dataset = coco_pose.COCOPoseDataset(ann_file, root, remove_images_without_annotations, transforms)
 
     sampler = make_data_sampler(dataset, shuffle, is_distributed)
@@ -138,8 +160,17 @@ if __name__ == '__main__':
     FLIP_MODE = FLIP_LEFT_RIGHT
 
     points = np.load(points_file)
+    # points = [[]]
+    # for cls in CLASSES[1:]:
+    #     points.append(np.loadtxt(root + "/../models/%s/points.xyz"%(cls)))
+    # np.save(points_file, points)
 
-    intrinsics = np.array([[1066.778, 0, 312.9869], [0, 1067.487, 241.3109], [0.0, 0.0, 1.0]])
+    # coord_frame = open3d.create_mesh_coordinate_frame(size = 0.6, origin = [0, 0, 0])
+    # for pts in points[1:]:
+    #     open3d.draw_geometries([create_cloud(pts), coord_frame])
+
+    # intrinsics = np.array([[1066.778, 0, 312.9869], [0, 1067.487, 241.3109], [0.0, 0.0, 1.0]])
+    intrinsics = np.array([[768.16,0,480],[0,768.16,270],[0,0,1]])
 
     for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
         print(targets)
@@ -177,9 +208,10 @@ if __name__ == '__main__':
             centers = np.array([c.polygons[0].numpy() for c in c_field])
 
             K = intrinsics * im_scale
+            K[-1,-1] = 1
             poses = poses.numpy()
-            poses[:,-1] /= im_scale
-            vis_pose(im_copy, labels, poses, centers * im_scale, K, points)
+
+            vis_pose(im_copy, labels, poses, centers, K, points)
 
             for ix,vc in enumerate(v_field):
                 label = labels[ix]
