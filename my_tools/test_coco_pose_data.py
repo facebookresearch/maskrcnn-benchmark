@@ -130,6 +130,9 @@ if __name__ == '__main__':
     cfg.INPUT.MIN_SIZE_TRAIN = 240 * 2
     cfg.INPUT.MAX_SIZE_TRAIN = 320 * 2
     cfg.INPUT.FLIP_PROB_TRAIN = 0
+    cfg.MODEL.VERTEX_ON = True
+    cfg.MODEL.POSE_ON = True
+    cfg.MODEL.DEPTH_ON = True
 
     # transforms = T.Compose([T.ToTensor()]) # T.build_transforms(cfg, is_train)
     transforms = T.build_transforms(cfg, is_train, normalize=False)
@@ -139,11 +142,10 @@ if __name__ == '__main__':
     # dataset = coco.COCODataset(ann_file, root, remove_images_without_annotations, transforms)
     # root = "./datasets/LOV/data"
     # ann_file = "./datasets/LOV/coco_lov_debug.json"
-    # points_file = "./datasets/LOV/points_all_orig.npy"  
     root = "./datasets/FAT/data"
     ann_file = "./datasets/FAT/coco_fat_debug.json"
-    points_file = "./datasets/FAT/points_all_orig.npy"  
-    dataset = coco_pose.COCOPoseDataset(ann_file, root, remove_images_without_annotations, transforms)
+    # ann_file = "./datasets/FAT/coco_fat_mixed_temple_0.json"
+    dataset = coco_pose.COCOPoseDataset(ann_file, root, remove_images_without_annotations, transforms, cfg)
 
     sampler = make_data_sampler(dataset, shuffle, is_distributed)
     batch_sampler = make_batch_data_sampler(dataset, sampler, aspect_grouping, images_per_gpu, num_iters, start_iter)
@@ -159,18 +161,20 @@ if __name__ == '__main__':
     FLIP_TOP_BOTTOM = 1
     FLIP_MODE = FLIP_LEFT_RIGHT
 
-    points = np.load(points_file)
-    # points = [[]]
-    # for cls in CLASSES[1:]:
-    #     points.append(np.loadtxt(root + "/../models/%s/points.xyz"%(cls)))
-    # np.save(points_file, points)
+    if cfg.MODEL.POSE_ON:
+        # intrinsics = np.array([[1066.778, 0, 312.9869], [0, 1067.487, 241.3109], [0.0, 0.0, 1.0]])
+        intrinsics = np.array([[768.16,0,480],[0,768.16,270],[0,0,1]])
 
-    # coord_frame = open3d.create_mesh_coordinate_frame(size = 0.6, origin = [0, 0, 0])
-    # for pts in points[1:]:
-    #     open3d.draw_geometries([create_cloud(pts), coord_frame])
+        points_file = "./datasets/FAT/points_all_orig.npy"  
+        points = np.load(points_file)
+        # points = [[]]
+        # for cls in CLASSES[1:]:
+        #     points.append(np.loadtxt(root + "/../models/%s/points.xyz"%(cls)))
+        # np.save(points_file, points)
 
-    # intrinsics = np.array([[1066.778, 0, 312.9869], [0, 1067.487, 241.3109], [0.0, 0.0, 1.0]])
-    intrinsics = np.array([[768.16,0,480],[0,768.16,270],[0,0,1]])
+        # coord_frame = open3d.create_mesh_coordinate_frame(size = 0.6, origin = [0, 0, 0])
+        # for pts in points[1:]:
+        #     open3d.draw_geometries([create_cloud(pts), coord_frame])
 
     for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
         print(targets)
@@ -186,46 +190,49 @@ if __name__ == '__main__':
             h,w,_ = im_np.shape
             cv2.imshow("im", im_np)
 
-            v_field = t1.get_field("vertex")
-            c_field = t1.get_field("centers")
             m_field = t1.get_field("masks")
             labels = t1.get_field('labels')
-            poses = t1.get_field("poses")
+            
+            if cfg.MODEL.VERTEX_ON or cfg.MODEL.POSE_ON:
+                c_field = t1.get_field("centers")
+                centers = np.array([c.polygons[0].numpy() for c in c_field])
 
-            # proposal = [w//4,h//4,w//4*3,h//4*3]
-            # im_copy = cv2.rectangle(im_copy, tuple(proposal[:2]), tuple(proposal[2:]), (0,255,0), 2)
-            # cv2.imshow("im", im_copy)
-            # cv2.imshow("flip", cv2.flip(im_copy,1-FLIP_MODE))
-            # cv2.waitKey(0)
-            # v_field = v_field.crop(proposal)
-            # m_field = m_field.crop(proposal)
-            # resize_shape = (w//4, h//4)
-            # v_field = v_field.resize(resize_shape)
-            # m_field = m_field.resize(resize_shape)
-            # v_field = v_field.transpose(FLIP_MODE)
-            # m_field = m_field.transpose(FLIP_MODE)
+                if cfg.MODEL.VERTEX_ON:
+                    v_field = t1.get_field("vertex")
 
-            centers = np.array([c.polygons[0].numpy() for c in c_field])
+                if cfg.MODEL.POSE_ON:
+                    poses = t1.get_field("poses")
+                    K = intrinsics * im_scale
+                    K[-1,-1] = 1
+                    poses = poses.numpy()
+                    vis_pose(im_copy, labels, poses, centers, K, points)
 
-            K = intrinsics * im_scale
-            K[-1,-1] = 1
-            poses = poses.numpy()
+            if cfg.MODEL.DEPTH_ON:
+                depth_field = t1.get_field("depth")
 
-            vis_pose(im_copy, labels, poses, centers, K, points)
-
-            for ix,vc in enumerate(v_field):
-                label = labels[ix]
+            for ix,label in enumerate(labels):
                 print("Label: %d, %s"%(label, CLASSES[label]))
                 p = m_field.polygons[ix]
                 m = p.convert('mask')
-                vc_np = np.transpose(vc.data.numpy().squeeze(), [1,2,0])
-                visualize_vertex_centers(vc_np)
                 # visualize_mask(m.numpy())
                 m = m.numpy()  # uint8 format, 0-1
                 m *= 255
                 m = cv2.cvtColor(m, cv2.COLOR_GRAY2BGR)
-                center = centers[ix]
-                m = cv2.circle(m, (int(center[0]), int(center[1])), 2, (0,255,0), -1)
+                
+                if cfg.MODEL.VERTEX_ON or cfg.MODEL.POSE_ON:
+                    center = centers[ix]
+                    m = cv2.circle(m, (int(center[0]), int(center[1])), 2, (0,255,0), -1)
+
+                    if cfg.MODEL.VERTEX_ON:
+                        vc_np = np.transpose(v_field[ix].data.numpy().squeeze(), [1,2,0])
+                        visualize_vertex_centers(vc_np)
+
+                if cfg.MODEL.DEPTH_ON:
+                    depth_np = depth_field[ix].data.numpy().squeeze()
+                    max_depth = 7 
+                    depth_np = 1.0 - normalize(depth_np, 0, max_depth)
+                    cv2.imshow("depth", depth_np)
+
                 cv2.imshow("mask", m)
                 cv2.waitKey(0)
 

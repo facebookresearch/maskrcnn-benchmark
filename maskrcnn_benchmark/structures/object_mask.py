@@ -37,20 +37,20 @@ def flip_top_bottom(tensor):
     # # flip height channel
     return flip(tensor, 2)
 
-class VertexMask(object):
+class ObjectMask(object):
     """
-    Contains all vertex centers in the image
-        vertex_centers: tensor of shape (N,3,W,H), where the second channels represents [x direction, y direction, z distance]
+    Contains all object masks in the image
+        object_masks: tensor of shape (N,?,W,H)
     """
 
-    def __init__(self, vertex_centers, size):
+    def __init__(self, object_masks, size):
         """
-        vertex_centers: tensor of shape (N,3,W,H)
+        object_masks: tensor of shape (N,?,W,H)
         """
-        assert isinstance(vertex_centers, torch.Tensor) and vertex_centers.shape[2:][::-1] == size  # size is (W,H)
-        assert vertex_centers.shape[1] == 3
+        assert isinstance(object_masks, torch.Tensor) and object_masks.shape[2:][::-1] == size  # size is (W,H)
+        # assert object_masks.shape[1] == 3
         
-        self.vertex_centers = vertex_centers # self._generate_vertex_centers()
+        self.object_masks = object_masks
         self.size = size
 
     def transpose(self, method):
@@ -61,56 +61,56 @@ class VertexMask(object):
             )
 
         if method == FLIP_LEFT_RIGHT:
-            flipped = flip_lr(self.vertex_centers) 
+            flipped = flip_lr(self.object_masks)
         else:
-            flipped = flip_top_bottom(self.vertex_centers) 
+            flipped = flip_top_bottom(self.object_masks)
 
-        return VertexMask(flipped, size=self.size)
+        return ObjectMask(flipped, size=self.size)
 
     def resize(self, size, *args, **kwargs):
         # print("RESIZE")
         w,h = size
-        scaled = bilinear_upsample(self.vertex_centers, (h,w))
-        return VertexMask(scaled, size=size)
+        scaled = bilinear_upsample(self.object_masks, (h, w))
+        return ObjectMask(scaled, size=size)
 
     def crop(self, box):
         # print("CROP")
         bbox = torch.round(box).int()
         w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
-        cropped_centers = self.vertex_centers[:, :, bbox[1] : bbox[3], bbox[0] : bbox[2]]
-        return VertexMask(cropped_centers, size=(w, h))
+        cropped_centers = self.object_masks[:, :, bbox[1]: bbox[3], bbox[0]: bbox[2]]
+        return ObjectMask(cropped_centers, size=(w, h))
 
     @property
     def data(self):
-        return self.vertex_centers
+        return self.object_masks
 
     def to(self, *args, **kwargs):
         return self
 
     def __iter__(self):
-        return iter(self.__getitem__(i) for i in range(len(self.vertex_centers)))
+        return iter(self.__getitem__(i) for i in range(len(self.object_masks)))
 
     def __getitem__(self, item):
         if isinstance(item, int):
-            if item >= len(self.vertex_centers):
+            if item >= len(self.object_masks):
                 raise IndexError
-            selected_vertex = self.vertex_centers[item:item+1]
+            selected_vertex = self.object_masks[item:item + 1]
         elif isinstance(item, slice):
-            selected_vertex = self.vertex_centers[item]
+            selected_vertex = self.object_masks[item]
         else:
             # advanced indexing on a single dimension
             if isinstance(item, torch.Tensor) and item.dtype == torch.uint8:
                 item = item.nonzero()
                 item = item.squeeze(1) if item.numel() > 0 else item
                 item = item.tolist()
-            selected_vertex = self.vertex_centers[item]
+            selected_vertex = self.object_masks[item]
             # for i in item:
             #     selected_vertex.append(self.vertex_centers[i])
-        return VertexMask(selected_vertex, size=self.size)
+        return ObjectMask(selected_vertex, size=self.size)
 
     def __repr__(self):
         s = self.__class__.__name__ + "("
-        s += "num_vertex_masks={}, ".format(len(self.vertex_centers))
+        s += "num_object_masks={}, ".format(len(self.object_masks))
         s += "image_width={}, ".format(self.size[0])
         s += "image_height={})".format(self.size[1])
         # s += "mode={})".format(self.mode)

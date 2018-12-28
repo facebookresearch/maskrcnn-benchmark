@@ -12,7 +12,7 @@ from .coco import COCODataset
 
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask, Polygons
-from maskrcnn_benchmark.structures.vertex_mask import VertexMask
+from maskrcnn_benchmark.structures.object_mask import ObjectMask
 
 
 def _generate_vertex_center_mask(label_mask, center, depth=None):
@@ -37,6 +37,15 @@ def _generate_vertex_center_mask(label_mask, center, depth=None):
         vertex_centers[2, y, x] = depth[y, x]
     return vertex_centers
 
+def _generate_depth_mask(label_mask, depth):
+    h,w = label_mask.shape
+    assert depth.shape == (h, w)
+
+    depths = np.zeros((1, h, w), dtype=np.float32)  # channels first, as in pytorch convention
+    y, x = np.where(label_mask == 1)
+    depths[0, y, x] = depth[y, x]
+    return depths
+
 def _get_mask_from_polygon(polygons, im_size):
     width, height = im_size
     rles = mask_utils.frPyObjects(polygons, height, width)
@@ -46,7 +55,7 @@ def _get_mask_from_polygon(polygons, im_size):
 
 class COCOPoseDataset(COCODataset):
     def __init__(
-        self, ann_file, root, remove_images_without_annotations, transforms=None
+        self, ann_file, root, remove_images_without_annotations, transforms=None, cfg=None
     ):
         super(COCOPoseDataset, self).__init__(ann_file, root, remove_images_without_annotations, transforms)
 
@@ -55,36 +64,42 @@ class COCOPoseDataset(COCODataset):
         self._classes = ['__background'] + [categories[k]['name'] for k in categories]  # +1 for bg class
         self.num_classes = len(self._classes)
 
-        # extents_file = os.path.join(root, "../extents.txt")
-        symmetry_file = os.path.join(root, "../symmetry.txt")
-        models_dir = os.path.join(root, "../models")
+        self.cfg = {"Pose": False, "Vertex": False, "Depth": False}
+        if cfg is not None:
+            self.cfg["Vertex"] = cfg.MODEL.VERTEX_ON
+            self.cfg["Depth"] = cfg.MODEL.DEPTH_ON
+            self.cfg["Pose"] = cfg.MODEL.POSE_ON
 
-        # read symmetry file
-        self.symmetry = self._load_object_symmetry(symmetry_file)
-        is_symmetric = True
+        if self.cfg["Pose"]:
+            # extents_file = os.path.join(root, "../extents.txt")
+            models_dir = os.path.join(root, "../models")
 
-        # read points from models_dir
-        _, self.points = self._load_object_points(models_dir)
-        # maybe get 'extents' from points instead?
+            # read points from models_dir
+            _, self.points = self._load_object_points(models_dir)
+            # maybe get 'extents' from points instead?
 
-        # read extents file
-        # self.extents = self._load_object_extents(extents_file)
-        # self.extents = np.zeros((len(self.points), 3))
-        self.extents = np.max(self.points,axis=1) - np.min(self.points,axis=1)
+            # read extents file
+            # self.extents = self._load_object_extents(extents_file)
+            # self.extents = np.zeros((len(self.points), 3))
+            self.extents = np.max(self.points,axis=1) - np.min(self.points,axis=1)
 
-        # set weights to points
-        point_blob = self.points.copy()
-        for i in range(1, self.num_classes):
-            # compute the rescaling factor for the points
-            weight = 2.0 / np.amax(self.extents[i, :])
-            weight = max(weight, 10.0)
-            if self.symmetry[i] > 0 and is_symmetric:
-                weight *= 4
-            point_blob[i, :, :] *= weight
+            # set weights to points
+            # read symmetry file
+            symmetry_file = os.path.join(root, "../symmetry.txt")
+            self.symmetry = self._load_object_symmetry(symmetry_file)
+            is_symmetric = True
+            point_blob = self.points.copy()
+            for i in range(1, self.num_classes):
+                # compute the rescaling factor for the points
+                weight = 2.0 / np.amax(self.extents[i, :])
+                weight = max(weight, 10.0)
+                if self.symmetry[i] > 0: #and is_symmetric:
+                    weight *= 4
+                point_blob[i, :, :] *= weight
 
-        self.symmetry = torch.tensor(self.symmetry)
-        self.points = torch.tensor(point_blob)
-        self.extents = torch.tensor(self.extents)
+            self.symmetry = torch.tensor(self.symmetry)
+            self.points = torch.tensor(point_blob)
+            self.extents = torch.tensor(self.extents)
 
 
     def _load_object_points(self, models_dir):
@@ -105,7 +120,6 @@ class COCOPoseDataset(COCODataset):
             points_all[i, :, :] = points[i][:num, :]
 
         return points, points_all
-
 
     def _load_object_extents(self, extent_file):
 
@@ -141,21 +155,26 @@ class COCOPoseDataset(COCODataset):
         target = coco.loadAnns(ann_ids)
 
         data = coco.loadImgs(img_id)[0]
-        img_path = os.path.join(self.root, data['file_name'])
+        f_name = data['file_name']
+        img_path = os.path.join(self.root, f_name)
         img = Image.open(img_path).convert('RGB')
 
-        depth = None
-        if 'depth_file_name' in data:
-            depth_path = os.path.join(self.root, data['depth_file_name'])
-            depth = np.array(Image.open(depth_path)).astype(np.float32)
-            if 'factor_depth' in data:
-                depth = depth / float(data['factor_depth'])
 
         if self.transform is not None:
             img = self.transform(img)
 
         if self.target_transform is not None:
             target = self.target_transform(target)
+
+        depth = None
+        if self.cfg["Depth"]:
+            if 'depth_file_name' in data:
+                depth_path = os.path.join(self.root, data['depth_file_name'])
+                depth = np.array(Image.open(depth_path)).astype(np.float32)
+                if 'factor_depth' in data:
+                    depth = depth / float(data['factor_depth'])
+            else:
+                print("[WARN]: Depth mode is ON, but no 'depth_file_name' field in annotation: %s"%(f_name))
 
         return img, target, depth
 
@@ -179,35 +198,51 @@ class COCOPoseDataset(COCODataset):
         seg_mask_instance = SegmentationMask(polygons, img.size)
         target.add_field("masks", seg_mask_instance)
 
-        meta = [obj["meta"] for obj in anno]
-        poses = [obj["pose"] for obj in meta]
+        masks = [_get_mask_from_polygon(polygon, img.size) for polygon in polygons]
+        N = len(masks)
+        W, H = img.size
+        if self.cfg["Pose"] or self.cfg["Vertex"]:
+            meta = [obj["meta"] for obj in anno]
+            centers = [m['center'] for m in meta]
+            assert len(meta) == len(polygons)
 
-        target.add_field("poses", torch.tensor(poses))
+            if self.cfg["Pose"]:
+                poses = [obj["pose"] for obj in meta]
+                target.add_field("poses", torch.tensor(poses))
 
-        assert len(meta) == len(polygons)
-        # masks = [_get_mask_from_polygon(polygon, img.size) for polygon in seg_mask_instance.polygons]
-        vertex_centers = []
-        centers = [m['center'] for m in meta]
-        for ix, poly in enumerate(polygons):
-            center = centers[ix]
-            # pose = poses[ix]
-            # z = np.log(pose[-1]) # z distance is the last value in pose [qw,qx,qy,qz,x,y,z]
-            m = _get_mask_from_polygon(poly, img.size)
-            vertex_centers.append(_generate_vertex_center_mask(m, center, depth))
-        vertex_centers = torch.tensor(vertex_centers)
-        vertexes = VertexMask(vertex_centers, img.size)
-        target.add_field("vertex", vertexes)
+            if self.cfg["Vertex"]:
+                vertex_centers = np.zeros((N, 3, H, W))
+                for ix, m in enumerate(masks):
+                    center = centers[ix]
+                    # pose = poses[ix]
+                    # z = np.log(pose[-1]) # z distance is the last value in pose [qw,qx,qy,qz,x,y,z]
+                    # m = _get_mask_from_polygon(poly, img.size)
+                    vertex_centers[ix, :] = _generate_vertex_center_mask(m, center, depth)
 
-        centers = Polygons(centers, img.size, mode=None)
-        target.add_field("centers", centers)
+                vertex_centers = torch.tensor(vertex_centers)
+                vertexes = ObjectMask(vertex_centers, img.size)
+                target.add_field("vertex", vertexes)
+
+            centers = Polygons(centers, img.size, mode=None)
+            target.add_field("centers", centers)
+
+        if self.cfg["Depth"]:
+            depth_data = np.zeros((N, 1, H, W))
+            if depth is not None:
+                for ix, m in enumerate(masks):
+                    depth_data[ix, :] = _generate_depth_mask(m, depth)
+            depth_data = torch.tensor(depth_data)
+            depth_D = ObjectMask(depth_data, img.size)
+            target.add_field("depth", depth_D)
 
         target = target.clip_to_image(remove_empty=True)
-
         if self.transforms is not None:
             img, target = self.transforms(img, target)
 
-        target.add_field("symmetry", self.symmetry)
-        target.add_field("extents", self.extents)
-        target.add_field("points", self.points)
+        if self.cfg["Pose"]:
+            target.add_field("symmetry", self.symmetry)
+            target.add_field("extents", self.extents)
+            target.add_field("points", self.points)
 
-        return img, target, idx        
+
+        return img, target, idx

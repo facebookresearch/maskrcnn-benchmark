@@ -78,12 +78,8 @@ class Checkpointer(object):
         save_file = os.path.join(self.save_dir, "last_checkpoint")
         try:
             with open(save_file, "r") as f:
-<<<<<<< HEAD
-                last_saved = f.read().strip()
-=======
                 last_saved = f.read()
                 last_saved = last_saved.strip()
->>>>>>> 49b96394c14f554965de08c37240d4580753b424
         except IOError:
             # if file doesn't exist, maybe because it has just been
             # deleted by a separate process
