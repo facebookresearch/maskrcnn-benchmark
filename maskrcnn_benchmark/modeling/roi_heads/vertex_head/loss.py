@@ -62,7 +62,7 @@ def smooth_l1_loss_vertex(vertex_pred, vertex_targets, vertex_weights=None, sigm
     return loss.mean()
 
 
-class PoseRCNNLossComputation(object):
+class VertexRCNNLossComputation(object):
     def __init__(self, proposal_matcher, discretization_size):
         """
         Arguments:
@@ -164,7 +164,7 @@ def make_roi_vertex_loss_evaluator(cfg):
         allow_low_quality_matches=False,
     )
 
-    loss_evaluator = PoseRCNNLossComputation(
+    loss_evaluator = VertexRCNNLossComputation(
         matcher, cfg.MODEL.ROI_VERTEX_HEAD.RESOLUTION
     )
 

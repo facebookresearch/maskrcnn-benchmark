@@ -45,6 +45,19 @@ def _generate_depth_mask(label_mask, depth):
     y, x = np.where(label_mask == 1)
     depths[0, y, x] = depth[y, x]
     return depths
+#
+# def _generate_depth_mask(boxes, depth):
+#     x1,y1,bw,bh = boxes
+#     x2 = x1 + bw
+#     y2 = y1 + bh
+#     h,w = depth.shape
+#     assert w > x2 and h > y2 and x1 >= 0 and y1 >= 0
+#
+#     depths = np.zeros((1, h, w), dtype=np.float32)  # channels first, as in pytorch convention
+#
+#     depths[0, y1:y2, x1:x2] = depth[y1:y2, x1:x2]
+#     return depths
+
 
 def _get_mask_from_polygon(polygons, im_size):
     width, height = im_size

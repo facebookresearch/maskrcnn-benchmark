@@ -193,7 +193,7 @@ def backproject_camera(im_depth, meta_data):
     return np.array(X)
 
 
-def render_predicted_depths(im, depth, vertex_pred, meta_data):
+def render_predicted_depths(im, depth, pred_depths, meta_data):
     rgb = im.copy()
     if rgb.dtype == np.uint8:
         rgb = rgb.astype(np.float32)[:,:,::-1] / 255
@@ -206,8 +206,8 @@ def render_predicted_depths(im, depth, vertex_pred, meta_data):
     scene_cloud.colors = open3d.Vector3dVector(cloud_rgb)
 
     md = {'intrinsic_matrix': meta_data['intrinsic_matrix'], 'factor_depth': 1}
-    for vp in vertex_pred:
-        X = backproject_camera(vp[:, :, -1], md)
+    for dp in pred_depths:
+        X = backproject_camera(dp, md)
         pred_cloud = open3d.PointCloud()
         pred_cloud.points = open3d.Vector3dVector(X.T)
         open3d.draw_geometries([scene_cloud, pred_cloud])
@@ -292,37 +292,26 @@ if __name__ == '__main__':
     ]
 
     confidence_threshold = 0.95
-    config_file = "./configs/lov_debug.yaml"
     device = "cuda"
     cpu_device = torch.device("cpu")
 
-    # update the config options with the config file
-    cfg.merge_from_file(config_file)
-
-    img_transformer = ImageTransformer(cfg)
-
     # model_file = "./checkpoints/lov_debug_pose_res14/model_final.pth"
-    # intrinsics = np.array([[1066.778, 0, 312.9869], [0, 1067.487, 241.3109], [0.0, 0.0, 1.0]])
     # image_dir = "./datasets/LOV/data"
-    # points_file = "./datasets/LOV/points_all_orig.npy"  # TODO: CHANGE    
     # image_files = ["0000/000001", "0001/000001", "0002/000001", "0003/000001", "0004/000001", "0005/000001", "0006/000001", "0007/000001", "0008/000001"]
     # image_ext = "-color.png"
     # depth_ext = "-depth.png"
 
-    model_file = "./checkpoints/fat_debug_res14/model_final.pth"
-    intrinsics = np.array([[768.1605834960938, 0.0, 480.0],[0.0, 768.1605834960938, 270.0],[0.0, 0.0, 1.0]])
+    # model_file = "./checkpoints/fat_debug_res14/model_final.pth"
+
+    config_file = "./configs/fat_depth_debug.yaml"
+    model_file = "./checkpoints/fat_depth_debug_14/model_final.pth"
     image_dir = "./datasets/FAT/data"
-    points_file = "./datasets/FAT/points_all_orig.npy"  # TODO: CHANGE
-    image_files = ["mixed/temple_0/001362.left"]#,"mixed/temple_0/001822.right"]
+    image_files = ["mixed/temple_0/000885.left","mixed/temple_0/001774.left"]
     image_ext = ".jpg"
     depth_ext = ".depth.png"
-    
-    points = np.load(points_file)
 
-    assert len(points) == len(CLASSES)
-    extents = np.zeros((len(CLASSES), 3))
-    for ix in range(1,len(extents)):
-        extents[ix] = np.max(points[ix], axis=0) - np.min(points[ix],axis=0)
+    cfg.merge_from_file(config_file)
+    img_transformer = ImageTransformer(cfg)
 
     # BASE MODEL
     model = build_detection_model(cfg)
@@ -330,10 +319,22 @@ if __name__ == '__main__':
     model.eval()
     model.to(device)
 
-    hough_voting = build_hough_voting_layer()
-    hough_voting.eval()
-    hough_voting.to(device)
-    
+    intrinsics = np.array([[768.1605834960938, 0.0, 480.0], [0.0, 768.1605834960938, 270.0], [0.0, 0.0, 1.0]])
+
+    if cfg.MODEL.POSE_ON:
+        hough_voting = build_hough_voting_layer()
+        hough_voting.eval()
+        hough_voting.to(device)
+
+        points_file = "./datasets/FAT/points_all_orig.npy"
+        points = np.load(points_file)
+
+        assert len(points) == len(CLASSES)
+        extents = np.zeros((len(CLASSES), 3))
+        for ix in range(1,len(extents)):
+            extents[ix] = np.max(points[ix], axis=0) - np.min(points[ix],axis=0)
+
+    max_depth = 7
     # for image_file in glob.glob("%s/*1-%s"%(image_dir, image_ext)):
     for image_file in ["%s/%s%s"%(image_dir, f, image_ext) for f in image_files]:
         img = cv2.imread(image_file)
@@ -350,13 +351,14 @@ if __name__ == '__main__':
         image_list = image_list.to(device)
 
         im_scale = image_scale_list[0]
-        K = intrinsics# * im_scale  # not needed
-        # K[-1,-1] = 1
 
         with torch.no_grad():
             predictions = model(image_list)
         predictions = [o.to(cpu_device) for o in predictions]
         # always single image is passed at a time
+        if len(predictions) == 0:
+            print("No predictions for %s"%(image_file))
+            continue
         predictions = predictions[0]
 
         # reshape prediction (a BoxList) into the original image size
@@ -364,23 +366,28 @@ if __name__ == '__main__':
         predictions = select_top_predictions(predictions, confidence_threshold)
 
         labels = predictions.get_field("labels").numpy() 
-        verts = predictions.get_field("vertex").numpy()
         masks = predictions.get_field("mask").numpy().squeeze()
-        poses = predictions.get_field("pose").numpy()
         scores = predictions.get_field("scores").numpy()
         bboxes = predictions.bbox.numpy()
         bboxes = np.round(bboxes).astype(np.int32)
 
-        canvas = np.zeros((height, width), dtype=np.float32)
+        if cfg.MODEL.VERTEX_ON:
+            verts = predictions.get_field("vertex").numpy()
+        if cfg.MODEL.POSE_ON:
+            poses = predictions.get_field("pose").numpy()
+        if cfg.MODEL.DEPTH_ON:
+            pred_depths = predictions.get_field("depth").numpy()
+
         thresh = 0.5
 
         N = len(masks)
         label_mask = np.zeros((N, height, width), dtype=np.float32)
         vertex_pred = np.zeros((N, 3, height, width), dtype=np.float32)
+        depth_pred = np.zeros((N, height, width), dtype=np.float32)
 
         ix = 0
         img_copy = img.copy()
-        for bbox, mask, vert, label, score in zip(bboxes, masks, verts, labels, scores):
+        for ix, (bbox, mask, label, score) in enumerate(zip(bboxes, masks, labels, scores)):
 
             mask = paste_mask_on_image(mask, bbox, height, width, thresh=thresh)
 
@@ -393,48 +400,78 @@ if __name__ == '__main__':
             img_copy = cv2.drawContours(img_copy, contours, -1, color, 3)
             img_copy = cv2.putText(img_copy, "%s (%.3f)"%(CLASSES[label],score), tuple(bbox[:2]), cv2.FONT_HERSHEY_COMPLEX, 0.5, color)
 
-            cx = paste_mask_on_image(vert[0], bbox, height, width)
-            cx[mask!=1] = 0
-            vertex_pred[ix, 0] = cx
+            if cfg.MODEL.VERTEX_ON:
+                vert = verts[ix]
 
-            cy = paste_mask_on_image(vert[1], bbox, height, width)
-            cy[mask!=1] = 0
-            vertex_pred[ix, 1] = cy
+                cx = paste_mask_on_image(vert[0], bbox, height, width)
+                cx[mask!=1] = 0
+                vertex_pred[ix, 0] = cx
 
-            cz = paste_mask_on_image(vert[2], bbox, height, width, interp=cv2.INTER_NEAREST)
-            cz[mask!=1] = 0
-            vertex_pred[ix, 2] = cz
+                cy = paste_mask_on_image(vert[1], bbox, height, width)
+                cy[mask!=1] = 0
+                vertex_pred[ix, 1] = cy
+
+                # cz = paste_mask_on_image(vert[2], bbox, height, width, interp=cv2.INTER_NEAREST)
+                # cz[mask!=1] = 0
+                # vertex_pred[ix, 2] = cz
             
-            # cv2.imshow("mask", mask)
-            # cv2.imshow("centers x", normalize(cx, -1, 1))
-            # cv2.imshow("centers y", normalize(cy, -1, 1))
-            # cv2.imshow("centers z", normalize(np.exp(cz), 0, 6))
+                cv2.imshow("centers x", normalize(cx, -1, 1))
+                cv2.imshow("centers y", normalize(cy, -1, 1))
+                # cv2.imshow("centers z", normalize(np.exp(cz), 0, 6))
+
+            if cfg.MODEL.DEPTH_ON:
+                dp = pred_depths[ix]
+                mean = np.mean(dp)
+                std = np.std(dp)
+                dp = cv2.GaussianBlur(dp, (7,7), 0.1)
+                # dp[dp <= mean - 2 * std] = 0
+                m_depth = paste_mask_on_image(dp, bbox, height, width, interp=cv2.INTER_NEAREST)
+                m_depth[mask != 1] = 0
+                m_depth[m_depth <= mean - 2 * std] = 0
+                # m_depth[mask == 1] = np.exp(m_depth[mask == 1])
+                depth_pred[ix] = m_depth
+                cv2.imshow("depths", normalize(m_depth, 0, max_depth))
+
+            # cv2.imshow("masks", img_copy)
             # cv2.waitKey(0)
 
             ix += 1
 
-        cv2.imshow("masks", img_copy)
-        cv2.waitKey(0)
+        # cv2.imshow("masks", img_copy)
+        # cv2.waitKey(0)
 
-        vertex_pred = np.transpose(vertex_pred, [0,2,3,1])
-        rois, final_poses = hough_voting.forward(FT(labels), FT(label_mask), FT(vertex_pred), FT(extents), FT(poses), FT(K))
-        final_poses = final_poses.cpu().numpy()
-        rois = rois.cpu().numpy()
-
-        vis_rois(img, rois)
-        vis_pose(img, labels, final_poses, K, points)
-        cv2.waitKey(0)
-
+        if not (cfg.MODEL.DEPTH_ON or cfg.MODEL.VERTEX_ON and cfg.MODEL.POSE_ON):
+            continue
         factor_depth = 10000
-        meta_data = {'intrinsic_matrix': K.tolist(), 'factor_depth': factor_depth}
         depth_file = image_file.replace(image_ext, depth_ext)
-        depth = cv2.imread(depth_file, cv2.IMREAD_UNCHANGED)
-        if depth is None:
+        depth_img = cv2.imread(depth_file, cv2.IMREAD_UNCHANGED)
+        if depth_img is None:
             print("Could not find %s"%(depth_file))
             continue
 
-        # render_predicted_depths(img, depth, vertex_pred, meta_data)
-        render_object_pose(img, depth, labels, meta_data, final_poses, points)
+        cv2.imshow("raw depth", normalize(depth_img.astype(np.float32) / factor_depth, 0, max_depth))
+        cv2.waitKey(0)
+            
+        if cfg.MODEL.VERTEX_ON and cfg.MODEL.POSE_ON:
+            vertex_pred = np.transpose(vertex_pred, [0,2,3,1])
+            K = intrinsics# * im_scale  # not needed
+            # K[-1,-1] = 1
+            rois, final_poses = hough_voting.forward(FT(labels), FT(label_mask), FT(vertex_pred), FT(extents), FT(poses), FT(K))
+            final_poses = final_poses.cpu().numpy()
+            rois = rois.cpu().numpy()
+
+            vis_rois(img, rois)
+            vis_pose(img, labels, final_poses, K, points)
+            cv2.waitKey(0)
+            
+            meta_data = {'intrinsic_matrix': K.tolist(), 'factor_depth': factor_depth}
+            render_object_pose(img, depth_img, labels, meta_data, final_poses, points)
+
+        if cfg.MODEL.DEPTH_ON:
+            K = intrinsics
+            meta_data = {'intrinsic_matrix': K.tolist(), 'factor_depth': factor_depth}
+
+            render_predicted_depths(img, depth_img, depth_pred, meta_data)
 
         #
         # im_file_prefix = image_file.replace("color.png", "")

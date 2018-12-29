@@ -19,6 +19,8 @@ class CombinedROIHeads(torch.nn.ModuleDict):
             self.vertex.feature_extractor = self.box.feature_extractor
         if cfg.MODEL.POSE_ON and cfg.MODEL.ROI_POSE_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             self.pose.feature_extractor = self.box.feature_extractor
+        if cfg.MODEL.DEPTH_ON and cfg.MODEL.ROI_DEPTH_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
+            self.depth.feature_extractor = self.box.feature_extractor
 
     def forward(self, features, proposals, targets=None):
         losses = {}
@@ -43,6 +45,17 @@ class CombinedROIHeads(torch.nn.ModuleDict):
 
             # if not self.training:
             #     detections = mask_detections
+
+        if self.cfg.MODEL.DEPTH_ON:
+            depth_features = features
+            if (
+                self.training
+                and self.cfg.MODEL.ROI_DEPTH_HEAD.SHARE_BOX_FEATURE_EXTRACTOR
+            ):
+                depth_features = x
+            x, depth_pred, detections, loss_depth = self.depth(depth_features, detections, targets)
+            losses.update(loss_depth)
+
 
         if self.cfg.MODEL.VERTEX_ON:
             vertex_features = features
@@ -85,6 +98,9 @@ def build_roi_heads(cfg):
         roi_heads.append(("box", build_roi_box_head(cfg)))
     if cfg.MODEL.MASK_ON:
         roi_heads.append(("mask", build_roi_mask_head(cfg)))
+    if cfg.MODEL.DEPTH_ON:
+        from .depth_head.depth_head import build_roi_depth_head
+        roi_heads.append(("depth", build_roi_depth_head(cfg)))
     if cfg.MODEL.VERTEX_ON:
         from .vertex_head.vertex_head import build_roi_vertex_head
         roi_heads.append(("vertex", build_roi_vertex_head(cfg)))
