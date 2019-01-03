@@ -5,6 +5,7 @@
 #include "generate_mask_targets.h"
 #include "box_iou.h"
 #include "box_encode.h"
+#include "match_proposals.h"
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("nms", &nms, "non-maximum suppression");
@@ -15,4 +16,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("generate_mask_targets", &generate_mask_targets, "generate_mask_targets");
   m.def("box_iou", &box_iou, "box_iou");
   m.def("box_encode", &box_encode, "box_encode");  
+  m.def("match_proposals", &match_proposals, "match_proposals");
 }
