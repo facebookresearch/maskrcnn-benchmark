@@ -54,4 +54,9 @@ at::Tensor generate_mask_targets_cuda(at::Tensor dense_vector,
 
 at::Tensor box_iou_cuda(at::Tensor box1, at::Tensor box2);
                                       
-                                      
+std::vector<at::Tensor> box_encode_cuda(at::Tensor boxes, 
+                                     at::Tensor anchors, 
+                                     float wx, 
+                                     float wy, 
+                                     float ww, 
+                                     float wh);                                       
