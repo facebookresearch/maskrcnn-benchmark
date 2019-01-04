@@ -9,7 +9,7 @@ from maskrcnn_benchmark.modeling.utils import cat
 from maskrcnn_benchmark.structures.segmentation_mask import Polygons
 
 
-def berhu_loss(input, target, beta=0.2, size_average=True):
+def berhu_loss(input, target, beta=0.2):#, size_average=True):
     abs_error = torch.abs(input - target)
     max_err = torch.max(abs_error)
     min_err = torch.min(abs_error)
@@ -19,9 +19,10 @@ def berhu_loss(input, target, beta=0.2, size_average=True):
         loss = torch.where(cond, abs_error, (abs_error ** 2 + c ** 2) / (2 * c))
     else:
         loss = abs_error
-    if size_average:
-        return loss.mean()
-    return loss.sum()
+    return loss
+    # if size_average:
+    #     return loss.mean()
+    # return loss.sum()
 
 def mean_var_loss(input, target, size_average=True):
     # mean_p = torch.mean(input)
@@ -30,7 +31,8 @@ def mean_var_loss(input, target, size_average=True):
     # mean_loss = torch.abs(mean_t - mean_p)
     md = torch.mean(diff)
     var_loss = (1 + torch.abs(diff - md)) ** 2 - 1
-    loss = 0.5 * torch.abs(diff) + 0.5 * var_loss
+    # loss = 0.5 * torch.abs(diff) + 0.5 * var_loss
+    loss = 0.5 * berhu_loss(input, target) + 0.5 * var_loss
     if size_average:
         return loss.mean()
     return loss.sum()
@@ -173,8 +175,8 @@ class DepthRCNNLossComputation(object):
             seg = seg_masks[i]
             pred = dp[i][seg==1]
             tar = depth_targets[i][seg==1]
-            # loss = berhu_loss(pred, tar, beta=0.2, size_average=True)
-            loss = mean_var_loss(pred, tar, size_average=True)
+            loss = berhu_loss(pred, tar, beta=0.2).mean()
+            # loss = mean_var_loss(pred, tar, size_average=True)
             depth_loss += loss
         depth_loss /= N
 
