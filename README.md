@@ -200,7 +200,7 @@ Then you can simply point the converted model path in the config file by changin
 
 For further information, please refer to [#15](https://github.com/facebookresearch/maskrcnn-benchmark/issues/15).
 
-To finetune the pretrained maskRCNN to train fasterRCNN or maskRCNN on your own dataset, four steps are needed:
+To finetune the pretrained maskRCNN to train fasterRCNN or maskRCNN on your own dataset, four steps are needed: <br />
 **step 1**. Run the demo.py to test your package is installed successfully. Meanwhile, you can save the pretrained model, which has been converted from pkl format to pth format, which can be loaded by a pytorch model. The model is just a data of COCODEmo object in the demo. This way, no need to look into [_load_file fun](https://github.com/wmmxk/maskrcnn-benchmark/blob/f25c6cff92d32d92abe8965d68401004e90c8bee/maskrcnn_benchmark/utils/checkpoint.py#L117).
 
 **step 2**. Create a fastercnn or maskRCNN model using a yaml file in the configs folder. When doing this, you need to call the cfg.merge_from_list method to change the [_C.MODEL.ROI_BOX_HEAD.NUM_CLASSES =81 ](https://github.com/wmmxk/maskrcnn-benchmark/blob/f25c6cff92d32d92abe8965d68401004e90c8bee/maskrcnn_benchmark/config/defaults.py#L182) to the number of classes in your dataset (background does not count in this implementation).
@@ -214,7 +214,7 @@ model_dict = self.model.state_dict()
 pretrained_dict = {k: v for k, v in pretrained_model.items() if k in model_dict and "roi_heads" not in k}
 model_dict.update(pretrained_dict)
 
- 
+**Note**: when encoding the labels of your dataset, the label should be indexed starting from zero. Otherwise when computing the cros entropy loss on a cpu, pytorch complains saying "Assertion `cur_target >= 0 && cur_target < n_classes". When computing on a gpu, the error message is not informative. 
 ## Troubleshooting
 If you have issues running or compiling this code, we have compiled a list of common issues in
 [TROUBLESHOOTING.md](TROUBLESHOOTING.md). If your issue is not present there, please feel
