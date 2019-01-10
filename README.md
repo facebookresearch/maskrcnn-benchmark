@@ -216,6 +216,7 @@ This way, no need to look into [_load_file fun](https://github.com/facebookresea
 
 **step 4**. For a pytorch pretrained model, the weights are storted in a dictionary, in which the key is the name of a layer. So you can exclude layers that do not exist or you want train from scratch as follows:
 ```python
+# see step 1 for how the model is saved.
 pretrained_model = torch.load(checkpoint_path)['state']
 model_dict = self.model.state_dict()
 pretrained_dict = {k: v for k, v in pretrained_model.items() if k in model_dict and "roi_heads" not in k}
