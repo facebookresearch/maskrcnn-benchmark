@@ -149,38 +149,59 @@ class DataGenerator():
             tmgt = tmgt.cuda()
         return tm, tmgt
 
-
 class ConvNet(nn.Module):
-    def __init__(self, in_channels=3):
+    def __init__(self, in_channels=3, out_channels=1):
         super(ConvNet, self).__init__()
 
-        conv1_filters = 32
-        conv2_filters = 64
-        conv3_filters = 64
+        conv1_filters = 64
+        conv2_filters = 128
+        conv3_filters = 256
+        conv4_filters = 512
+        conv5_filters = 1024
 
-        self.conv1 = nn.Conv2d(in_channels, conv1_filters, kernel_size=3, stride=2, padding=1)
-        self.conv2 = nn.Conv2d(conv1_filters, conv2_filters, kernel_size=3, stride=2, padding=1)
-        self.conv3 = nn.Conv2d(conv2_filters, conv3_filters, kernel_size=3, stride=2, padding=1)
+        self.conv1 = nn.Conv2d(in_channels, conv1_filters, kernel_size=5, stride=2, padding=5//2)
+        self.conv2 = nn.Conv2d(conv1_filters, conv2_filters, kernel_size=5, stride=2, padding=5//2)
+        self.conv3 = nn.Conv2d(conv2_filters, conv3_filters, kernel_size=5, stride=1, padding=5//2)
+        self.conv4 = nn.Conv2d(conv3_filters, conv4_filters, kernel_size=3, stride=1, padding=3//2)
+        self.conv5 = nn.Conv2d(conv4_filters, conv5_filters, kernel_size=3, stride=1, padding=3 // 2)
         self.bn1 = nn.BatchNorm2d(conv1_filters)
         self.bn2 = nn.BatchNorm2d(conv2_filters)
         self.bn3 = nn.BatchNorm2d(conv3_filters)
+        self.bn4 = nn.BatchNorm2d(conv4_filters)
+        self.bn5 = nn.BatchNorm2d(conv5_filters)
 
-        conv_t_filters = 64
-        self.conv_t1 = conv_transpose2d_by_factor(conv3_filters, conv_t_filters, factor=2)
-        self.conv_t2 = conv_transpose2d_by_factor(conv_t_filters, conv_t_filters, factor=2)
-        self.conv_t3 = conv_transpose2d_by_factor(conv_t_filters, 1, factor=2)
-        # self.depth_reg = Conv2d(conv_t_filters, 1, 5, 1, 5 // 2)
+        self.max_pool = nn.MaxPool2d(2, stride=2)
+        self.avgpool = nn.AvgPool2d(kernel_size=7, stride=7)
+
+        self.reg = nn.Linear(conv5_filters, out_channels)
+        # self.reg = nn.Conv2d(conv2_filters, out_channels, kernel_size=3, stride=1, padding=3 // 2)
+        self._init_params()
+
+    def _init_params(self):
+        conv_modules = [self.conv1, self.conv2, self.conv3, self.conv4, self.conv5] #self.conv_t1, self.conv_t2, self.conv_t3]
+        for m in conv_modules:
+            nn.init.constant_(m.bias, 0)
+            nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
+            # nn.init.normal_(m.weight, mean=0, std=0.001)
+
+        fc_modules = [self.reg]
+        for m in fc_modules:
+            nn.init.normal_(m.weight, mean=0, std=0.01)
+            nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
-        batch_sz = len(x)
+        # batch_sz = len(x)
         c1 = F.relu(self.bn1(self.conv1(x)))
+        c1 = self.max_pool(c1)
         c2 = F.relu(self.bn2(self.conv2(c1)))
         c3 = F.relu(self.bn3(self.conv3(c2)))
-        ct1 = F.relu(self.conv_t1(c3))
-        ct2 = F.relu(self.conv_t2(ct1))
-        ct3 = self.conv_t3(ct2)
-        return ct3 #self.depth_reg(F.relu(ct3))
+        c4 = F.relu(self.bn4(self.conv4(c3)))
+        c5 = F.relu(self.bn5(self.conv5(c4)))
 
+        x = self.avgpool(c5)
+        x = x.view(x.size(0), -1)
+        out = self.reg(x)
+        return out # torch.tanh(out)
 
 def l1_loss(x, y):
     return torch.abs(x - y)
@@ -272,7 +293,7 @@ if __name__ == '__main__':
     data = dg.next_batch(batch_sz)
     x = dg.convert_data_batch_to_tensor(data)
 
-    model = ConvNet(in_channels=3)
+    model = ConvNet(in_channels=3, out_channels=1)
     model.cuda()
     print("Model constructed")
 

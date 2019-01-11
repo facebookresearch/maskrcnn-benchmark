@@ -1,7 +1,3 @@
-"""
-Fully conv regression on scaled depth OR raw depth
-"""
-
 import json
 import cv2
 import numpy as np
@@ -15,7 +11,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from conv_test import conv_transpose2d_by_factor
-
 
 class persistent_locals(object):
     def __init__(self, func):
@@ -259,7 +254,7 @@ class FATDataLoader(object):
             t_mask[t_mask > 0.5] = 1
             t_mask[t_mask <= 0.5] = 0
 
-            t_im = t_im.astype(np.float32) / 255  # assumes 0-255!
+            t_im = t_im.astype(np.float32) / 255  # assumes uint8!
             # t_im = (t_im - 0.5) * 2
             t_image_list[ix] = t_im
             t_mask_list[ix] = t_mask
@@ -314,12 +309,9 @@ def berhu_loss(input, target, beta=0.2):#, size_average=True):
 
 def train(model, dg, n_iters=1000, lr=1e-3):
 
-    from tensorboardX import SummaryWriter
-    writer = SummaryWriter()
-
     # epochs = 10
     # n_iters = 1000
-    batch_size = 16
+    batch_size = 32
 
     model.train()
 
@@ -359,7 +351,6 @@ def train(model, dg, n_iters=1000, lr=1e-3):
             #     mask = mask_tensor[ix] == 1
             #     loss += loss_fn(cls_output[mask], depth_tensor[ix][mask]).mean()
             # loss /= N
-
         loss.backward()
         optimizer.step()
 
@@ -368,14 +359,11 @@ def train(model, dg, n_iters=1000, lr=1e-3):
         losses.append(loss_value)
         all_losses.append(loss_value)
 
-        writer.add_scalar('data/loss', loss_value, iter)
-
         if iter % 20 == 0 and iter > 0:
             print("iter %d of %d -> (%s) Total loss: %.4f, Avg loss: %.4f"%(iter, n_iters, loss_type, np.mean(losses), np.mean(all_losses)))
             losses = []
 
     print("iter %d of %d -> Total loss: %.4f, Avg loss: %.4f"%(iter, n_iters, np.mean(losses), np.mean(all_losses)))
-    writer.close()
 
 def paste_mask_on_image(mask, box, im_h, im_w, thresh=None, interp=cv2.INTER_LINEAR):
     w = box[2]# - box[0] + 1
@@ -417,7 +405,7 @@ def test(model, dg, batch_sz = 8, use_scaled_depth=False, verbose=False):
     class_agnostic = False
     if out_channels == 1:
         class_agnostic = True
-    preds = preds.detach().cpu().numpy()#.squeeze()
+    preds = preds.detach().cpu().numpy().squeeze()
 
     for ix,depth_pred in enumerate(preds):
         ann = annots[ix]
@@ -426,8 +414,6 @@ def test(model, dg, batch_sz = 8, use_scaled_depth=False, verbose=False):
 
         if not class_agnostic:
             depth_pred = depth_pred[cls]
-        else:
-            depth_pred = depth_pred[0]
 
         img_data = dg.images[dg.img_index[img_id]]
 
@@ -475,16 +461,18 @@ def test(model, dg, batch_sz = 8, use_scaled_depth=False, verbose=False):
         # paste it on depth map
         dp[mask!=1] = 0
         dp = cv2.resize(dp, (bbox_w, bbox_h), interpolation=cv2.INTER_NEAREST)
-        dummy_dp = np.zeros(dp.shape, dtype=np.float32) + centroid_z
+        # dummy_dp = np.zeros(dp.shape, dtype=np.float32) + centroid_z
         dp = paste_mask_on_image(dp, bbox, height, width, interp=cv2.INTER_LINEAR)
-        dummy_dp = paste_mask_on_image(dummy_dp, bbox, height, width, interp=cv2.INTER_LINEAR)
+        # dummy_dp = paste_mask_on_image(dummy_dp, bbox, height, width, interp=cv2.INTER_LINEAR)
 
-        render_predicted_depths(img, intrinsics, depth.astype(np.float32) / factor_depth, pred_depths = [dp, dummy_dp], 
+        render_predicted_depths(img, intrinsics, depth.astype(np.float32) / factor_depth, pred_depths = [dp], 
                 pred_colors=[get_random_color(), (255,0,0)], factor_depth=1)
 
 class ConvNet(nn.Module):
-    def __init__(self, in_channels=3, out_channels=1):
+    def __init__(self, in_channels=3, out_channels=1, use_tanh=False):
         super(ConvNet, self).__init__()
+
+        self.use_tanh = use_tanh
 
         conv1_filters = 64
         conv2_filters = 128
@@ -517,7 +505,9 @@ class ConvNet(nn.Module):
         ct3 = F.relu(self.conv_t3(ct2))
         out = F.relu(self.depth_reg(ct3))
         out = self.depth_reg2(out)
-        return torch.tanh(out)
+        if self.use_tanh:
+            out = torch.tanh(out)
+        return out
 
 if __name__ == '__main__':
 
@@ -538,8 +528,7 @@ if __name__ == '__main__':
     out_channels = 1 if CLASS_AGNOSTIC else num_classes
 
     root_dir = "./datasets/FAT/data"
-    # ann_file = "./datasets/FAT/coco_fat_debug_1000.json"
-    ann_file = "./datasets/FAT/coco_fat_mixed_temple_0.json"
+    ann_file = "./datasets/FAT/coco_fat_debug.json"
 
     data_loader = FATDataLoader(root_dir, ann_file, USE_SCALED_DEPTH)
     # data = data_loader.next_batch(2)
@@ -552,27 +541,27 @@ if __name__ == '__main__':
     #     cv2.imshow("mask", mask)
 
     if USE_SCALED_DEPTH:
-        save_path = "./model_depth_0.pth"
+        save_path = "./model_x_depth_0.pth"
     else:
-        save_path = "./model_noscale_depth_0.pth"
-    # save_path = save_path.replace(".pth", "_notanh.pth")
+        save_path = "./model_x_noscale_depth_0.pth"
+    save_path = save_path.replace(".pth", "_notanh_l1.pth")
     if CLASS_AGNOSTIC:
         save_path = save_path.replace(".pth", "_agn.pth")
 
-    model = ConvNet(in_channels=3, out_channels=out_channels)
+    use_tanh = USE_SCALED_DEPTH
+    model = ConvNet(in_channels=3, out_channels=out_channels, use_tanh=use_tanh)
     model.cuda()
 
-    save_path = "model_depth_l1_8k.pth"
-    model.load_state_dict(torch.load(save_path))
-    print("Loaded %s"%(save_path))
+    # model.load_state_dict(torch.load(save_path))
+    # print("Loaded %s"%(save_path))
 
-    n_iters = 5000
-    lr = 1e-3
-    # train(model, data_loader, n_iters=n_iters, lr=lr)
-    # torch.save(model.state_dict(), save_path)
+    n_iters = 200
+    lr = 3e-3
+    train(model, data_loader, n_iters=n_iters, lr=lr)
+    torch.save(model.state_dict(), save_path)
 
     # test_ann_file = "./datasets/FAT/coco_fat_debug_200.json"
-    test_ann_file = "./datasets/FAT/coco_fat_mixed_temple_1_n100.json"
-    test_data_loader = FATDataLoader(root_dir, test_ann_file, USE_SCALED_DEPTH)    
-    # test_data_loader = data_loader
+    # test_data_loader = FATDataLoader(root_dir, test_ann_file, USE_SCALED_DEPTH)
+    test_data_loader = data_loader
     test(model, test_data_loader, use_scaled_depth=USE_SCALED_DEPTH, batch_sz=16)
+

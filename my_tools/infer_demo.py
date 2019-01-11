@@ -192,6 +192,19 @@ def backproject_camera(im_depth, meta_data):
 
     return np.array(X)
 
+def create_cloud(points, normals=[], colors=[], T=None):
+    cloud = open3d.PointCloud()
+    cloud.points = open3d.Vector3dVector(points)
+    if len(normals) > 0:
+        assert len(normals) == len(points)
+        cloud.normals = open3d.Vector3dVector(normals)
+    if len(colors) > 0:
+        assert len(colors) == len(points)
+        cloud.colors = open3d.Vector3dVector(colors)
+
+    if T is not None:
+        cloud.transform(T)
+    return cloud
 
 def render_predicted_depths(im, depth, pred_depths, meta_data):
     rgb = im.copy()
@@ -201,16 +214,27 @@ def render_predicted_depths(im, depth, pred_depths, meta_data):
     X = backproject_camera(depth, meta_data)
     cloud_rgb = rgb # .astype(np.float32)[:,:,::-1] / 255
     cloud_rgb = cloud_rgb.reshape((cloud_rgb.shape[0]*cloud_rgb.shape[1],3))
-    scene_cloud = open3d.PointCloud()
-    scene_cloud.points = open3d.Vector3dVector(X.T)
-    scene_cloud.colors = open3d.Vector3dVector(cloud_rgb)
+    scene_cloud = create_cloud(X.T, colors=cloud_rgb)
 
     md = {'intrinsic_matrix': meta_data['intrinsic_matrix'], 'factor_depth': 1}
     for dp in pred_depths:
         X = backproject_camera(dp, md)
-        pred_cloud = open3d.PointCloud()
-        pred_cloud.points = open3d.Vector3dVector(X.T)
+        pred_cloud = create_cloud(X.T)
         open3d.draw_geometries([scene_cloud, pred_cloud])
+
+def get_4x4_transform(pose):
+    object_pose_matrix4f = np.identity(4)
+    object_pose = np.array(pose)
+    if object_pose.shape == (4,4):
+        object_pose_matrix4f = object_pose
+    elif object_pose.shape == (3,4):
+        object_pose_matrix4f[:3,:] = object_pose
+    elif len(object_pose) == 7:
+        object_pose_matrix4f[:3,:3] = quat2mat(object_pose[:4])
+        object_pose_matrix4f[:3,-1] = object_pose[4:]    
+    else:
+        print("[WARN]: Object pose is not of shape (4,4) or (3,4) or 1-d quat (7), skipping...")
+    return object_pose_matrix4f
 
 def render_object_pose(im, depth, labels, meta_data, pose_data, points):
     """
@@ -229,9 +253,7 @@ def render_object_pose(im, depth, labels, meta_data, pose_data, points):
     X = backproject_camera(depth, meta_data)
     cloud_rgb = rgb # .astype(np.float32)[:,:,::-1] / 255
     cloud_rgb = cloud_rgb.reshape((cloud_rgb.shape[0]*cloud_rgb.shape[1],3))
-    scene_cloud = open3d.PointCloud()
-    scene_cloud.points = open3d.Vector3dVector(X.T)
-    scene_cloud.colors = open3d.Vector3dVector(cloud_rgb)
+    scene_cloud = create_cloud(X.T, colors=cloud_rgb)
 
     if len(pose_data) == 0:
         open3d.draw_geometries([scene_cloud])
@@ -242,28 +264,15 @@ def render_object_pose(im, depth, labels, meta_data, pose_data, points):
         object_cls = labels[ix]
         object_pose = pd
         # object_cloud_file = osp.join(object_model_dir,object_name,"points.xyz")
-        object_pose_matrix4f = np.identity(4)
-        object_pose = np.array(object_pose)
-        if object_pose.shape == (4,4):
-            object_pose_matrix4f = object_pose
-        elif object_pose.shape == (3,4):
-            object_pose_matrix4f[:3,:] = object_pose
-        elif len(object_pose) == 7:
-            object_pose_matrix4f[:3,:3] = quat2mat(object_pose[:4])
-            object_pose_matrix4f[:3,-1] = object_pose[4:]
-        else:
-            print("[WARN]: Object pose for %s is not of shape (4,4) or (3,4) or 1-d quat (7), skipping..."%(object_name))
-            continue
+        object_pose_matrix4f = get_4x4_transform(object_pose)
         # object_pose_T = object_pose[:,3]
         # object_pose_R = object_pose[:,:3]
 
         object_pts3d = points[object_cls] # read_xyz_file(object_cloud_file)
-        object_cloud = open3d.PointCloud(); 
-        object_cloud.points = open3d.Vector3dVector(object_pts3d)
         pt_colors = np.zeros(object_pts3d.shape, np.float32)
-        pt_colors[:] = np.array(get_random_color()) / 255
-        object_cloud.colors = open3d.Vector3dVector(pt_colors)
-        object_cloud.transform(object_pose_matrix4f)
+        pt_colors[:] = np.array(get_random_color(), dtype=np.float32) / 255
+        object_cloud = create_cloud(object_pts3d, colors=pt_colors, T=object_pose_matrix4f)
+        # object_cloud.transform(object_pose_matrix4f)
         all_objects_cloud += object_cloud
 
         # print("Showing %s"%(object_name))
@@ -305,6 +314,7 @@ if __name__ == '__main__':
 
     config_file = "./configs/fat_depth_debug.yaml"
     model_file = "./checkpoints/fat_depth_debug_14/model_final.pth"
+    model_file = "./checkpoints/fat_depth_debug_14_berhu/model_final.pth"
     image_dir = "./datasets/FAT/data"
     image_files = ["mixed/temple_0/000885.left","mixed/temple_0/001774.left"]
     image_ext = ".jpg"
