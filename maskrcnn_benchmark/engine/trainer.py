@@ -22,9 +22,9 @@ def reduce_loss_dict(loss_dict):
     with torch.no_grad():
         loss_names = []
         all_losses = []
-        for k, v in loss_dict.items():
+        for k in sorted(loss_dict.keys()):
             loss_names.append(k)
-            all_losses.append(v)
+            all_losses.append(loss_dict[k])
         all_losses = torch.stack(all_losses, dim=0)
         dist.reduce(all_losses, dst=0)
         if dist.get_rank() == 0:
