@@ -4,10 +4,10 @@ Fully conv regression on 3D angular vertex fields
 
 import cv2
 import numpy as np
-import numpy.random as npr
+# import numpy.random as npr
 import os
 import os.path as osp
-import open3d
+# import open3d
 from transforms3d.quaternions import quat2mat, mat2quat
 
 import torch
@@ -16,7 +16,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from conv_depth import FATDataLoader, FT, conv_transpose2d_by_factor, get_random_color, create_cloud#, backproject_camera,
-from conv_test import ConvNet
+from conv_test import ConvNet, get_4x4_transform, average_point_distance_metric
 from conv_pose import render_object_pose
 
 CHANNELS = 9
@@ -87,15 +87,16 @@ def draw_cuboid_2d(img2, cuboid, color):
         pt2 = points[line[1]]
         cv2.line(img2, pt1, pt2, color)
 
-def draw_axis_pose(img, axis_vectors, centroid, intrinsic_matrix, dist_coeffs=np.zeros((4,1))):
+def draw_axis_pose(img, rvec, centroid, intrinsic_matrix, dist_coeffs=np.zeros((4,1))):
     """
-    axis_vectors: (3,3) matrix, representing the axes
+    rvec: (3,3) rotation matrix
     centroid: (3) vector
     intrinsic_matrix: (3,3) matrix
     """
     # draw 3 axis pose
     # from https://github.com/jerryhouuu/Face-Yaw-Roll-Pitch-from-Pose-Estimation-using-OpenCV/blob/master/pose_estimation.py
 
+    axis_vectors = rvec.T
     avec = axis_vectors * 0.1  # convert from metres (100cm) to 10 cm
     points = np.vstack((avec, centroid))
     imgpts, _ = cv2.projectPoints(points, np.identity(3), centroid, intrinsic_matrix, dist_coeffs)
@@ -109,35 +110,8 @@ def draw_axis_pose(img, axis_vectors, centroid, intrinsic_matrix, dist_coeffs=np
     return im_copy2
 
 class FATDataLoader3(FATDataLoader):
-    def __init__(self, root_dir, ann_file, use_scaled_depth=False):
-        super(FATDataLoader3, self).__init__(root_dir, ann_file, use_scaled_depth=use_scaled_depth)
-
-        self.SYMMETRIES_DICT = {
-            '__background__': [0,0,0],
-            '002_master_chef_can': [0,0,0],
-            '003_cracker_box': [0,0,0],
-            '004_sugar_box': [0,0,0],
-            '005_tomato_soup_can': [0,0,0],
-            '006_mustard_bottle': [1,0,0],
-            '007_tuna_fish_can': [0,1,0], # the green axis (top and bottom) looks similar 
-            '008_pudding_box': [0,0,0],  # brown JELLO box
-            '009_gelatin_box': [0,0,0],  # red JELLO box
-            '010_potted_meat_can': [0,0,0],
-            '011_banana': [0,0,0],
-            '019_pitcher_base': [0,0,0],
-            '021_bleach_cleanser': [0,0,0],
-            '024_bowl': [1,0,1],
-            '025_mug': [0,0,0],
-            '035_power_drill': [0,0,0],
-            '036_wood_block': [1,1,1],
-            '037_scissors': [0,0,0],
-            '040_large_marker': [1,0,1], # assume symmetric on the sides, since marker is very small to see the texture clearly
-            '051_large_clamp': [0,1,1],
-            '052_extra_large_clamp': [0,1,1],
-            '061_foam_brick': [1,1,1]
-        }
-        self.SYMMETRIES = [v for k,v in self.SYMMETRIES_DICT.items()]
-
+    def __init__(self, root_dir, ann_file, use_scaled_depth=False, shuffle=True):
+        super(FATDataLoader3, self).__init__(root_dir, ann_file, use_scaled_depth=use_scaled_depth, shuffle=shuffle)
 
     def next_batch(self, batch_sz):
         data = super(FATDataLoader3, self).next_batch(batch_sz)
@@ -212,7 +186,7 @@ class FATDataLoader3(FATDataLoader):
 
             centroid = np.array(pose[4:])
 
-            im_copy2 = draw_axis_pose(img, vertex_field_list[ix], centroid, intrinsic_matrix)
+            im_copy2 = draw_axis_pose(img, vertex_field_list[ix].T, centroid, intrinsic_matrix)
 
             cv2.imshow("im", im_copy2)
             cv2.waitKey(0)
@@ -286,7 +260,7 @@ def train(model, dg, n_iters=1000, lr=1e-3):
     print("iter %d of %d -> Total loss: %.4f, Avg loss: %.4f"%(iter, n_iters, np.mean(losses), np.mean(all_losses)))
     writer.close()
 
-def test(model, dg, batch_sz = 8):
+def test(model, dg, batch_sz = 8, visualize=True):
     model.eval()
 
     points_file = osp.join(dg.root, "../points_all_orig.npy")
@@ -297,9 +271,6 @@ def test(model, dg, batch_sz = 8):
         if len(pts) > 0:
             points_min[ix] = np.min(pts, axis=0)
             points_max[ix] = np.max(pts, axis=0)
-    # coord_frame = open3d.create_mesh_coordinate_frame(size = 0.6, origin = [0, 0, 0])
-    # for pts in points[1:]:
-    #     open3d.draw_geometries([create_cloud(pts), coord_frame])
 
     data = dg.next_batch(batch_sz)
     image_list, labels_list, mask_list, depth_list, vert_field_list, annots = data
@@ -318,32 +289,40 @@ def test(model, dg, batch_sz = 8):
     preds = preds.detach().cpu().numpy()
 
     dist_coeffs = np.zeros((4,1))
+
+    metric_list = dict((ix, []) for ix,k in enumerate(dg._classes))
     for ix,pred in enumerate(preds):
         ann = annots[ix]
-        img_id = ann['image_id']
         cls = ann['category_id']
+        assert cls == labels_list[ix]
 
         if pred.size == 0:
             continue
         C = len(pred)
         pred = pred.reshape((C//CHANNELS,CHANNELS))  # classes, 9
         pred = pred[cls]  #9
-        # pred = np.transpose(pred, [1,2,0])  # H,W,9
-        # pred = pred.reshape((CHANNELS, H*W))
-        # median_pred = np.median(pred, axis=1)
-        pred_R = pred.reshape((3,3))
+        pred_R = pred.reshape((3,3)).T
 
-        img_data = dg.images[dg.img_index[img_id]]
+        gt_R = vert_field_list[ix].T
+        axis_symmetry = dg.SYMMETRIES[cls]
+        is_symmetric = np.sum(axis_symmetry) >= 2
+        ave_dd = average_point_distance_metric(points[cls], pred_R, gt_R, closest_point=is_symmetric)
+        ave_dd2 = average_point_distance_metric(points[cls], pred_R, gt_R, closest_point=True)
+        print("%d) [cls %d (%s)] ADD: %.3f, ADD 2: %.3f"%(ix + 1, cls, dg._classes[cls], ave_dd, ave_dd2))
+        metric_list[cls].append([ave_dd, ave_dd2])
+        if not visualize:
+            continue
 
-        label = labels_list[ix]
-        # axis_symmetry = dg.SYMMETRIES[label]
         # print(axis_symmetry)
         # if np.sum(axis_symmetry) == 0:
         #     continue
 
         # load img
+        img_id = ann['image_id']
+        img_data = dg.images[dg.img_index[img_id]]
         img_file = img_data["file_name"]
         img_file_path = osp.join(dg.root, img_file)
+        print(img_file_path)
         img = cv2.imread(img_file_path)
         if img is None:
             print("Could not read %s"%(img_file_path))
@@ -353,12 +332,11 @@ def test(model, dg, batch_sz = 8):
         pose = meta['pose']  # qw,qx,qy,qz,x,y,z
         intrinsic_matrix = np.array(meta['intrinsic_matrix']).reshape((3,3))
         # bounds = meta['bounds']
-        bounds = [points_min[label], points_max[label]]
+        bounds = [points_min[cls], points_max[cls]]
         cuboid = get_cuboid_from_min_max(bounds[0], bounds[1])
         centroid = np.array(pose[4:])
 
-        gt_R = vert_field_list[ix]
-        cuboid_2d, _ = cv2.projectPoints(cuboid, gt_R.T, centroid, intrinsic_matrix, dist_coeffs)
+        cuboid_2d, _ = cv2.projectPoints(cuboid, gt_R, centroid, intrinsic_matrix, dist_coeffs)
         cuboid_2d = np.round(cuboid_2d).squeeze().astype(np.int32)
         img_copy = img.copy()
         draw_cuboid_2d(img_copy, cuboid_2d, (255,0,0))
@@ -381,7 +359,7 @@ def test(model, dg, batch_sz = 8):
         # add translation to quaternion
         centroid = meta['centroid']
         final_pose = np.zeros(7, dtype=np.float32)
-        M = pred_R.T # gt_R.T
+        M = pred_R # gt_R
 
         # for i in range(3):
         #     sym = axis_symmetry[i]
@@ -396,7 +374,12 @@ def test(model, dg, batch_sz = 8):
 
         factor_depth = img_data['factor_depth']
         meta_data = {'intrinsic_matrix': intrinsic_matrix.tolist(), 'factor_depth': factor_depth}
-        render_object_pose(img, depth, [label], meta_data, [final_pose], points)
+        render_object_pose(img, depth, [cls], meta_data, [final_pose], points)
+
+    # metric_mean = np.mean(metric_list, axis=0)
+    # print("Mean ADD: %.3f, ADD 2: %.3f"%(metric_mean[0], metric_mean[1]))
+    return metric_list
+
 
 if __name__ == '__main__':
     CLASSES = [
@@ -429,11 +412,17 @@ if __name__ == '__main__':
     print("Loaded %s"%(save_path))
 
     n_iters = 3000
-    lr = 1e-3
+    lr = 1e-4
     # train(model, data_loader, n_iters=n_iters, lr=lr)
     # torch.save(model.state_dict(), save_path)
 
     test_ann_file = osp.join(dataset_dir, "coco_fat_test_500.json")
     # test_ann_file = osp.join(dataset_dir, "coco_fat_mixed_temple_1_n100.json")
-    test_data_loader = FATDataLoader3(root_dir, test_ann_file)
-    test(model, test_data_loader, batch_sz=32)
+    test_data_loader = FATDataLoader3(root_dir, test_ann_file, shuffle=False)
+    results = test(model, test_data_loader, batch_sz=100, visualize=True)
+
+    for ix,cls in enumerate(test_data_loader._classes):
+        if ix == 0:
+            continue
+        r = np.array(results[ix])
+        print("(%s): Mean ADD: %.3f, ADD2: %.3f"%(cls, np.mean(r[:,0]), np.mean(r[:,1])))

@@ -14,8 +14,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from conv_test import conv_transpose2d_by_factor
-
+from conv_test import conv_transpose2d_by_factor, create_cloud, backproject_camera
 
 class persistent_locals(object):
     def __init__(self, func):
@@ -55,51 +54,6 @@ def normalize(x, xmin=None, xmax=None):
     nx = x - xmin
     nx /= (xmax - xmin)
     return nx
-
-def backproject_camera(im_depth, intrinsics, factor_depth=1):
-
-    depth = im_depth.astype(np.float32, copy=True) / factor_depth
-
-    # get intrinsic matrix
-    K = intrinsics.copy()
-    K = np.matrix(K)
-    K = np.reshape(K,(3,3))
-    Kinv = np.linalg.inv(K)
-
-    # compute the 3D points        
-    width = depth.shape[1]
-    height = depth.shape[0]
-
-    # construct the 2D points matrix
-    x, y = np.meshgrid(np.arange(width), np.arange(height))
-    ones = np.ones((height, width), dtype=np.float32)
-    x2d = np.stack((x, y, ones), axis=2).reshape(width*height, 3)
-
-    # backprojection
-    R = Kinv * x2d.transpose()
-
-    # compute the 3D points
-    X = np.multiply(np.tile(depth.reshape(1, width*height), (3, 1)), R)
-
-    return np.array(X)
-
-
-def create_cloud(points, normals=[], colors=[], T=None):
-    cloud = open3d.PointCloud()
-    cloud.points = open3d.Vector3dVector(points)
-    if len(normals) > 0:
-        assert len(normals) == len(points)
-        cloud.normals = open3d.Vector3dVector(normals)
-    if len(colors) > 0:
-        # if len(colors) == 1: # ((1,3))
-        #     colors = np.array(colors) * len(points)
-        # else:
-        assert len(colors) == len(points)
-        cloud.colors = open3d.Vector3dVector(colors)
-
-    if T is not None:
-        cloud.transform(T)
-    return cloud
 
 def render_predicted_depths(im, intrinsics, depth, pred_depths = [], pred_colors=[], factor_depth=1):
     rgb = im.copy()
@@ -162,7 +116,7 @@ def FT(x): return torch.FloatTensor(x)
 def LT(x): return torch.LongTensor(x)
 
 class FATDataLoader(object):
-    def __init__(self, root_dir, ann_file, use_scaled_depth=False):
+    def __init__(self, root_dir, ann_file, use_scaled_depth=False, shuffle=True):
         self.root = root_dir 
         self.ann_file = ann_file
         self.use_scaled_depth = use_scaled_depth
@@ -183,8 +137,50 @@ class FATDataLoader(object):
         self.annots = annots
         self.data = data
 
+        self.shuffle = shuffle
+        self.cur_idx = 0
+        self.permutation = None
+        self._reset_permutation()
+
+        self.SYMMETRIES_DICT = {
+            '__background__': [0,0,0],
+            '002_master_chef_can': [0,0,0],
+            '003_cracker_box': [0,0,0],
+            '004_sugar_box': [0,0,0],
+            '005_tomato_soup_can': [0,0,0],
+            '006_mustard_bottle': [1,0,0],
+            '007_tuna_fish_can': [0,1,0], # the green axis (top and bottom) looks similar 
+            '008_pudding_box': [0,0,0],  # brown JELLO box
+            '009_gelatin_box': [0,0,0],  # red JELLO box
+            '010_potted_meat_can': [0,0,0],
+            '011_banana': [0,0,0],
+            '019_pitcher_base': [0,0,0],
+            '021_bleach_cleanser': [0,0,0],
+            '024_bowl': [1,0,1],
+            '025_mug': [0,0,0],
+            '035_power_drill': [0,0,0],
+            '036_wood_block': [1,1,1],
+            '037_scissors': [0,0,0],
+            '040_large_marker': [1,0,1], # assume symmetric on the sides, since marker is very small to see the texture clearly
+            '051_large_clamp': [0,1,1],
+            '052_extra_large_clamp': [0,1,1],
+            '061_foam_brick': [1,1,1]
+        }
+        self.SYMMETRIES = [v for k,v in self.SYMMETRIES_DICT.items()]
+
+
+    def _reset_permutation(self):
+        total = self.total_annots
+        self.permutation = npr.permutation(total) if self.shuffle else np.arange(total)
+
     def next_batch(self, batch_sz):
-        perm = npr.permutation(self.total_annots)[:batch_sz]
+        start_idx = self.cur_idx
+        self.cur_idx += batch_sz
+        perm = self.permutation[start_idx:self.cur_idx]
+        if self.cur_idx >= self.total_annots:
+            self._reset_permutation()
+            self.cur_idx -= self.total_annots
+            perm = np.hstack((perm, self.permutation[:self.cur_idx]))
         annots = [self.annots[idx] for idx in perm]
 
         image_list = []
