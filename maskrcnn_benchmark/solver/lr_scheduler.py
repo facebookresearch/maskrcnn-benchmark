@@ -42,7 +42,7 @@ class WarmupMultiStepLR(torch.optim.lr_scheduler._LRScheduler):
             if self.warmup_method == "constant":
                 warmup_factor = self.warmup_factor
             elif self.warmup_method == "linear":
-                alpha = self.last_epoch / self.warmup_iters
+                alpha = float(self.last_epoch) / self.warmup_iters
                 warmup_factor = self.warmup_factor * (1 - alpha) + alpha
         return [
             base_lr
