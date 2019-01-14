@@ -7,6 +7,86 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+import open3d
+
+from transforms3d.quaternions import quat2mat#, mat2quat
+
+
+def create_cloud(points, normals=[], colors=[], T=None):
+    cloud = open3d.PointCloud()
+    cloud.points = open3d.Vector3dVector(points)
+    if len(normals) > 0:
+        assert len(normals) == len(points)
+        cloud.normals = open3d.Vector3dVector(normals)
+    if len(colors) > 0:
+        # if len(colors) == 1: # ((1,3))
+        #     colors = np.array(colors) * len(points)
+        # else:
+        assert len(colors) == len(points)
+        cloud.colors = open3d.Vector3dVector(colors)
+
+    if T is not None:
+        cloud.transform(T)
+    return cloud
+
+def backproject_camera(im_depth, intrinsics, factor_depth=1):
+
+    depth = im_depth.astype(np.float32, copy=True) / factor_depth
+
+    # get intrinsic matrix
+    K = intrinsics.copy()
+    K = np.matrix(K)
+    K = np.reshape(K,(3,3))
+    Kinv = np.linalg.inv(K)
+
+    # compute the 3D points        
+    width = depth.shape[1]
+    height = depth.shape[0]
+
+    # construct the 2D points matrix
+    x, y = np.meshgrid(np.arange(width), np.arange(height))
+    ones = np.ones((height, width), dtype=np.float32)
+    x2d = np.stack((x, y, ones), axis=2).reshape(width*height, 3)
+
+    # backprojection
+    R = Kinv * x2d.transpose()
+
+    # compute the 3D points
+    X = np.multiply(np.tile(depth.reshape(1, width*height), (3, 1)), R)
+
+    return np.array(X)
+
+
+def average_point_distance_metric(points, rotation1, rotation2, closest_point=False):
+    assert rotation1.shape == rotation2.shape == (3,3)
+    if closest_point:
+        M1 = np.identity(4)
+        M1[:3,:3] = rotation1
+        M2 = np.identity(4)
+        M2[:3,:3] = rotation2
+        cloud1 = create_cloud(points, T=M1)
+        cloud2 = create_cloud(points, T=M2)
+
+        # get closest point
+        tree = open3d.KDTreeFlann(cloud1)
+        distances = []
+        for ix in range(len(points)):
+            _, idx, _ = tree.search_knn_vector_3d(cloud2.points[ix], 1)
+            idx = idx.pop()#; dist = dist.pop()
+            dist = np.linalg.norm(cloud2.points[ix] - cloud1.points[idx])
+            distances.append(dist)
+        return np.mean(distances)
+        # # use icp to compare distance of nearest points
+        # reg = open3d.registration_icp(cloud1, cloud2, 0.02, np.identity(4),
+        #     open3d.TransformationEstimationPointToPoint())
+        # inliers = np.asarray(reg.correspondence_set)
+        # p1 = np.asarray(cloud1.points)
+        # p2 = np.asarray(cloud2.points)
+    else:
+        pts = np.array(points).T if isinstance(points, list) else points.T
+        p1 = np.dot(rotation1, pts).T
+        p2 = np.dot(rotation2, pts).T
+        return np.linalg.norm(p1 - p2, axis=1).mean()
 
 class _NewEmptyTensorOp(torch.autograd.Function):
     @staticmethod
@@ -149,6 +229,20 @@ class DataGenerator():
             tmgt = tmgt.cuda()
         return tm, tmgt
 
+def get_4x4_transform(pose):
+    object_pose_matrix4f = np.identity(4)
+    object_pose = np.array(pose)
+    if object_pose.shape == (4,4):
+        object_pose_matrix4f = object_pose
+    elif object_pose.shape == (3,4):
+        object_pose_matrix4f[:3,:] = object_pose
+    elif len(object_pose) == 7:
+        object_pose_matrix4f[:3,:3] = quat2mat(object_pose[:4])
+        object_pose_matrix4f[:3,-1] = object_pose[4:]    
+    else:
+        print("[WARN]: Object pose is not of shape (4,4) or (3,4) or 1-d quat (7), skipping...")
+    return object_pose_matrix4f
+
 class ConvNet(nn.Module):
     def __init__(self, in_channels=3, out_channels=1):
         super(ConvNet, self).__init__()
@@ -160,8 +254,8 @@ class ConvNet(nn.Module):
         conv5_filters = 1024
 
         self.conv1 = nn.Conv2d(in_channels, conv1_filters, kernel_size=5, stride=2, padding=5//2)
-        self.conv2 = nn.Conv2d(conv1_filters, conv2_filters, kernel_size=5, stride=2, padding=5//2)
-        self.conv3 = nn.Conv2d(conv2_filters, conv3_filters, kernel_size=5, stride=1, padding=5//2)
+        self.conv2 = nn.Conv2d(conv1_filters, conv2_filters, kernel_size=5, stride=1, padding=5//2)
+        self.conv3 = nn.Conv2d(conv2_filters, conv3_filters, kernel_size=5, stride=2, padding=5//2)
         self.conv4 = nn.Conv2d(conv3_filters, conv4_filters, kernel_size=3, stride=1, padding=3//2)
         self.conv5 = nn.Conv2d(conv4_filters, conv5_filters, kernel_size=3, stride=1, padding=3 // 2)
         self.bn1 = nn.BatchNorm2d(conv1_filters)

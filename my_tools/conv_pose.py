@@ -18,7 +18,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from maskrcnn_benchmark.layers.ave_dist_loss import AverageDistanceLoss
-from conv_test import ConvNet
+from conv_test import ConvNet, get_4x4_transform, average_point_distance_metric
 from conv_depth import FATDataLoader, FT, create_cloud, backproject_camera, get_random_color
 
 POSE_CHANNELS = 4
@@ -80,8 +80,8 @@ PoseNet = ConvNet
 #         return torch.tanh(fc3)
 
 class FATDataLoader2(FATDataLoader):
-    def __init__(self, root_dir, ann_file, use_scaled_depth=False):
-        super(FATDataLoader2, self).__init__(root_dir, ann_file, use_scaled_depth=use_scaled_depth)
+    def __init__(self, root_dir, ann_file, use_scaled_depth=False, shuffle=True):
+        super(FATDataLoader2, self).__init__(root_dir, ann_file, use_scaled_depth=use_scaled_depth, shuffle=shuffle)
 
         # load models as points (Class,N,3)
         models_dir = os.path.join(root_dir, "../models")
@@ -174,20 +174,6 @@ class FATDataLoader2(FATDataLoader):
     def get_object_points(self):
         return self.points.copy(), self.symmetry.copy()
 
-def get_4x4_transform(pose):
-    object_pose_matrix4f = np.identity(4)
-    object_pose = np.array(pose)
-    if object_pose.shape == (4,4):
-        object_pose_matrix4f = object_pose
-    elif object_pose.shape == (3,4):
-        object_pose_matrix4f[:3,:] = object_pose
-    elif len(object_pose) == 7:
-        object_pose_matrix4f[:3,:3] = quat2mat(object_pose[:4])
-        object_pose_matrix4f[:3,-1] = object_pose[4:]    
-    else:
-        print("[WARN]: Object pose is not of shape (4,4) or (3,4) or 1-d quat (7), skipping...")
-    return object_pose_matrix4f
-
 def render_object_pose(im, depth, labels, meta_data, pose_data, points):
     """
     im: rgb image of the scene
@@ -222,7 +208,8 @@ def render_object_pose(im, depth, labels, meta_data, pose_data, points):
 
         object_pts3d = points[object_cls] # read_xyz_file(object_cloud_file)
         pt_colors = np.zeros(object_pts3d.shape, np.float32)
-        pt_colors[:] = np.array(get_random_color()) / 255
+        color = np.array(get_random_color()) / 255
+        pt_colors[:] = color
         object_cloud = create_cloud(object_pts3d, colors=pt_colors, T=object_pose_matrix4f)
         # object_cloud.transform(object_pose_matrix4f)
         all_objects_cloud += object_cloud
@@ -298,7 +285,7 @@ def train(model, dg, use_rgb=False, n_iters=1000, lr=1e-3):
     print("iter %d of %d -> Total loss: %.4f, Avg loss: %.4f"%(iter, n_iters, np.mean(losses), np.mean(all_losses)))
     writer.close()
 
-def test(model, dg, batch_sz = 8, use_rgb=False):
+def test(model, dg, batch_sz = 8, use_rgb=False, visualize=True):
     model.eval()
 
     intrinsics = np.array([[768.1605834960938, 0.0, 480.0], [0.0, 768.1605834960938, 270.0], [0.0, 0.0, 1.0]])
@@ -325,16 +312,30 @@ def test(model, dg, batch_sz = 8, use_rgb=False):
 
     meta_data = {'intrinsic_matrix': intrinsics.tolist(), 'factor_depth': factor_depth}
 
+    metric_list = dict((ix, []) for ix,k in enumerate(dg._classes))
     for ix,pose_pred in enumerate(preds):
         ann = annots[ix]
-        img_id = ann['image_id']
         cls = ann['category_id']
 
         pose_pred = pose_pred[cls*POSE_CHANNELS:(cls+1)*POSE_CHANNELS]
 
-        img_data = dg.images[dg.img_index[img_id]]
+        meta = ann['meta']
+        gt_pose = meta['pose']
+        gt_quat = gt_pose[:4]
+        pred_R = quat2mat(pose_pred)
+        gt_R = quat2mat(gt_quat)
+        axis_symmetry = dg.SYMMETRIES[cls]
+        is_symmetric = np.sum(axis_symmetry) >= 2
+        ave_dd = average_point_distance_metric(points[cls], pred_R, gt_R, closest_point=is_symmetric)
+        ave_dd2 = average_point_distance_metric(points[cls], pred_R, gt_R, closest_point=True)
+        print("%d) [cls %d (%s)] ADD: %.3f, ADD 2: %.3f"%(ix + 1, cls, dg._classes[cls], ave_dd, ave_dd2))
+        metric_list[cls].append([ave_dd, ave_dd2])
+        if not visualize:
+            continue
 
         # load img
+        img_id = ann['image_id']
+        img_data = dg.images[dg.img_index[img_id]]
         img_file = img_data["file_name"]
         img_file_path = osp.join(dg.root, img_file)
         img = cv2.imread(img_file_path)
@@ -351,7 +352,6 @@ def test(model, dg, batch_sz = 8, use_rgb=False):
             continue
 
         # add translation to quaternion
-        meta = ann['meta']
         centroid = meta['centroid']
         final_pose = np.zeros(7, dtype=np.float32)
         final_pose[:4] = pose_pred
@@ -360,6 +360,9 @@ def test(model, dg, batch_sz = 8, use_rgb=False):
         label = labels_list[ix]
         render_object_pose(img, depth, [label], meta_data, [final_pose], points)
 
+    # metric_mean = np.mean(metric_list, axis=0)
+    # print("Mean ADD: %.3f, ADD 2: %.3f"%(metric_mean[0], metric_mean[1]))
+    return metric_list
 
 if __name__ == '__main__':
 
@@ -395,11 +398,17 @@ if __name__ == '__main__':
     print("Loaded %s"%(save_path))
 
     n_iters = 3000
-    lr = 1e-3
+    lr = 1e-4
     # train(model, data_loader, use_rgb=USE_RGB, n_iters=n_iters, lr=lr)
     # torch.save(model.state_dict(), save_path)
 
     test_ann_file = "./datasets/FAT/coco_fat_test_500.json"
     # test_ann_file = "./datasets/FAT/coco_fat_mixed_temple_1_n100.json"
-    test_data_loader = FATDataLoader2(root_dir, test_ann_file, USE_SCALED_DEPTH)    
-    test(model, test_data_loader, batch_sz=32, use_rgb=USE_RGB)
+    test_data_loader = FATDataLoader2(root_dir, test_ann_file, USE_SCALED_DEPTH, shuffle=False)    
+    results = test(model, test_data_loader, batch_sz=100, use_rgb=USE_RGB, visualize=True)
+
+    for ix,cls in enumerate(test_data_loader._classes):
+        if ix == 0:
+            continue
+        r = np.array(results[ix])
+        print("(%s): Mean ADD: %.3f, ADD2: %.3f"%(cls, np.mean(r[:,0]), np.mean(r[:,1])))
