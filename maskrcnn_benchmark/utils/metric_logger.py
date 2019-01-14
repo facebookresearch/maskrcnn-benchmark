@@ -8,6 +8,7 @@ from datetime import datetime
 from .comm import is_main_process
 import matplotlib.pyplot as plt
 from matplotlib import patches
+import numpy as np
 
 class SmoothedValue(object):
     """Track a series of values and provide access to smoothed values over a
@@ -68,10 +69,9 @@ class MetricLogger(object):
         
 
 class TensorboardLogger(MetricLogger):
-    def __init__(self, log_dir='logs', start_iter=0, delimiter='\t'):
+    def __init__(self, log_dir='logs', delimiter='\t'):
         
         super(TensorboardLogger, self).__init__(delimiter)
-        self.iteration = start_iter
         self.writer = self._get_tensorboard_writer(log_dir)
         
     @staticmethod
@@ -88,23 +88,24 @@ class TensorboardLogger(MetricLogger):
         else:
             return None
     
-    def update(self, ** kwargs):
+    def update(self, iteration, ** kwargs):
         super(TensorboardLogger, self).update(**kwargs)
         if self.writer:
             for k, v in kwargs.items():
                 if isinstance(v, torch.Tensor):
                     v = v.item()
                 assert isinstance(v, (float, int))
-                self.writer.add_scalar(k, v, self.iteration)
-            self.iteration += 1
+                self.writer.add_scalar(k, v, iteration)
             
-    def update_image(self, image, preds):
+    def update_image(self, iteration, image, preds, targets):
         image = image.cpu().numpy()
         boxes = preds.bbox.cpu().numpy()
-        cats = preds.get_field('labels')
+        boxes_gt = targets.bbox.cpu().numpy()
+        cats = preds.get_field('labels').cpu().numpy()
+        cats_gt = targets.get_field('labels').cpu().numpy()
         
         if self.writer:
-            for cat in cats.unique():
+            for cat in np.unique(np.append(cats, cats_gt)):
                 if cat == 0:
                     continue
                 fig, ax = plt.figure(), plt.gca()
@@ -124,9 +125,24 @@ class TensorboardLogger(MetricLogger):
                             )
                         )
                         
+                for i in range(len(cats_gt)):
+                    if cats_gt[i] == cat:
+                        x1, y1, x2, y2 = boxes_gt[i]
+                        ax.add_patch(
+                            patches.Rectangle(
+                                (x1, y1),
+                                x2 - x1,
+                                y2 - y1,
+                                edgecolor='g',
+                                linewidth=1,
+                                fill=False
+                            )
+                        )
+                        
+                        
                 plt.axis('scaled')
                 plt.tight_layout()
                         
-                self.writer.add_figure('train/image/{}'.format(cat), fig, self.iteration)
+                self.writer.add_figure('train/image/{}'.format(cat), fig, iteration)
 
     

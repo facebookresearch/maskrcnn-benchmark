@@ -64,7 +64,7 @@ class KittiDataset(Dataset):
         img = F.pad(img, (0, padRight, 0, padBottom))
         
         # load annotations
-        with open(os.path.join(self.label_dir, self.label_paths[idx])) as f:
+        with open(os.path.join(self.label_dir, self.image_paths[idx].replace('.png', '.txt'))) as f:
             labels = f.read().splitlines()
         
         boxes = []

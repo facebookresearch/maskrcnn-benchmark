@@ -50,7 +50,6 @@ def do_train(
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
     logger.info("Start training")
     meters = TensorboardLogger(log_dir=tb_log_dir,
-                               start_iter=arguments['iteration'],
                                delimiter="  ") \
              if use_tensorboard else MetricLogger(delimiter="  ")
     max_iter = len(data_loader)
@@ -73,7 +72,7 @@ def do_train(
         # reduce losses over all GPUs for logging purposes
         loss_dict_reduced = reduce_loss_dict(loss_dict)
         losses_reduced = sum(loss for loss in loss_dict_reduced.values())
-        meters.update(loss=losses_reduced, **loss_dict_reduced)
+        meters.update(iteration, loss=losses_reduced, **loss_dict_reduced)
 
         optimizer.zero_grad()
         losses.backward()
@@ -81,7 +80,7 @@ def do_train(
 
         batch_time = time.time() - end
         end = time.time()
-        meters.update(time=batch_time, data=data_time)
+        meters.update(iteration, time=batch_time, data=data_time)
             
         eta_seconds = meters.time.global_avg * (max_iter - iteration)
         eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
@@ -105,9 +104,9 @@ def do_train(
                     memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
                 )
             )
-        if iteration % checkpoint_period == 0 and iteration > 0:
+        if iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
-            meters.update_image(images.tensors[0], preds[0])
+            meters.update_image(iteration, images.tensors[0], preds[0], targets[0])
 
     checkpointer.save("model_{:07d}".format(iteration), **arguments)
     total_training_time = time.time() - start_training_time
