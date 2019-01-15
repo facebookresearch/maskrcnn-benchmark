@@ -47,6 +47,18 @@ def _rename_basic_resnet_weights(layer_keys):
     layer_keys = [k.replace(".branch1.", ".downsample.0.") for k in layer_keys]
     layer_keys = [k.replace(".branch1_bn.", ".downsample.1.") for k in layer_keys]
 
+    # GroupNorm
+    layer_keys = [k.replace("conv1.gn.s", "gn1.weight") for k in layer_keys]
+    layer_keys = [k.replace("conv1.gn.bias", "gn1.bias") for k in layer_keys]
+    layer_keys = [k.replace("conv2.gn.s", "gn2.weight") for k in layer_keys]
+    layer_keys = [k.replace("conv2.gn.bias", "gn2.bias") for k in layer_keys]
+    layer_keys = [k.replace("conv3.gn.s", "gn3.weight") for k in layer_keys]
+    layer_keys = [k.replace("conv3.gn.bias", "gn3.bias") for k in layer_keys]
+    layer_keys = [k.replace("downsample.0.gn.s", "downsample.1.weight") \
+        for k in layer_keys]
+    layer_keys = [k.replace("downsample.0.gn.bias", "downsample.1.bias") \
+        for k in layer_keys]
+
     return layer_keys
 
 def _rename_fpn_weights(layer_keys, stage_names):

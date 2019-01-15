@@ -31,6 +31,7 @@ def build_resnet_fpn_backbone(cfg):
         ],
         out_channels=out_channels,
         top_blocks=fpn_module.LastLevelMaxPool(),
+        use_gn=cfg.MODEL.FPN.USE_GN
     )
     model = nn.Sequential(OrderedDict([("body", body), ("fpn", fpn)]))
     return model

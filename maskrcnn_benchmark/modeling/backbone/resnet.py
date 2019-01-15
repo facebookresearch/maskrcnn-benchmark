@@ -7,6 +7,12 @@ Example usage. Strings may be specified in the config file.
         "BottleneckWithFixedBatchNorm",
         "ResNet50StagesTo4",
     )
+OR:
+    model = ResNet(
+        "StemWithGN",
+        "BottleneckWithGN",
+        "ResNet50StagesTo4",
+    )
 Custom implementations may be written in user code and hooked in via the
 `register_*` functions.
 """
@@ -16,6 +22,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from maskrcnn_benchmark.layers import gn_layer_from_cfg
 from maskrcnn_benchmark.layers import FrozenBatchNorm2d
 from maskrcnn_benchmark.layers import Conv2d
 from maskrcnn_benchmark.utils.registry import Registry
@@ -289,13 +296,125 @@ class StemWithFixedBatchNorm(nn.Module):
         x = F.relu_(x)
         x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
         return x
+        return x
+
+
+class BottleneckWithGN(nn.Module):
+    def __init__(
+        self,
+        in_channels,
+        bottleneck_channels,
+        out_channels,
+        num_groups=1,
+        stride_in_1x1=True,
+        stride=1,
+        dilation=1
+    ):
+        super(BottleneckWithGN, self).__init__()
+
+        self.downsample = None
+        if in_channels != out_channels:
+            down_stride = stride if dilation == 1 else 1
+            self.downsample = nn.Sequential(
+                Conv2d(
+                    in_channels, out_channels, 
+                    kernel_size=1, stride=down_stride, bias=False
+                ),
+                gn_layer_from_cfg(out_channels)
+            )
+
+        if dilation > 1:
+            stride = 1 # reset to be 1
+
+        # The original MSRA ResNet models have stride in the first 1x1 conv
+        # The subsequent fb.torch.resnet and Caffe2 ResNe[X]t implementations have
+        # stride in the 3x3 conv
+        stride_1x1, stride_3x3 = (stride, 1) if stride_in_1x1 else (1, stride)
+
+        self.conv1 = Conv2d(
+            in_channels,
+            bottleneck_channels,
+            kernel_size=1,
+            stride=stride_1x1,
+            bias=False,
+        )
+        self.gn1 = gn_layer_from_cfg(bottleneck_channels)
+        # TODO: specify init for the above
+
+        self.conv2 = Conv2d(
+            bottleneck_channels,
+            bottleneck_channels,
+            kernel_size=3,
+            stride=stride_3x3,
+            padding=dilation, # dilation * (kernel_size - 1) // 2,
+            bias=False,
+            groups=num_groups,
+            dilation=dilation
+        )
+        self.gn2 = gn_layer_from_cfg(bottleneck_channels)
+
+        self.conv3 = Conv2d(
+            bottleneck_channels, out_channels, kernel_size=1, bias=False
+        )
+        self.gn3 = gn_layer_from_cfg(out_channels)
+
+        # for l in [self.conv1, self.conv2, self.conv3]:
+        #     nn.init.kaiming_uniform_(l.weight, a=1)
+
+    def forward(self, x):
+        identity = x
+
+        out = self.conv1(x)
+        out = self.gn1(out)
+        out = F.relu_(out)
+
+        out = self.conv2(out)
+        out = self.gn2(out)
+        out = F.relu_(out)
+
+        out0 = self.conv3(out)
+        out = self.gn3(out0)
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        out += identity
+        out = F.relu_(out)
+
+        return out
+
+
+class StemWithGN(nn.Module):
+    def __init__(self, cfg):
+        super(StemWithGN, self).__init__()
+
+        out_channels = cfg.MODEL.RESNETS.STEM_OUT_CHANNELS
+
+        self.conv1 = Conv2d(
+            3, out_channels, kernel_size=7, stride=2, padding=3, bias=False
+        )
+        self.gn1 = gn_layer_from_cfg(out_channels)
+
+        # for l in [self.conv1,]:
+        #     nn.init.kaiming_uniform_(l.weight, a=1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.gn1(x)
+        x = F.relu_(x)
+        x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
+        return x
 
 
 _TRANSFORMATION_MODULES = Registry({
-    "BottleneckWithFixedBatchNorm": BottleneckWithFixedBatchNorm
+    "BottleneckWithFixedBatchNorm": BottleneckWithFixedBatchNorm,
+    "BottleneckWithGN": BottleneckWithGN,
 })
 
-_STEM_MODULES = Registry({"StemWithFixedBatchNorm": StemWithFixedBatchNorm})
+_STEM_MODULES = Registry({
+    "StemWithFixedBatchNorm": StemWithFixedBatchNorm,
+    "StemWithGN": StemWithGN,
+})
 
 _STAGE_SPECS = Registry({
     "R-50-C4": ResNet50StagesTo4,
