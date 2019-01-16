@@ -1,15 +1,15 @@
 INPUT:
   MIN_SIZE_TRAIN: 800
-  MAX_SIZE_TRAIN: 1280
+  MAX_SIZE_TRAIN: 1333
   MIN_SIZE_TEST: 800
-  MAX_SIZE_TEST: 1400
+  MAX_SIZE_TEST: 1333
 MODEL:
   META_ARCHITECTURE: "GeneralizedRCNN"
   WEIGHT: "" # no pretrained model
   BACKBONE:
     CONV_BODY: "R-50-FPN"
-    OUT_CHANNELS: 224 # reduce memory
-    FREEZE_CONV_BODY_AT: -1 # finetune all layers
+    OUT_CHANNELS: 256
+    FREEZE_CONV_BODY_AT: 0 # finetune all layers
   RESNETS: # use GN for backbone
     TRANS_FUNC: "BottleneckWithGN"
     STEM_FUNC: "StemWithGN"
@@ -24,7 +24,7 @@ MODEL:
     FPN_POST_NMS_TOP_N_TEST: 1000
   ROI_HEADS:
     USE_FPN: True
-    BATCH_SIZE_PER_IMAGE: 320
+    BATCH_SIZE_PER_IMAGE: 512
     POSITIVE_FRACTION: 0.25
   ROI_BOX_HEAD:
     USE_GN: True # use GN for bbox head
@@ -36,7 +36,7 @@ MODEL:
   ROI_MASK_HEAD:
     USE_GN: True # use GN for mask head
     POOLER_SCALES: (0.25, 0.125, 0.0625, 0.03125)
-    CONV_LAYERS: (224, 224, 224, 256)
+    CONV_LAYERS: (256, 256, 256, 256)
     FEATURE_EXTRACTOR: "MaskRCNNFPNFeatureExtractor"
     PREDICTOR: "MaskRCNNC4Predictor"
     POOLER_RESOLUTION: 14
@@ -50,10 +50,10 @@ DATASETS:
 DATALOADER:
   SIZE_DIVISIBILITY: 32
 SOLVER:
-  # Assume 4 gpus
+  # Assume 8 gpus
   BASE_LR: 0.01
   WEIGHT_DECAY: 0.0001
-  STEPS: (420000, 500000) # 3x lr schedule
+  STEPS: (420000, 500000)
   MAX_ITER: 540000
   IMS_PER_BATCH: 8
 TEST:

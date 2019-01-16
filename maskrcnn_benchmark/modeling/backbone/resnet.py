@@ -111,6 +111,8 @@ class ResNet(nn.Module):
         self._freeze_backbone(cfg.MODEL.BACKBONE.FREEZE_CONV_BODY_AT)
 
     def _freeze_backbone(self, freeze_at):
+        if freeze_at < 0:
+            return
         for stage_index in range(freeze_at):
             if stage_index == 0:
                 m = self.stem  # stage 0 is the stem
