@@ -268,7 +268,7 @@ class Bottleneck(nn.Module):
             bottleneck_channels,
             kernel_size=3,
             stride=stride_3x3,
-            padding=dilation, # dilation * (kernel_size - 1) // 2,
+            padding=dilation,
             bias=False,
             groups=num_groups,
             dilation=dilation

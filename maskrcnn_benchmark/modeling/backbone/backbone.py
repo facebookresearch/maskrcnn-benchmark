@@ -33,7 +33,9 @@ def build_resnet_fpn_backbone(cfg):
             in_channels_stage2 * 8,
         ],
         out_channels=out_channels,
-        conv_block=conv_with_kaiming_uniform(cfg.MODEL.FPN.USE_GN),
+        conv_block=conv_with_kaiming_uniform(
+            cfg.MODEL.FPN.USE_GN, cfg.MODEL.FPN.USE_RELU
+        ),
         top_blocks=fpn_module.LastLevelMaxPool(),
     )
     model = nn.Sequential(OrderedDict([("body", body), ("fpn", fpn)]))
