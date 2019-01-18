@@ -77,18 +77,6 @@ _C.DATALOADER.ASPECT_RATIO_GROUPING = True
 
 
 # ---------------------------------------------------------------------------- #
-# Group Norm options
-# ---------------------------------------------------------------------------- #
-_C.GROUP_NORM = CN()
-# Number of dimensions per group in GroupNorm (-1 if using NUM_GROUPS)
-_C.GROUP_NORM.DIM_PER_GP = -1
-# Number of groups in GroupNorm (-1 if using DIM_PER_GP)
-_C.GROUP_NORM.NUM_GROUPS = 32
-# GroupNorm's small constant in the denominator
-_C.GROUP_NORM.EPSILON = 1e-5
-
-
-# ---------------------------------------------------------------------------- #
 # Backbone options
 # ---------------------------------------------------------------------------- #
 _C.MODEL.BACKBONE = CN()
@@ -111,6 +99,18 @@ _C.MODEL.BACKBONE.USE_GN = False
 # ---------------------------------------------------------------------------- #
 _C.MODEL.FPN = CN()
 _C.MODEL.FPN.USE_GN = False
+
+
+# ---------------------------------------------------------------------------- #
+# Group Norm options
+# ---------------------------------------------------------------------------- #
+_C.MODEL.GROUP_NORM = CN()
+# Number of dimensions per group in GroupNorm (-1 if using NUM_GROUPS)
+_C.MODEL.GROUP_NORM.DIM_PER_GP = -1
+# Number of groups in GroupNorm (-1 if using DIM_PER_GP)
+_C.MODEL.GROUP_NORM.NUM_GROUPS = 32
+# GroupNorm's small constant in the denominator
+_C.MODEL.GROUP_NORM.EPSILON = 1e-5
 
 
 # ---------------------------------------------------------------------------- #

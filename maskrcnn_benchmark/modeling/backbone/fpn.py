@@ -2,7 +2,6 @@
 import torch
 import torch.nn.functional as F
 from torch import nn
-from maskrcnn_benchmark.layers import gn_layer_from_cfg
 
 
 class FPN(nn.Module):
@@ -13,8 +12,7 @@ class FPN(nn.Module):
     """
 
     def __init__(
-        self, in_channels_list, out_channels, 
-        top_blocks=None, use_gn=False
+        self, in_channels_list, out_channels, conv_block, top_blocks=None
     ):
         """
         Arguments:
@@ -31,27 +29,8 @@ class FPN(nn.Module):
         for idx, in_channels in enumerate(in_channels_list, 1):
             inner_block = "fpn_inner{}".format(idx)
             layer_block = "fpn_layer{}".format(idx)
-            if use_gn:
-                inner_block_module = nn.Sequential(
-                    nn.Conv2d(in_channels, out_channels, 1, bias=False),
-                    gn_layer_from_cfg(out_channels)
-                )
-                layer_block_module = nn.Sequential(
-                    nn.Conv2d(out_channels, out_channels, 3, 1, 1, bias=False),
-                    gn_layer_from_cfg(out_channels)
-                )
-                for modules in [inner_block_module, layer_block_module]:
-                    for l in modules.modules():
-                        if isinstance(l, nn.Conv2d):
-                            nn.init.kaiming_uniform_(l.weight, a=1)
-            else:
-                inner_block_module = nn.Conv2d(in_channels, out_channels, 1)
-                layer_block_module = nn.Conv2d(out_channels, out_channels, 3, 1, 1)
-                for module in [inner_block_module, layer_block_module]:
-                    # Caffe2 implementation uses XavierFill, which in fact
-                    # corresponds to kaiming_uniform_ in PyTorch
-                    nn.init.kaiming_uniform_(module.weight, a=1)
-                    nn.init.constant_(module.bias, 0)
+            inner_block_module = conv_block(in_channels, out_channels, 1)
+            layer_block_module = conv_block(out_channels, out_channels, 3, 1)
             self.add_module(inner_block, inner_block_module)
             self.add_module(layer_block, layer_block_module)
             self.inner_blocks.append(inner_block)

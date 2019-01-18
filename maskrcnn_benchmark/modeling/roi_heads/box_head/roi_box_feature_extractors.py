@@ -6,7 +6,7 @@ from torch.nn import functional as F
 from maskrcnn_benchmark.modeling import registry
 from maskrcnn_benchmark.modeling.backbone import resnet
 from maskrcnn_benchmark.modeling.poolers import Pooler
-from maskrcnn_benchmark.layers import gn_layer_from_cfg
+from maskrcnn_benchmark.modeling.make_layers import group_norm
 from maskrcnn_benchmark.modeling.make_layers import make_fc
 
 
@@ -118,7 +118,7 @@ class FPNXconv1fcFeatureExtractor(nn.Module):
             )
             in_channels = conv_head_dim
             if use_gn:
-                xconvs.append(gn_layer_from_cfg(in_channels))
+                xconvs.append(group_norm(in_channels))
             xconvs.append(nn.ReLU(inplace=True))
 
         self.add_module("xconvs", nn.Sequential(*xconvs))
