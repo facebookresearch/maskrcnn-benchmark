@@ -113,7 +113,9 @@ class ModelCatalog(object):
     S3_C2_DETECTRON_URL = "https://dl.fbaipublicfiles.com/detectron"
     C2_IMAGENET_MODELS = {
         "MSRA/R-50": "ImageNetPretrained/MSRA/R-50.pkl",
+        "MSRA/R-50-GN": "ImageNetPretrained/47261647/R-50-GN.pkl",
         "MSRA/R-101": "ImageNetPretrained/MSRA/R-101.pkl",
+        "MSRA/R-101-GN": "ImageNetPretrained/47592356/R-101-GN.pkl",
         "FAIR/20171220/X-101-32x8d": "ImageNetPretrained/20171220/X-101-32x8d.pkl",
     }
 
