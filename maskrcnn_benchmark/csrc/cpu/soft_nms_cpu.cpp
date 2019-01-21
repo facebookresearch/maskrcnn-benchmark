@@ -69,8 +69,9 @@ at::Tensor soft_nms_cpu_kernel(const at::Tensor& dets,
 }
 
 at::Tensor soft_nms_cpu(const at::Tensor& dets,
-               at::Tensor& scores,
-               const float threshold) {
+                        at::Tensor& scores,
+                        const float threshold,
+                        const float sigma) {
   at::Tensor result;
   AT_DISPATCH_FLOATING_TYPES(dets.type(), "soft_nms", [&] {
     result = soft_nms_cpu_kernel<scalar_t>(dets, scores, threshold);
