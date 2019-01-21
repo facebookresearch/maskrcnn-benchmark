@@ -126,7 +126,7 @@ class RPNLossComputation(object):
             box_regression[sampled_pos_inds],
             regression_targets[sampled_pos_inds],
             beta=1.0 / 9,
-            size_average=False,
+            reduction='sum',
         ) / (sampled_inds.numel())
 
         objectness_loss = F.binary_cross_entropy_with_logits(
