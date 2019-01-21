@@ -37,37 +37,41 @@ def draw_cuboid_2d(img2, cuboid, color):
 def get_data():
     im_file = "./datasets/FAT/data/mixed/temple_0/000295.right.jpg"
     # points indexed 3,4 are the front and back ones
-    # model_points = np.array([
-    #     [-0.05080691, -0.041769,   -0.02880055],
-    #     [-0.05080691,  0.04176 ,   -0.02880055],
-    #     [-0.05080691, -0.041769,    0.02880038],
-    #     [-0.05080691,  0.04176 ,    0.02880038],
-    #     [ 0.0508229 , -0.041769,   -0.02880055],
-    #     [ 0.0508229 ,  0.04176 ,   -0.02880055],
-    #     [ 0.0508229 , -0.041769,    0.02880038],
-    #     [ 0.0508229 ,  0.04176 ,    0.02880038],
-    # ])
+    model_points = np.array([
+        [-0.05080691, -0.041769,   -0.02880055],
+        [-0.05080691,  0.04176 ,   -0.02880055],
+        [-0.05080691, -0.041769,    0.02880038],
+        [-0.05080691,  0.04176 ,    0.02880038],
+        [ 0.0508229 , -0.041769,   -0.02880055],
+        [ 0.0508229 ,  0.04176 ,   -0.02880055],
+        [ 0.0508229 , -0.041769,    0.02880038],
+        [ 0.0508229 ,  0.04176 ,    0.02880038],
+    ])
+    image_points = np.array([
+        [569, 299],
+        [526, 309],
+        [589, 329],
+        [546, 337],
+        [538, 348],
+        [495, 355],
+        [561, 379],
+        [517, 384],
+    ], dtype=np.float32)
     # image_points = np.array([
-    #     [569, 299],
-    #     [526, 309],
-    #     [589, 329],
-    #     [546, 337],
-    #     [538, 348],
-    #     [495, 355],
-    #     [561, 379],
-    #     [517, 384],
+    #     [575, 304],
+    #     [530, 311],
+    #     [580, 332],
+    #     [540, 332],
+    #     [533, 350],
+    #     [496, 350],
+    #     [564, 383],
+    #     [514, 389],
     # ], dtype=np.float32)
-    # # image_points = np.array([
-    # #     [575, 304],
-    # #     [530, 311],
-    # #     [580, 332],
-    # #     [540, 332],
-    # #     [533, 350],
-    # #     [496, 350],
-    # #     [564, 383],
-    # #     [514, 389],
-    # # ], dtype=np.float32)
-    # cls = 9
+    cls = 9
+    pred_R = np.array([[-0.13374473, -0.39525998,  0.41382402],
+         [ 0.60616624,  0.03293807,  0.56743467],
+         [-0.33144197,  0.24944006,  0.50241154]],
+    )
 
     im_file = "./datasets/FAT/data/mixed/temple_0/001600.right.jpg"
     model_points = np.array([
@@ -91,6 +95,10 @@ def get_data():
         [543, 392],
     ], dtype=np.float32)
     cls = 17
+    pred_R = np.array([[ 0.8092772,   0.32167298, -0.07783523],
+         [ 0.055264 ,   0.51261824, -0.32159093],
+         [-0.04363448 , 0.5587809 ,  0.38377702]],
+    )
 
     # im_file = "./datasets/FAT/data/mixed/temple_0/000127.left.jpg"
     # model_points = np.array([
@@ -112,6 +120,9 @@ def get_data():
     #     [366, 382],
     #     [426, 470]]
     # cls = 2
+    # pred_R = np.array([[-0.49625674, -0.07090731, -0.03685391],
+    #      [-0.02566289, 0.2529236 , -0.552534  ],
+    #      [-0.08301728, -0.07011836, -0.465668  ]])
 
     # im_file = "./datasets/FAT/data/mixed/temple_0/001600.right.jpg"
     # model_points = [
@@ -133,32 +144,41 @@ def get_data():
     #  [709, 419],
     #  [774, 401]]
     # cls = 9
+    # pred_R = np.array([[ 0.04379589, 0.6991153 , -0.07654756],
+    #      [ 0.41686264, 0.21312058, -0.37969974],
+    #      [-0.30132285, 0.1908857 , -0.6128634 ]],
+    # )
 
-    # im_file = "./datasets/FAT/data/mixed/temple_0/000127.left.jpg"
-    # model_points = [[-0.03359818, -0.050927,   -0.0338576 ],
-    #  [-0.03359818,  0.050916 ,  -0.0338576 ],
-    #  [-0.03359818, -0.050927 ,   0.03385666],
-    #  [-0.03359818,  0.050916 ,   0.03385666],
-    #  [ 0.03361415, -0.050927 ,  -0.0338576 ],
-    #  [ 0.03361415,  0.050916 ,  -0.0338576 ],
-    #  [ 0.03361415, -0.050927 ,   0.03385666],
-    #  [ 0.03361415,  0.050916 ,   0.03385666]]
-    # image_points = [[730, 411],
-    #  [722, 476],
-    #  [699, 434],
-    #  [691, 500],
-    #  [685, 389],
-    #  [679, 452],
-    #  [653, 410],
-    #  [648, 474]]
+    im_file = "./datasets/FAT/data/mixed/temple_0/000127.left.jpg"
+    model_points = [[-0.03359818, -0.050927,   -0.0338576 ],
+     [-0.03359818,  0.050916 ,  -0.0338576 ],
+     [-0.03359818, -0.050927 ,   0.03385666],
+     [-0.03359818,  0.050916 ,   0.03385666],
+     [ 0.03361415, -0.050927 ,  -0.0338576 ],
+     [ 0.03361415,  0.050916 ,  -0.0338576 ],
+     [ 0.03361415, -0.050927 ,   0.03385666],
+     [ 0.03361415,  0.050916 ,   0.03385666]]
+    image_points = [[730, 411],
+     [722, 476],
+     [699, 434],
+     [691, 500],
+     [685, 389],
+     [679, 452],
+     [653, 410],
+     [648, 474]]
+    cls = 4
+    pred_R = np.array([[-0.790117  , -0.00430778, -0.34703857],
+         [-0.04868058,  0.81629056,  0.26626855],
+         [ 0.3662843 ,  0.54237545, -0.7064773 ]])
 
-    # cls = 4
+    # image_points = np.array(image_points)[[0, 4, 1, 5, 2, 6, 3, 7]]
 
     model_points = np.vstack((model_points, [0,0,0]))
     center = np.mean(image_points, axis=0)
     image_points = np.vstack((image_points, center)).astype(np.float32)
+    pred_R = np.array(pred_R)
 
-    return model_points, image_points, im_file, cls
+    return model_points, image_points, im_file, cls, pred_R
 
 from transforms3d.euler import euler2mat
 
@@ -181,7 +201,7 @@ if __name__ == '__main__':
     points = np.load(points_file)
 
     # Read Image
-    model_points, image_points, im_file, cls = get_data()
+    model_points, image_points, im_file, cls, pred_R = get_data()
     depth_file = im_file.replace(".jpg",".depth.png")
 
 
@@ -295,7 +315,7 @@ if __name__ == '__main__':
 
     im2 = img.copy()
     draw_cuboid_2d(im2, theeight_points[:8], (255,0,0)) 
-    R_init = np.dot(R, get_rotate_mat(90,0))
+    R_init = pred_R #np.dot(R, get_rotate_mat(90,0))
     im2 = draw_axis_pose(im2, R_init, translation_vector.squeeze(), camera_matrix, dist_coeffs)
 
     # Display image
@@ -337,14 +357,13 @@ if __name__ == '__main__':
         # last_axis_sign *= sign
         assigned += 1
         if assigned == 2: # np.sum(axes != 0) >= 2: # only need to know direction of 2 axes to know the third
-            # axes[axes==0] = last_axis_sign * ((1+2+3) - np.abs(axes).sum())
             break
 
     aa = {
         (1,2,3): [get_rotate_mat(0,0)], # default
         (1,-2,-3): [get_rotate_mat(180,0)],  # rotated 180 around x
-        (1,-3,2): [get_rotate_mat(90,0)],   # rotated 90 clockwise around x
-        (1,3,-2): [get_rotate_mat(270,0)],  # rotated 270 clockwise around x
+        (1,-3,2): [get_rotate_mat(270,0)],   # rotated 90 clockwise around x
+        (1,3,-2): [get_rotate_mat(90,0)],  # rotated 270 clockwise around x
 
         # start with -1 (rotate 180 around y from default)
         (-1,2,-3): [get_rotate_mat(180,1)],   # 
@@ -353,16 +372,16 @@ if __name__ == '__main__':
         (-1,-3,-2): [get_rotate_mat(180,1), get_rotate_mat(270,0)],   # then rotate 270 clockwise around x
 
         # start with 2 (rotate 270 clockwise around z from default)
-        (2,-1,3): [get_rotate_mat(270,2)],   # 
-        (2,1,-3): [get_rotate_mat(270,2),get_rotate_mat(180,1)],   # then rotate 180 around y
-        (2,3,1): [get_rotate_mat(270,2),get_rotate_mat(90,1)],   # then rotate 90 clockwise around y
-        (2,-3,-1): [get_rotate_mat(270,2),get_rotate_mat(270,1)],   # then rotate 270 clockwise around y
+        (2,-1,3): [get_rotate_mat(90,2)],   # 
+        (2,1,-3): [get_rotate_mat(90,2),get_rotate_mat(180,1)],   # then rotate 180 around y
+        (2,3,1): [get_rotate_mat(90,2),get_rotate_mat(90,1)],   # then rotate 90 clockwise around y
+        (2,-3,-1): [get_rotate_mat(90,2),get_rotate_mat(270,1)],   # then rotate 270 clockwise around y
 
         # start with -2 (rotate 90 clockwise around z from default)
-        (-2,1,3): [get_rotate_mat(90,2)],   # 
-        (-2,-1,-3): [get_rotate_mat(90,2),get_rotate_mat(180,1)],   # then rotate 180 around y
-        (-2,-3,1): [get_rotate_mat(90,2),get_rotate_mat(90,1)],   # then rotate 90 clockwise around y
-        (-2,3,-1): [get_rotate_mat(90,2),get_rotate_mat(270,1)],   # then rotate 270 clockwise around y
+        (-2,1,3): [get_rotate_mat(270,2)],   # 
+        (-2,-1,-3): [get_rotate_mat(270,2),get_rotate_mat(180,1)],   # then rotate 180 around y
+        (-2,-3,1): [get_rotate_mat(270,2),get_rotate_mat(90,1)],   # then rotate 90 clockwise around y
+        (-2,3,-1): [get_rotate_mat(270,2),get_rotate_mat(270,1)],   # then rotate 270 clockwise around y
 
         # start with 3 (rotate 270 clockwise around y from default)
         (3,2,-1): [get_rotate_mat(270,1)],   # 
@@ -382,23 +401,50 @@ if __name__ == '__main__':
     aa_order = {}
     for k in aa:
         x = np.dot(get_rotate(aa[k]), theeight.T).T 
-        x = np.round(x)#[:-1]
+        x = np.round(x)[:-1]
         aa_order[k] = [hashx[tuple(v)] for v in x]
 
-    valid_axes = np.where(axes!=0)[0]
-    ax = axes[valid_axes]
-    for k in aa:
-        if k[valid_axes[0]] == ax[0]:
-            if k[valid_axes[1]] == ax[1]:
-                axes2 = k
-                break
+    OLD = True
+    if not OLD:
+        newkeys = []
+        for k in aa_order:
+            k2 = np.array(k)
+            ix = np.where(np.abs(k2) == 2)[0][0]
+            k2[ix] *= -1
+            v = aa_order[k]
+            v2 = []
+            for i in range(len(v) // 2):
+                v2 += [v[i*2+1], v[i*2]]
+            newkeys.append([tuple(k2), v2])
+
+        for d in newkeys:
+            k, v = d
+            aa_order[k] = v
+
+        last_axis = (1+2+3) - np.abs(axes).sum()
+        i = np.where(axes==0)[0][0]
+        cos_similarity = np.cos(angle_matrix[i,last_axis - 1])
+        sign = np.sign(cos_similarity)            
+        axes[i] = sign * last_axis
+    else:
+        valid_axes = np.where(axes!=0)[0]
+        ax = axes[valid_axes]
+        for k in aa:
+            if k[valid_axes[0]] == ax[0]:
+                if k[valid_axes[1]] == ax[1]:
+                    axes = k
+                    break
+
+    axes2 = tuple(axes)
     print(axes2, aa_order[axes2])
 
     final_ordering = aa_order[axes2]
-    s,rvec3,t = cv2.solvePnP(model_points, image_points[final_ordering], camera_matrix, dist_coeffs)
+    final_ordering += [-1]
+    final_image_points = image_points[final_ordering]
+    s,rvec3,t = cv2.solvePnP(model_points, final_image_points, camera_matrix, dist_coeffs)
     R3, j = cv2.Rodrigues(rvec3)
     im3 = img.copy()
-    draw_cuboid_2d(im3, image_points[final_ordering][:-1], (255,0,0)) 
+    draw_cuboid_2d(im3, final_image_points[:-1], (255,0,0)) 
     im3 = draw_axis_pose(im3, R3, translation_vector.squeeze(), camera_matrix, dist_coeffs)
 
     # Display image
