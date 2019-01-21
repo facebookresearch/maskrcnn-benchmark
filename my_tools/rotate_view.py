@@ -70,52 +70,51 @@ rotation = get_rotate(rotation_list, R45)
 imgpts, _ = cv2.projectPoints(theeight * 0.1, rotation, T, camera_matrix, dist_coeffs)
 m = draw_axis_pose(m, rotation, T, camera_matrix, dist_coeffs)
 draw_cuboid_2d(m, imgpts.squeeze()[:-1], (0,0,255))
-# for ix, pt in enumerate(imgpts.squeeze()):
-#     pt = tuple(pt)
-#     cv2.circle(m, pt, 4, (0,0,255), -1)
-#     cv2.putText(m, "%d"%(ix), pt, cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,0,255))
 
-cv2.imshow("m2", m)
-cv2.waitKey(0)
+# cv2.imshow("m2", m)
+# cv2.waitKey(0)
 
 aa = {
-    (1,2,3): [0,1,2,3,4,5,6,7], # default
-    (1,-2,-3): [3,2,1,0,7,6,5,4],  # rotated 180 around x
-    (1,-3,2): [1,3,0,2,5,7,4,6],   # rotated 90 clockwise around x
-    (1,3,-2): [2,0,3,1,6,4,7,5],  # rotated 270 clockwise around x
+    (1,2,3): [get_rotate_mat(0,0)], # default
+    (1,-2,-3): [get_rotate_mat(180,0)],  # rotated 180 around x
+    (1,-3,2): [get_rotate_mat(90,0)],   # rotated 90 clockwise around x
+    (1,3,-2): [get_rotate_mat(270,0)],  # rotated 270 clockwise around x
 
     # start with -1 (rotate 180 around y from default)
-    (-1,2,-3): [6,7,4,5,2,3,0,1], #  
-    (-1,-2,3): [5,4,7,6,1,0,3,2], #  rotate 180 around x
-    (-1,3,2): [4,6,5,7,0,2,1,3],   #  rotate 90 clockwise around x
-    (-1,-3,-2): [7,5,6,4,3,1,2,0],   # rotate 270 clockwise around x
+    (-1,2,-3): [get_rotate_mat(180,1)],   # 
+    (-1,-2,3): [get_rotate_mat(180,1), get_rotate_mat(180,0)],   # then rotate 180 around x
+    (-1,3,2): [get_rotate_mat(180,1), get_rotate_mat(90,0)],   # then rotate 90 clockwise around x
+    (-1,-3,-2): [get_rotate_mat(180,1), get_rotate_mat(270,0)],   # then rotate 270 clockwise around x
 
     # start with 2 (rotate 270 clockwise around z from default)
-    (2,-1,3): [1,5,3,7,0,4,2,6],   # 
-    (2,1,-3): [],   # then rotate 180 around y
-    (2,3,1): [],   # then rotate 90 clockwise around y
-    (2,-3,-1): [],   # then rotate 270 clockwise around y
+    (2,-1,3): [get_rotate_mat(270,2)],   # 
+    (2,1,-3): [get_rotate_mat(270,2),get_rotate_mat(180,1)],   # then rotate 180 around y
+    (2,3,1): [get_rotate_mat(270,2),get_rotate_mat(90,1)],   # then rotate 90 clockwise around y
+    (2,-3,-1): [get_rotate_mat(270,2),get_rotate_mat(270,1)],   # then rotate 270 clockwise around y
 
     # start with -2 (rotate 90 clockwise around z from default)
-    (-2,1,3): [],   # 
-    (-2,-1,-3): [],   # then rotate 180 around y
-    (-2,3,-1): [],   # then rotate 90 clockwise around y
-    (-2,-3,1): [],   # then rotate 270 clockwise around y
+    (-2,1,3): [get_rotate_mat(90,2)],   # 
+    (-2,-1,-3): [get_rotate_mat(90,2),get_rotate_mat(180,1)],   # then rotate 180 around y
+    (-2,-3,1): [get_rotate_mat(90,2),get_rotate_mat(90,1)],   # then rotate 90 clockwise around y
+    (-2,3,-1): [get_rotate_mat(90,2),get_rotate_mat(270,1)],   # then rotate 270 clockwise around y
 
-    # start with 3 (rotate 90 clockwise around y from default)
-    (3,2,-1): [],   # 
-    (3,-2,1): [],   # then rotate 180 around z
-    (3,-1,-2): [],   # then rotate 90 clockwise around z
-    (3,1,2): [],   # then rotate 270 clockwise around z
+    # start with 3 (rotate 270 clockwise around y from default)
+    (3,2,-1): [get_rotate_mat(270,1)],   # 
+    (3,-2,1): [get_rotate_mat(270,1),get_rotate_mat(180,2)],   # then rotate 180 around z
+    (3,-1,-2): [get_rotate_mat(270,1),get_rotate_mat(90,2)],   # then rotate 90 clockwise around z
+    (3,1,2): [get_rotate_mat(270,1),get_rotate_mat(270,2)],   # then rotate 270 clockwise around z
 
-    # start with -3 (rotate 270 clockwise around y from default)
-    (-3,2,1): [],   # 
-    (-3,-2,-1): [],   # then rotate 180 around z
-    (-3,-1,2): [],   # then rotate 90 clockwise around z
-    (-3,1,-2): [],   # then rotate 270 clockwise around z
+    # start with -3 (rotate 90 clockwise around y from default)
+    (-3,2,1): [get_rotate_mat(90,1)],   # 
+    (-3,-2,-1): [get_rotate_mat(90,1),get_rotate_mat(180,2)],   # then rotate 180 around z
+    (-3,-1,2): [get_rotate_mat(90,1),get_rotate_mat(90,2)],   # then rotate 90 clockwise around z
+    (-3,1,-2): [get_rotate_mat(90,1),get_rotate_mat(270,2)],   # then rotate 270 clockwise around z
 }
 
+
 hashx = dict((tuple(v), ix) for ix, v in enumerate(theeight))
-x = np.dot(get_rotate([get_rotate_mat(270,2)]), theeight.T).T 
-x = np.round(x)[:-1]
-[hashx[tuple(v)] for v in x]
+aa_order = {}
+for k in aa:
+    x = np.dot(get_rotate(aa[k]), theeight.T).T 
+    x = np.round(x)[:-1]
+    aa_order[k] = [hashx[tuple(v)] for v in x]

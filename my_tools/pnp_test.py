@@ -35,8 +35,8 @@ def draw_cuboid_2d(img2, cuboid, color):
         cv2.line(img2, pt1, pt2, color)
 
 def get_data():
-    # im_file = "./datasets/FAT/data/mixed/temple_0/000295.right.jpg"
-    # # points indexed 3,4 are the front and back ones
+    im_file = "./datasets/FAT/data/mixed/temple_0/000295.right.jpg"
+    # points indexed 3,4 are the front and back ones
     # model_points = np.array([
     #     [-0.05080691, -0.041769,   -0.02880055],
     #     [-0.05080691,  0.04176 ,   -0.02880055],
@@ -46,7 +46,6 @@ def get_data():
     #     [ 0.0508229 ,  0.04176 ,   -0.02880055],
     #     [ 0.0508229 , -0.041769,    0.02880038],
     #     [ 0.0508229 ,  0.04176 ,    0.02880038],
-    #     [ 0,           0,           0         ] # add centroid
     # ])
     # image_points = np.array([
     #     [569, 299],
@@ -70,49 +69,49 @@ def get_data():
     # # ], dtype=np.float32)
     # cls = 9
 
-    # im_file = "./datasets/FAT/data/mixed/temple_0/001600.right.jpg"
-    # model_points = np.array([
-    #     [-0.10122322, -0.04362476, -0.00781424],
-    #     [-0.10122322,  0.04369109, -0.00781424],
-    #     [-0.10122322, -0.04362476,  0.00778602],
-    #     [-0.10122322,  0.04369109,  0.00778602],
-    #     [ 0.10129841, -0.04362476, -0.00781424],
-    #     [ 0.10129841,  0.04369109, -0.00781424],
-    #     [ 0.10129841, -0.04362476,  0.00778602],
-    #     [ 0.10129841,  0.04369109,  0.00778602],
-    # ])
-    # image_points = np.array([
-    #     [400, 457],
-    #     [452, 446],
-    #     [397, 445],
-    #     [449, 435],
-    #     [492, 414],
-    #     [547, 404],
-    #     [488, 401],
-    #     [543, 392],
-    # ], dtype=np.float32)
-    # cls = 17
-
-    im_file = "./datasets/FAT/data/mixed/temple_0/000127.left.jpg"
+    im_file = "./datasets/FAT/data/mixed/temple_0/001600.right.jpg"
     model_points = np.array([
-        [-0.081932, -0.106709, -0.035852],
-        [-0.081932,  0.106668, -0.035852],
-        [-0.081932, -0.106709,  0.035837],
-        [-0.081932,  0.106668,  0.035837],
-        [ 0.081727, -0.106709, -0.035852],
-        [ 0.081727,  0.106668, -0.035852],
-        [ 0.081727, -0.106709,  0.035837],
-        [ 0.081727,  0.106668,  0.035837]
+        [-0.10122322, -0.04362476, -0.00781424],
+        [-0.10122322,  0.04369109, -0.00781424],
+        [-0.10122322, -0.04362476,  0.00778602],
+        [-0.10122322,  0.04369109,  0.00778602],
+        [ 0.10129841, -0.04362476, -0.00781424],
+        [ 0.10129841,  0.04369109, -0.00781424],
+        [ 0.10129841, -0.04362476,  0.00778602],
+        [ 0.10129841,  0.04369109,  0.00778602],
     ])
-    image_points = [[471, 395],
-        [543, 477],
-        [471, 355],
-        [545, 432],
-        [369, 424],
-        [428, 517],
-        [366, 382],
-        [426, 470]]
-    cls = 2
+    image_points = np.array([
+        [400, 457],
+        [452, 446],
+        [397, 445],
+        [449, 435],
+        [492, 414],
+        [547, 404],
+        [488, 401],
+        [543, 392],
+    ], dtype=np.float32)
+    cls = 17
+
+    # im_file = "./datasets/FAT/data/mixed/temple_0/000127.left.jpg"
+    # model_points = np.array([
+    #     [-0.081932, -0.106709, -0.035852],
+    #     [-0.081932,  0.106668, -0.035852],
+    #     [-0.081932, -0.106709,  0.035837],
+    #     [-0.081932,  0.106668,  0.035837],
+    #     [ 0.081727, -0.106709, -0.035852],
+    #     [ 0.081727,  0.106668, -0.035852],
+    #     [ 0.081727, -0.106709,  0.035837],
+    #     [ 0.081727,  0.106668,  0.035837]
+    # ])
+    # image_points = [[471, 395],
+    #     [543, 477],
+    #     [471, 355],
+    #     [545, 432],
+    #     [369, 424],
+    #     [428, 517],
+    #     [366, 382],
+    #     [426, 470]]
+    # cls = 2
 
     # im_file = "./datasets/FAT/data/mixed/temple_0/001600.right.jpg"
     # model_points = [
@@ -212,7 +211,7 @@ if __name__ == '__main__':
 
     camera_matrix = intrinsics
 
-    print("Camera Matrix :\n %s"%(camera_matrix))
+    # print("Camera Matrix :\n %s"%(camera_matrix))
      
     dist_coeffs = np.zeros((4,1)) # Assuming no lens distortion
     pnp_algorithm = cv2.SOLVEPNP_ITERATIVE 
@@ -295,7 +294,9 @@ if __name__ == '__main__':
     #     cv2.line(im2, pt, tuple(thesix_points[(ix+1)%6]), (0,0,255))
 
     im2 = img.copy()
-    im2 = draw_axis_pose(im2, R2, translation_vector.squeeze(), camera_matrix, dist_coeffs)
+    draw_cuboid_2d(im2, theeight_points[:8], (255,0,0)) 
+    R_init = np.dot(R, get_rotate_mat(90,0))
+    im2 = draw_axis_pose(im2, R_init, translation_vector.squeeze(), camera_matrix, dist_coeffs)
 
     # Display image
     cv2.imshow("GT", im)
@@ -310,14 +311,14 @@ if __name__ == '__main__':
 
     open3d.draw_geometries([scene_cloud, object_cloud])
 
-
-    Rc = R.T
+    Rc = R_init.T
     R2c = R2.T
     angle_matrix = np.zeros((3,3), dtype=np.float32)
     for i in range(3):
         for j in range(3):
             angle_matrix[i,j] = get_vector_angle( Rc[i], R2c[j] )
     similarity_matrix = np.sin(angle_matrix)
+    print(similarity_matrix)
 
     best = np.argsort(similarity_matrix.flatten()) # small to large  (smaller means more similar)
     assigned = 0
@@ -339,49 +340,11 @@ if __name__ == '__main__':
             # axes[axes==0] = last_axis_sign * ((1+2+3) - np.abs(axes).sum())
             break
 
-    # Suppose axis 1,2,3 is x,y,z respectively (LHR)
-    aa = {
-        (1,2,3): [0,1,2,3,4,5,6,7], # default
-        (1,-2,-3): [3,2,1,0,7,6,5,4],  # rotated 180 around x
-        (1,3,-2): [1,3,0,2,5,7,4,6],  # rotated 90 clockwise around x
-        (1,-3,2): [2,0,3,1,6,4,7,5],   # rotated 270 clockwise around x
-
-        # start with -1 (rotate 180 around y from default)
-        (-1,2,-3): [6,7,4,5,2,3,0,1],   # 
-        (-1,-2,3): [5,4,7,6,1,0,3,2],   # then rotate 180 around x
-        (-1,3,2): [7,5,6,4,3,1,2,0],   # then rotate 90 clockwise around x
-        (-1,-3,-2): [4,6,5,7,0,2,1,3],   # then rotate 270 clockwise around x
-
-        # start with 2 (rotate 270 clockwise around z from default)
-        (2,-1,3): [1,5,3,7,0,4,2,6],   # 
-        (2,1,-3): [7,3,5,1,6,2,4,0],   # then rotate 180 around y
-        (2,3,1): [],   # then rotate 90 clockwise around y
-        (2,-3,-1): [],   # then rotate 270 clockwise around y
-
-        # start with -2 (rotate 90 clockwise around z from default)
-        (-2,1,3): [],   # 
-        (-2,-1,-3): [],   # then rotate 180 around y
-        (-2,3,-1): [],   # then rotate 90 clockwise around y
-        (-2,-3,1): [],   # then rotate 270 clockwise around y
-
-        # start with 3 (rotate 90 clockwise around y from default)
-        (3,2,-1): [],   # 
-        (3,-2,1): [],   # then rotate 180 around z
-        (3,-1,-2): [],   # then rotate 90 clockwise around z
-        (3,1,2): [],   # then rotate 270 clockwise around z
-
-        # start with -3 (rotate 270 clockwise around y from default)
-        (-3,2,1): [],   # 
-        (-3,-2,-1): [],   # then rotate 180 around z
-        (-3,-1,2): [],   # then rotate 90 clockwise around z
-        (-3,1,-2): [],   # then rotate 270 clockwise around z
-    }
-
     aa = {
         (1,2,3): [get_rotate_mat(0,0)], # default
         (1,-2,-3): [get_rotate_mat(180,0)],  # rotated 180 around x
-        (1,3,-2): [get_rotate_mat(90,0)],  # rotated 90 clockwise around x
-        (1,-3,2): [get_rotate_mat(270,0)],   # rotated 270 clockwise around x
+        (1,-3,2): [get_rotate_mat(90,0)],   # rotated 90 clockwise around x
+        (1,3,-2): [get_rotate_mat(270,0)],  # rotated 270 clockwise around x
 
         # start with -1 (rotate 180 around y from default)
         (-1,2,-3): [get_rotate_mat(180,1)],   # 
@@ -390,48 +353,54 @@ if __name__ == '__main__':
         (-1,-3,-2): [get_rotate_mat(180,1), get_rotate_mat(270,0)],   # then rotate 270 clockwise around x
 
         # start with 2 (rotate 270 clockwise around z from default)
-        (2,-1,3): [1,5,3,7,0,4,2,6],   # 
-        (2,1,-3): [7,3,5,1,6,2,4,0],   # then rotate 180 around y
-        (2,3,1): [],   # then rotate 90 clockwise around y
-        (2,-3,-1): [],   # then rotate 270 clockwise around y
+        (2,-1,3): [get_rotate_mat(270,2)],   # 
+        (2,1,-3): [get_rotate_mat(270,2),get_rotate_mat(180,1)],   # then rotate 180 around y
+        (2,3,1): [get_rotate_mat(270,2),get_rotate_mat(90,1)],   # then rotate 90 clockwise around y
+        (2,-3,-1): [get_rotate_mat(270,2),get_rotate_mat(270,1)],   # then rotate 270 clockwise around y
 
         # start with -2 (rotate 90 clockwise around z from default)
-        (-2,1,3): [],   # 
-        (-2,-1,-3): [],   # then rotate 180 around y
-        (-2,3,-1): [],   # then rotate 90 clockwise around y
-        (-2,-3,1): [],   # then rotate 270 clockwise around y
+        (-2,1,3): [get_rotate_mat(90,2)],   # 
+        (-2,-1,-3): [get_rotate_mat(90,2),get_rotate_mat(180,1)],   # then rotate 180 around y
+        (-2,-3,1): [get_rotate_mat(90,2),get_rotate_mat(90,1)],   # then rotate 90 clockwise around y
+        (-2,3,-1): [get_rotate_mat(90,2),get_rotate_mat(270,1)],   # then rotate 270 clockwise around y
 
-        # start with 3 (rotate 90 clockwise around y from default)
-        (3,2,-1): [],   # 
-        (3,-2,1): [],   # then rotate 180 around z
-        (3,-1,-2): [],   # then rotate 90 clockwise around z
-        (3,1,2): [],   # then rotate 270 clockwise around z
+        # start with 3 (rotate 270 clockwise around y from default)
+        (3,2,-1): [get_rotate_mat(270,1)],   # 
+        (3,-2,1): [get_rotate_mat(270,1),get_rotate_mat(180,2)],   # then rotate 180 around z
+        (3,-1,-2): [get_rotate_mat(270,1),get_rotate_mat(90,2)],   # then rotate 90 clockwise around z
+        (3,1,2): [get_rotate_mat(270,1),get_rotate_mat(270,2)],   # then rotate 270 clockwise around z
 
-        # start with -3 (rotate 270 clockwise around y from default)
-        (-3,2,1): [],   # 
-        (-3,-2,-1): [],   # then rotate 180 around z
-        (-3,-1,2): [],   # then rotate 90 clockwise around z
-        (-3,1,-2): [],   # then rotate 270 clockwise around z
+        # start with -3 (rotate 90 clockwise around y from default)
+        (-3,2,1): [get_rotate_mat(90,1)],   # 
+        (-3,-2,-1): [get_rotate_mat(90,1),get_rotate_mat(180,2)],   # then rotate 180 around z
+        (-3,-1,2): [get_rotate_mat(90,1),get_rotate_mat(90,2)],   # then rotate 90 clockwise around z
+        (-3,1,-2): [get_rotate_mat(90,1),get_rotate_mat(270,2)],   # then rotate 270 clockwise around z
     }
 
-    m = np.zeros(im.shape, dtype=np.uint8)
-    R45 = get_rotate([get_rotate_mat(45,0), get_rotate_mat(30,1)])
-    imgpts, _ = cv2.projectPoints(theeight * 0.1, R45, np.array([0,0,1.0]), camera_matrix, dist_coeffs)
-    # for ix, pt in enumerate(imgpts.squeeze()):
-    #     pt = tuple(pt)
-    #     cv2.circle(m, pt, 4, (0,0,255), -1)
-    #     cv2.putText(m, "%d"%(ix), pt, cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,0,255))
-    draw_cuboid_2d(m, imgpts.squeeze()[:-1], (255,0,0))
-    cv2.imshow("m", m)
-    # cv2.waitKey(0)
 
-    m = np.zeros(im.shape, dtype=np.uint8)
-    imgpts, _ = cv2.projectPoints(theeight * 0.1, get_rotate([get_rotate_mat(180,0)], R45), np.array([0,0,1.0]), camera_matrix, dist_coeffs)
-    draw_cuboid_2d(m, imgpts.squeeze()[:-1], (0,0,255))
-    # for ix, pt in enumerate(imgpts.squeeze()):
-    #     pt = tuple(pt)
-    #     cv2.circle(m, pt, 4, (0,0,255), -1)
-    #     cv2.putText(m, "%d"%(ix), pt, cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,0,255))
+    hashx = dict((tuple(v), ix) for ix, v in enumerate(theeight))
+    aa_order = {}
+    for k in aa:
+        x = np.dot(get_rotate(aa[k]), theeight.T).T 
+        x = np.round(x)#[:-1]
+        aa_order[k] = [hashx[tuple(v)] for v in x]
 
-    cv2.imshow("m2", m)
+    valid_axes = np.where(axes!=0)[0]
+    ax = axes[valid_axes]
+    for k in aa:
+        if k[valid_axes[0]] == ax[0]:
+            if k[valid_axes[1]] == ax[1]:
+                axes2 = k
+                break
+    print(axes2, aa_order[axes2])
+
+    final_ordering = aa_order[axes2]
+    s,rvec3,t = cv2.solvePnP(model_points, image_points[final_ordering], camera_matrix, dist_coeffs)
+    R3, j = cv2.Rodrigues(rvec3)
+    im3 = img.copy()
+    draw_cuboid_2d(im3, image_points[final_ordering][:-1], (255,0,0)) 
+    im3 = draw_axis_pose(im3, R3, translation_vector.squeeze(), camera_matrix, dist_coeffs)
+
+    # Display image
+    cv2.imshow("P2", im3)
     cv2.waitKey(0)
