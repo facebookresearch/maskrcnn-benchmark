@@ -18,8 +18,8 @@ def get_vector_angle(v1, v2):
     return np.arctan2(sinang, cosang)
 
 def draw_cuboid_2d(img2, cuboid, color):
-    assert len(cuboid) == 8
-    points = [tuple(pt) for pt in cuboid]
+    assert len(cuboid) >= 8
+    points = [tuple(pt) for pt in cuboid[:8]]
     for ix in range(len(points)):
         pt = points[ix]
         cv2.putText(img2, "%d"%(ix), pt, cv2.FONT_HERSHEY_COMPLEX, 0.5, color)
@@ -171,7 +171,8 @@ def get_data():
          [-0.04868058,  0.81629056,  0.26626855],
          [ 0.3662843 ,  0.54237545, -0.7064773 ]])
 
-    # image_points = np.array(image_points)[[0, 4, 1, 5, 2, 6, 3, 7]]
+    # ordering = [3, 7, 2, 6, 1, 5, 0, 4] #[6, 2, 7, 3, 4, 0, 5, 1] #[7, 5, 6, 4, 3, 1, 2, 0]
+    image_points = np.array(image_points)#[ordering]
 
     model_points = np.vstack((model_points, [0,0,0]))
     center = np.mean(image_points, axis=0)
@@ -194,171 +195,8 @@ def get_rotate(R_array, init_R=np.identity(3)):
         RR = np.dot(R, RR)
     return RR
 
-
-if __name__ == '__main__':
-
-    points_file = "./datasets/FAT/points_all_orig.npy"
-    points = np.load(points_file)
-
-    # Read Image
-    model_points, image_points, im_file, cls, pred_R = get_data()
-    depth_file = im_file.replace(".jpg",".depth.png")
-
-
-    intrinsics = np.array([[768.1605834960938, 0.0, 480.0], [0.0, 768.1605834960938, 270.0], [0.0, 0.0, 1.0]])
-    factor_depth=10000
-
-    img = cv2.imread(im_file)
-    # img = np.zeros((800,800,3), dtype=np.uint8) #cv2.imread("headPose.jpg")
-    H,W,_ = img.shape
-
-    # load depth and cloud
-    depth = cv2.imread(depth_file, cv2.IMREAD_UNCHANGED)
-
-    rgb = img.copy()[:,:,::-1]
-    if rgb.dtype == np.uint8:
-        rgb = rgb.astype(np.float32) / 255
-    X = backproject_camera(depth, intrinsics, factor_depth)
-    scene_cloud = create_cloud(X.T, colors=rgb.reshape((H*W,3)))
-
-    ordering = np.array([0,1,2,3,4,5,6,7,8])
-    # ordering = np.array([6,7,4,5,2,3,0,1,8])  # rotate 180 by one axis
-    # ordering = np.array([4,5,0,1,6,7,2,3,8])  # rotate 90 by one axis
-    # ordering = np.array([3,2,1,0,7,6,5,4,8])  # rotate 180 by other axis
-    # ordering = np.array([5,4,7,6,1,0,3,2,8])  # rotate 180 by other axis
-
-    image_points = image_points[ordering]
-
-    camera_matrix = intrinsics
-
-    # print("Camera Matrix :\n %s"%(camera_matrix))
-     
-    dist_coeffs = np.zeros((4,1)) # Assuming no lens distortion
-    pnp_algorithm = cv2.SOLVEPNP_ITERATIVE 
-    success, rotation_vector, translation_vector = cv2.solvePnP(model_points, image_points, camera_matrix, dist_coeffs, flags=pnp_algorithm)
-    # success, rotation_vector, translation_vector, inliers = cv2.solvePnPRansac(model_points, image_points, camera_matrix, dist_coeffs, flags=pnp_algorithm)#, iterationsCount=1000)
-     
-    # print("Rotation Vector:\n %s"%(rotation_vector))
-    # print("Translation Vector:\n %s"%(translation_vector))
-
-    R, j = cv2.Rodrigues(rotation_vector)
-    im = img.copy()
-    im = draw_axis_pose(im, R, translation_vector.squeeze(), camera_matrix, dist_coeffs)
-     
-    draw_cuboid_2d(im, image_points[:8], (255,0,0)) 
-    cv2.circle(im, tuple(image_points[-1]), 4, (0,0,255), -1)
-
-    # AAA
-    theeight = np.array([
-        [1,1,1],  # top right, back
-        [1,-1,1],  # bottom right, back
-        [1,1,-1],  # top right, front
-        [1,-1,-1],  # bottom right, front
-        
-        [-1,1,1],  # top left, back
-        [-1,-1,1],  # bottom left, back
-        [-1,1,-1],  # top left, front
-        [-1,-1,-1],  # bottom left, front
-
-        [0,0,0]  # centroid
-    ], dtype=np.float32)
-    theeight_ordering = np.array([0,1,2,3,4,5,6,7,8])
-    theeight_points = image_points[theeight_ordering] 
-    side_mapping = [[0,4],[0,1],[0,2]] # x (left-right), y (bottom-top), z (front-back)
-    sides = np.zeros((3), dtype=np.float32)
-    for ix,m in enumerate(side_mapping):
-        dist = np.linalg.norm(theeight_points[m[0]] - theeight_points[m[1]]) 
-        sides[ix] = dist / 2
-    theeight_model_points = theeight * sides
-    s,rvec2,t = cv2.solvePnP(theeight_model_points, theeight_points, camera_matrix, dist_coeffs)
-    R2, j = cv2.Rodrigues(rvec2)
-
-    # thesix = np.array([
-    #     [1,1,1],  # top right
-    #     [1,-1,1],  # mid right
-    #     [1,-1,-1],  # bottom right
-    #     [-1,-1,-1],  # bottom left
-    #     [-1,1,-1],  # mid left
-    #     [-1,1,1],  # top left
-    #     [0,0,0]  # centroid
-    # ], dtype=np.float32)
-    # thesix_ordering = np.array([0,2,6,7,5,1,8])
-    # # thesix_ordering = np.array([0,2,6,7,5,1,8])
-    # thesix_points = image_points[thesix_ordering] 
-
-    # sides = np.zeros((3), dtype=np.float32)
-    # for ix,o in enumerate(thesix_ordering[1:4]):
-    #     p1i = thesix_ordering[ix]
-    #     p2i = thesix_ordering[ix+1]
-    #     dist = np.linalg.norm(image_points[p1i] - image_points[p2i]) 
-    #     sides[ix] = dist / 2
-    # sides = sides[[2,0,1]]
-    # thesix_model_points = thesix * sides
-    # # thesix_points = image_points[thesix_ordering]
-    # s,rvec2,t = cv2.solvePnP(thesix_model_points, thesix_points, camera_matrix, dist_coeffs)
-    # R2, j = cv2.Rodrigues(rvec2)
-    # """
-    # red direction: 2,3
-    # blue direction: 3,4,5
-    # green direction: 1,2,3
-
-    # Need to change to:
-    # red direction: 1,2,3
-    # blue direction: 2,3
-    # green direction: 3,4,5
-    # """
-    # for ix, pt in enumerate(thesix_points[:-1]):
-    #     pt = tuple(pt)
-    #     cv2.circle(im2, pt, 4, (0,255,0), -1)
-    #     cv2.putText(im2, "%d"%(ix), pt, cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,0,255)) 
-    #     cv2.line(im2, pt, tuple(thesix_points[(ix+1)%6]), (0,0,255))
-
-    im2 = img.copy()
-    draw_cuboid_2d(im2, theeight_points[:8], (255,0,0)) 
-    R_init = pred_R #np.dot(R, get_rotate_mat(90,0))
-    im2 = draw_axis_pose(im2, R_init, translation_vector.squeeze(), camera_matrix, dist_coeffs)
-
-    # Display image
-    cv2.imshow("GT", im)
-    cv2.imshow("P", im2)
-    cv2.waitKey(0)
-
-    object_points = points[cls]
-    M = np.identity(4)
-    M[:3,:3] = R
-    M[:3,-1] = translation_vector.squeeze()
-    object_cloud = create_cloud(object_points, T=M)
-
-    open3d.draw_geometries([scene_cloud, object_cloud])
-
-    Rc = R_init.T
-    R2c = R2.T
-    angle_matrix = np.zeros((3,3), dtype=np.float32)
-    for i in range(3):
-        for j in range(3):
-            angle_matrix[i,j] = get_vector_angle( Rc[i], R2c[j] )
-    similarity_matrix = np.sin(angle_matrix)
-    print(similarity_matrix)
-
-    best = np.argsort(similarity_matrix.flatten()) # small to large  (smaller means more similar)
-    assigned = 0
-    axes = np.zeros((3), dtype=np.int32)
-    last_axis_sign = 1
-    for ix,b in enumerate(best):
-        i = b // 3 
-        j = b % 3
-        # check if 
-        if axes[i] != 0:
-            continue
-        # get the sign (+/-) of cosine similarity
-        cos_similarity = np.cos(angle_matrix[i,j])
-        sign = np.sign(cos_similarity)
-        axes[i] = sign * (j+1)
-        # last_axis_sign *= sign
-        assigned += 1
-        if assigned == 2: # np.sum(axes != 0) >= 2: # only need to know direction of 2 axes to know the third
-            break
-
+def get_cube_rotation_codes(unit_cube):
+    assert len(unit_cube) >= 8
     aa = {
         (1,2,3): [get_rotate_mat(0,0)], # default
         (1,-2,-3): [get_rotate_mat(180,0)],  # rotated 180 around x
@@ -397,56 +235,174 @@ if __name__ == '__main__':
     }
 
 
-    hashx = dict((tuple(v), ix) for ix, v in enumerate(theeight))
+    hashx = dict((tuple(v), ix) for ix, v in enumerate(unit_cube))
     aa_order = {}
     for k in aa:
-        x = np.dot(get_rotate(aa[k]), theeight.T).T 
-        x = np.round(x)[:-1]
+        x = np.dot(get_rotate(aa[k]), unit_cube.T).T 
+        x = np.round(x)#[:-1]
         aa_order[k] = [hashx[tuple(v)] for v in x]
 
-    OLD = True
-    if not OLD:
-        newkeys = []
-        for k in aa_order:
-            k2 = np.array(k)
-            ix = np.where(np.abs(k2) == 2)[0][0]
-            k2[ix] *= -1
-            v = aa_order[k]
-            v2 = []
-            for i in range(len(v) // 2):
-                v2 += [v[i*2+1], v[i*2]]
-            newkeys.append([tuple(k2), v2])
+    return aa_order
 
-        for d in newkeys:
-            k, v = d
-            aa_order[k] = v
+if __name__ == '__main__':
 
-        last_axis = (1+2+3) - np.abs(axes).sum()
-        i = np.where(axes==0)[0][0]
-        cos_similarity = np.cos(angle_matrix[i,last_axis - 1])
-        sign = np.sign(cos_similarity)            
-        axes[i] = sign * last_axis
-    else:
-        valid_axes = np.where(axes!=0)[0]
-        ax = axes[valid_axes]
-        for k in aa:
-            if k[valid_axes[0]] == ax[0]:
-                if k[valid_axes[1]] == ax[1]:
-                    axes = k
-                    break
+    points_file = "./datasets/FAT/points_all_orig.npy"
+    points = np.load(points_file)
 
-    axes2 = tuple(axes)
-    print(axes2, aa_order[axes2])
+    # Read Image
+    model_points, image_points, im_file, cls, pred_R = get_data()
 
-    final_ordering = aa_order[axes2]
-    final_ordering += [-1]
+    intrinsics = np.array([[768.1605834960938, 0.0, 480.0], [0.0, 768.1605834960938, 270.0], [0.0, 0.0, 1.0]])
+    camera_matrix = intrinsics
+    factor_depth=10000
+
+    img = cv2.imread(im_file)
+    # img = np.zeros((800,800,3), dtype=np.uint8) #cv2.imread("headPose.jpg")
+    H,W,_ = img.shape
+     
+    dist_coeffs = np.zeros((4,1)) # Assuming no lens distortion
+    pnp_algorithm = cv2.SOLVEPNP_ITERATIVE 
+    success, rotation_vector, translation_vector = cv2.solvePnP(model_points, image_points, camera_matrix, dist_coeffs, flags=pnp_algorithm)
+    tvec = translation_vector.squeeze()
+    # success, rotation_vector, translation_vector, inliers = cv2.solvePnPRansac(model_points, image_points, camera_matrix, dist_coeffs, flags=pnp_algorithm)#, iterationsCount=1000)
+
+    R, j = cv2.Rodrigues(rotation_vector)
+    im = img.copy()
+    im = draw_axis_pose(im, R, tvec, camera_matrix, dist_coeffs)
+     
+    draw_cuboid_2d(im, image_points, (255,0,0)) 
+    cv2.circle(im, tuple(image_points[-1]), 4, (0,0,255), -1)
+
+    # unit cube
+    unit_cube = np.array([
+        [1,1,1],  # top right, back
+        [1,-1,1],  # bottom right, back
+        [1,1,-1],  # top right, front
+        [1,-1,-1],  # bottom right, front
+        
+        [-1,1,1],  # top left, back
+        [-1,-1,1],  # bottom left, back
+        [-1,1,-1],  # top left, front
+        [-1,-1,-1],  # bottom left, front
+
+        [0,0,0]  # centroid
+    ], dtype=np.float32)
+    # unit_cube_ordering = np.array([0,1,2,3,4,5,6,7,8])
+    # unit_cube_points = image_points#[unit_cube_ordering] 
+    side_mapping = [[0,4],[0,1],[0,2]] # x (left-right), y (bottom-top), z (front-back)
+    sides = np.zeros((3), dtype=np.float32)
+    for ix,m in enumerate(side_mapping):
+        dist = np.linalg.norm(image_points[m[0]] - image_points[m[1]]) 
+        sides[ix] = dist / 2
+    unit_cube_model_points = unit_cube * sides
+    s,rvec2,t = cv2.solvePnP(unit_cube_model_points, image_points, camera_matrix, dist_coeffs)
+    R2, j = cv2.Rodrigues(rvec2)
+
+    im2 = img.copy()
+    draw_cuboid_2d(im2, image_points, (255,0,0)) 
+    im2 = draw_axis_pose(im2, pred_R, tvec, camera_matrix, dist_coeffs)
+
+    # Display image
+    cv2.imshow("GT", im)
+    cv2.imshow("P", im2)
+    cv2.waitKey(0)
+
+    def get_cuboid_ordering(raw_R, pred_R, rotation_codes):
+        Rc = pred_R.T
+        R2c = raw_R.T
+        angle_matrix = np.zeros((3,3), dtype=np.float32)
+        for i in range(3):
+            for j in range(3):
+                angle_matrix[i,j] = get_vector_angle( Rc[i], R2c[j] )
+        similarity_matrix = np.sin(angle_matrix)
+        print(similarity_matrix)
+
+        best = np.argsort(similarity_matrix.flatten()) # small to large  (smaller means more similar)
+        assigned = 0
+        axes = np.zeros((3), dtype=np.int32)
+        last_axis_sign = 1
+        for ix,b in enumerate(best):
+            i = b // 3 
+            j = b % 3
+            # check if 
+            if axes[i] != 0:
+                continue
+            # get the sign (+/-) of cosine similarity
+            cos_similarity = np.cos(angle_matrix[i,j])
+            sign = np.sign(cos_similarity)
+            axes[i] = sign * (j+1)
+            # last_axis_sign *= sign
+            assigned += 1
+            if assigned == 2: # only need to know direction of 2 axes to know the third
+                break
+
+        OLD = True
+        if not OLD:
+            newkeys = []
+            for k in rotation_codes:
+                k2 = np.array(k)
+                ix = np.where(np.abs(k2) == 2)[0][0]
+                k2[ix] *= -1
+                v = rotation_codes[k]
+                v2 = []
+                for i in range(len(v) // 2):
+                    v2 += [v[i*2+1], v[i*2]]
+                if len(v) % 2 == 1:
+                    v2 += [v[-1]]
+                newkeys.append([tuple(k2), v2])
+
+            for d in newkeys:
+                k, v = d
+                rotation_codes[k] = v
+
+            last_axis = (1+2+3) - np.abs(axes).sum()
+            i = np.where(axes==0)[0][0]
+            cos_similarity = np.cos(angle_matrix[i,last_axis - 1])
+            sign = np.sign(cos_similarity)            
+            axes[i] = sign * last_axis
+        else:
+            valid_axes = np.where(axes!=0)[0]
+            ax = axes[valid_axes]
+            for k in rotation_codes:
+                if k[valid_axes[0]] == ax[0]:
+                    if k[valid_axes[1]] == ax[1]:
+                        axes = k
+                        break
+
+        axes = tuple(axes)
+        print(axes, rotation_codes[axes])
+
+        final_ordering = rotation_codes[axes]
+        return final_ordering
+
+    rotation_codes = get_cube_rotation_codes(unit_cube)
+    final_ordering = get_cuboid_ordering(R2, pred_R, rotation_codes)
+    # final_ordering += [-1]
     final_image_points = image_points[final_ordering]
     s,rvec3,t = cv2.solvePnP(model_points, final_image_points, camera_matrix, dist_coeffs)
     R3, j = cv2.Rodrigues(rvec3)
     im3 = img.copy()
-    draw_cuboid_2d(im3, final_image_points[:-1], (255,0,0)) 
-    im3 = draw_axis_pose(im3, R3, translation_vector.squeeze(), camera_matrix, dist_coeffs)
+    draw_cuboid_2d(im3, final_image_points, (255,0,0)) 
+    im3 = draw_axis_pose(im3, R3, tvec, camera_matrix, dist_coeffs)
 
     # Display image
     cv2.imshow("P2", im3)
     cv2.waitKey(0)
+
+    # # load depth and cloud
+    # depth_file = im_file.replace(".jpg",".depth.png")
+    # depth = cv2.imread(depth_file, cv2.IMREAD_UNCHANGED)
+
+    # rgb = img.copy()[:,:,::-1]
+    # if rgb.dtype == np.uint8:
+    #     rgb = rgb.astype(np.float32) / 255
+    # X = backproject_camera(depth, intrinsics, factor_depth)
+    # scene_cloud = create_cloud(X.T, colors=rgb.reshape((H*W,3)))
+
+    # object_points = points[cls]
+    # M = np.identity(4)
+    # M[:3,:3] = R3
+    # M[:3,-1] = tvec
+    # object_cloud = create_cloud(object_points, T=M)
+
+    # open3d.draw_geometries([scene_cloud, object_cloud])
