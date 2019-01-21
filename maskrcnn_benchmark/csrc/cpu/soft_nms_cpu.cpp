@@ -63,9 +63,7 @@ at::Tensor soft_nms_cpu_kernel(const at::Tensor& dets,
         suppressed[j] = 1;
    }
   }
-
-  auto keep_idx = at::nonzero(suppressed_t == 0).squeeze(1);
-  return std::get<1>(scores[keep_idx].sort(0, /* descending=*/true));
+  return at::nonzero(suppressed_t == 0).squeeze(1);
 }
 
 at::Tensor soft_nms_cpu(const at::Tensor& dets,
