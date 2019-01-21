@@ -75,6 +75,7 @@ _C.DATALOADER.SIZE_DIVISIBILITY = 0
 # are not batched with portrait images.
 _C.DATALOADER.ASPECT_RATIO_GROUPING = True
 
+
 # ---------------------------------------------------------------------------- #
 # Backbone options
 # ---------------------------------------------------------------------------- #
@@ -89,6 +90,28 @@ _C.MODEL.BACKBONE.CONV_BODY = "R-50-C4"
 # Add StopGrad at a specified stage so the bottom layers are frozen
 _C.MODEL.BACKBONE.FREEZE_CONV_BODY_AT = 2
 _C.MODEL.BACKBONE.OUT_CHANNELS = 256 * 4
+# GN for backbone
+_C.MODEL.BACKBONE.USE_GN = False
+
+
+# ---------------------------------------------------------------------------- #
+# FPN options
+# ---------------------------------------------------------------------------- #
+_C.MODEL.FPN = CN()
+_C.MODEL.FPN.USE_GN = False
+_C.MODEL.FPN.USE_RELU = False
+
+
+# ---------------------------------------------------------------------------- #
+# Group Norm options
+# ---------------------------------------------------------------------------- #
+_C.MODEL.GROUP_NORM = CN()
+# Number of dimensions per group in GroupNorm (-1 if using NUM_GROUPS)
+_C.MODEL.GROUP_NORM.DIM_PER_GP = -1
+# Number of groups in GroupNorm (-1 if using DIM_PER_GP)
+_C.MODEL.GROUP_NORM.NUM_GROUPS = 32
+# GroupNorm's small constant in the denominator
+_C.MODEL.GROUP_NORM.EPSILON = 1e-5
 
 
 # ---------------------------------------------------------------------------- #
@@ -182,6 +205,12 @@ _C.MODEL.ROI_BOX_HEAD.POOLER_SCALES = (1.0 / 16,)
 _C.MODEL.ROI_BOX_HEAD.NUM_CLASSES = 81
 # Hidden layer dimension when using an MLP for the RoI box head
 _C.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM = 1024
+# GN
+_C.MODEL.ROI_BOX_HEAD.USE_GN = False
+# Dilation
+_C.MODEL.ROI_BOX_HEAD.DILATION = 1
+_C.MODEL.ROI_BOX_HEAD.CONV_HEAD_DIM = 256
+_C.MODEL.ROI_BOX_HEAD.NUM_STACKED_CONVS = 4
 
 
 _C.MODEL.ROI_MASK_HEAD = CN()
@@ -197,6 +226,10 @@ _C.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR = True
 # Whether or not resize and translate masks to the input image.
 _C.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS = False
 _C.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS_THRESHOLD = 0.5
+# Dilation
+_C.MODEL.ROI_MASK_HEAD.DILATION = 1
+# GN
+_C.MODEL.ROI_MASK_HEAD.USE_GN = False
 
 # ---------------------------------------------------------------------------- #
 # ResNe[X]t options (ResNets = {ResNet, ResNeXt}
