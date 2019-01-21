@@ -9,8 +9,8 @@
 
 at::Tensor soft_nms(const at::Tensor& dets,
                     at::Tensor& scores,
-                    const float threshold = 0.0001,
-                    const float sigma = 0.5) {
+                    const float threshold,
+                    const float sigma) {
 
   if (dets.type().is_cuda()) {
 #ifdef WITH_CUDA
