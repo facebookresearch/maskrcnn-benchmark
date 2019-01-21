@@ -18,7 +18,7 @@ class GeneralizedRCNN(nn.Module):
     Main class for Generalized R-CNN. Currently supports boxes and masks.
     It consists of three main parts:
     - backbone
-    = rpn
+    - rpn
     - heads: takes the features + the proposals from the RPN and computes
         detections / masks from it.
     """
