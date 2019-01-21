@@ -4,7 +4,7 @@
 
 template <typename scalar_t>
 at::Tensor soft_nms_cpu_kernel(const at::Tensor& dets,
-                                   at::Tensor& scores,
+                               at::Tensor& scores,
                                const float threshold,
                                const float sigma) {
   AT_ASSERTM(!dets.type().is_cuda(), "dets must be a CPU tensor");
