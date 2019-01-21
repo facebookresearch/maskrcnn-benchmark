@@ -4,5 +4,5 @@ from maskrcnn_benchmark import _C
 
 soft_nms = _C.soft_nms
 
-# nms.__doc__ = """
-# This function performs Non-maximum suppresion"""
+# soft_nms.__doc__ = """
+# This function performs Soft Non-maximum suppresion (https://arxiv.org/abs/1704.04503)"""
