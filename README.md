@@ -217,6 +217,14 @@ note = {Accessed: [Insert date here]}
 }
 ```
 
+## Projects using maskrcnn-benchmark
+
+- [RetinaMask: Learning to predict masks improves state-of-the-art single-shot detection for free](https://arxiv.org/abs/1901.03353). 
+  Cheng-Yang Fu, Mykhailo Shvets, and Alexander C. Berg.
+  Tech report, arXiv,1901.03353.
+
+
+
 ## License
 
 maskrcnn-benchmark is released under the MIT license. See [LICENSE](LICENSE) for additional details.
