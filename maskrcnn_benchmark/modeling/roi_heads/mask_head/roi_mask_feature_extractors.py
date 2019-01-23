@@ -5,6 +5,8 @@ from torch.nn import functional as F
 from ..box_head.roi_box_feature_extractors import ResNet50Conv5ROIFeatureExtractor
 from maskrcnn_benchmark.modeling.poolers import Pooler
 from maskrcnn_benchmark.layers import Conv2d
+from maskrcnn_benchmark.modeling.make_layers import make_conv3x3
+
 
 
 class MaskRCNNFPNFeatureExtractor(nn.Module):
@@ -32,17 +34,17 @@ class MaskRCNNFPNFeatureExtractor(nn.Module):
         input_size = cfg.MODEL.BACKBONE.OUT_CHANNELS
         self.pooler = pooler
 
+        use_gn = cfg.MODEL.ROI_MASK_HEAD.USE_GN
         layers = cfg.MODEL.ROI_MASK_HEAD.CONV_LAYERS
+        dilation = cfg.MODEL.ROI_MASK_HEAD.DILATION
 
         next_feature = input_size
         self.blocks = []
         for layer_idx, layer_features in enumerate(layers, 1):
             layer_name = "mask_fcn{}".format(layer_idx)
-            module = Conv2d(next_feature, layer_features, 3, stride=1, padding=1)
-            # Caffe2 implementation uses MSRAFill, which in fact
-            # corresponds to kaiming_normal_ in PyTorch
-            nn.init.kaiming_normal_(module.weight, mode="fan_out", nonlinearity="relu")
-            nn.init.constant_(module.bias, 0)
+            module = make_conv3x3(next_feature, layer_features, 
+                dilation=dilation, stride=1, use_gn=use_gn
+            )
             self.add_module(layer_name, module)
             next_feature = layer_features
             self.blocks.append(layer_name)

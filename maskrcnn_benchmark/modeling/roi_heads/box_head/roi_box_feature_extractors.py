@@ -1,10 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+import torch
 from torch import nn
 from torch.nn import functional as F
 
 from maskrcnn_benchmark.modeling import registry
 from maskrcnn_benchmark.modeling.backbone import resnet
 from maskrcnn_benchmark.modeling.poolers import Pooler
+from maskrcnn_benchmark.modeling.make_layers import group_norm
+from maskrcnn_benchmark.modeling.make_layers import make_fc
 
 
 @registry.ROI_BOX_FEATURE_EXTRACTORS.register("ResNet50Conv5ROIFeatureExtractor")
@@ -60,15 +63,10 @@ class FPN2MLPFeatureExtractor(nn.Module):
         )
         input_size = cfg.MODEL.BACKBONE.OUT_CHANNELS * resolution ** 2
         representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
+        use_gn = cfg.MODEL.ROI_BOX_HEAD.USE_GN
         self.pooler = pooler
-        self.fc6 = nn.Linear(input_size, representation_size)
-        self.fc7 = nn.Linear(representation_size, representation_size)
-
-        for l in [self.fc6, self.fc7]:
-            # Caffe2 implementation uses XavierFill, which in fact
-            # corresponds to kaiming_uniform_ in PyTorch
-            nn.init.kaiming_uniform_(l.weight, a=1)
-            nn.init.constant_(l.bias, 0)
+        self.fc6 = make_fc(input_size, representation_size, use_gn)
+        self.fc7 = make_fc(representation_size, representation_size, use_gn)
 
     def forward(self, x, proposals):
         x = self.pooler(x, proposals)
@@ -77,6 +75,69 @@ class FPN2MLPFeatureExtractor(nn.Module):
         x = F.relu(self.fc6(x))
         x = F.relu(self.fc7(x))
 
+        return x
+
+
+@registry.ROI_BOX_FEATURE_EXTRACTORS.register("FPNXconv1fcFeatureExtractor")
+class FPNXconv1fcFeatureExtractor(nn.Module):
+    """
+    Heads for FPN for classification
+    """
+
+    def __init__(self, cfg):
+        super(FPNXconv1fcFeatureExtractor, self).__init__()
+
+        resolution = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
+        scales = cfg.MODEL.ROI_BOX_HEAD.POOLER_SCALES
+        sampling_ratio = cfg.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
+        pooler = Pooler(
+            output_size=(resolution, resolution),
+            scales=scales,
+            sampling_ratio=sampling_ratio,
+        )
+        self.pooler = pooler
+        
+        use_gn = cfg.MODEL.ROI_BOX_HEAD.USE_GN
+        in_channels = cfg.MODEL.BACKBONE.OUT_CHANNELS
+        conv_head_dim = cfg.MODEL.ROI_BOX_HEAD.CONV_HEAD_DIM
+        num_stacked_convs = cfg.MODEL.ROI_BOX_HEAD.NUM_STACKED_CONVS
+        dilation = cfg.MODEL.ROI_BOX_HEAD.DILATION
+
+        xconvs = []
+        for ix in range(num_stacked_convs):
+            xconvs.append(
+                nn.Conv2d(
+                    in_channels,
+                    conv_head_dim,
+                    kernel_size=3,
+                    stride=1,
+                    padding=dilation,
+                    dilation=dilation,
+                    bias=False if use_gn else True
+                )
+            )
+            in_channels = conv_head_dim
+            if use_gn:
+                xconvs.append(group_norm(in_channels))
+            xconvs.append(nn.ReLU(inplace=True))
+
+        self.add_module("xconvs", nn.Sequential(*xconvs))
+        for modules in [self.xconvs,]:
+            for l in modules.modules():
+                if isinstance(l, nn.Conv2d):
+                    torch.nn.init.normal_(l.weight, std=0.01)
+                    if not use_gn:
+                        torch.nn.init.constant_(l.bias, 0)
+
+        input_size = conv_head_dim * resolution ** 2
+        representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
+        self.fc6 = make_fc(input_size, representation_size, use_gn)
+
+    def forward(self, x, proposals):
+        x = self.pooler(x, proposals)
+        x = self.xconvs(x)
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc6(x))
         return x
 
 
