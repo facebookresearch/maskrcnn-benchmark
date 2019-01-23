@@ -16,8 +16,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from conv_depth import FATDataLoader, FT, conv_transpose2d_by_factor, get_random_color, create_cloud#, backproject_camera,
-from conv_test import ConvNet, get_4x4_transform, average_point_distance_metric
+from conv_test import ConvNet, get_4x4_transform, average_point_distance_metric, draw_cuboid_2d, draw_axis_pose
 from conv_pose import render_object_pose
+from pnp_test import get_cube_rotation_codes, order_4corner_points, get_cuboid_ordering
 
 CHANNELS = 9
 STRIDE = 8
@@ -69,45 +70,6 @@ def get_cuboid_from_min_max(min_pt, max_pt):
     #      [4,5],[4,6],[5,7],[6,7],
     #      [0,4],[1,5],[2,6],[3,7]]
 
-
-def draw_cuboid_2d(img2, cuboid, color):
-    assert len(cuboid) == 8
-    points = [tuple(pt) for pt in cuboid]
-    for ix in range(len(points)):
-        pt = points[ix]
-        cv2.putText(img2, "%d"%(ix), pt, cv2.FONT_HERSHEY_COMPLEX, 0.4, color)
-        cv2.circle(img2, pt, 2, (0,255,0), -1)
-
-    lines = [[0,1],[0,2],[1,3],[2,3],
-         [4,5],[4,6],[5,7],[6,7],
-         [0,4],[1,5],[2,6],[3,7]]
-
-    for line in lines:
-        pt1 = points[line[0]]
-        pt2 = points[line[1]]
-        cv2.line(img2, pt1, pt2, color)
-
-def draw_axis_pose(img, rvec, centroid, intrinsic_matrix, dist_coeffs=np.zeros((4,1))):
-    """
-    rvec: (3,3) rotation matrix
-    centroid: (3) vector
-    intrinsic_matrix: (3,3) matrix
-    """
-    # draw 3 axis pose
-    # from https://github.com/jerryhouuu/Face-Yaw-Roll-Pitch-from-Pose-Estimation-using-OpenCV/blob/master/pose_estimation.py
-
-    axis_vectors = rvec.T
-    avec = axis_vectors * 0.1  # convert from metres (100cm) to 10 cm
-    points = np.vstack((avec, centroid))
-    imgpts, _ = cv2.projectPoints(points, np.identity(3), centroid, intrinsic_matrix, dist_coeffs)
-    imgpts = np.round(imgpts).astype(np.int32)
-
-    im_copy2 = img.copy()
-    center_pt = tuple(imgpts[-1].ravel())
-    cv2.line(im_copy2, center_pt, tuple(imgpts[0].ravel()), (255, 0, 0), 3)  # BLUE
-    cv2.line(im_copy2, center_pt, tuple(imgpts[1].ravel()), (0, 255, 0), 3)  # GREEN
-    cv2.line(im_copy2, center_pt, tuple(imgpts[2].ravel()), (0, 0, 255), 3)  # RED
-    return im_copy2
 
 class FATDataLoader3(FATDataLoader):
     def __init__(self, root_dir, ann_file, use_scaled_depth=False, shuffle=True):
@@ -284,6 +246,23 @@ def test(model, dg, batch_sz = 8, visualize=True):
     image_tensor, labels_tensor, mask_tensor, depth_tensor, vert_field_tensor = \
             dg.convert_data_batch_to_tensor(data, use_cuda=True)
 
+    # unit cube
+    unit_cube = np.array([
+        [1,1,1],  # top right, back
+        [1,-1,1],  # bottom right, back
+        [1,1,-1],  # top right, front
+        [1,-1,-1],  # bottom right, front
+        
+        [-1,1,1],  # top left, back
+        [-1,-1,1],  # bottom left, back
+        [-1,1,-1],  # top left, front
+        [-1,-1,-1],  # bottom left, front
+
+        # [0,0,0]  # centroid
+    ], dtype=np.float32)
+    rotation_codes = get_cube_rotation_codes(unit_cube)
+    rotation_code_values = list(rotation_codes.values())
+
     preds = model(image_tensor)
     preds = torch.tanh(preds)
     preds = preds.detach().cpu().numpy()
@@ -341,11 +320,54 @@ def test(model, dg, batch_sz = 8, visualize=True):
         img_copy = img.copy()
         draw_cuboid_2d(img_copy, cuboid_2d, (255,0,0))
 
+        print(cuboid)
+        print(cuboid_2d)
+        print(pred_R)
+
         im_copy2 = draw_axis_pose(img_copy, pred_R, centroid, intrinsic_matrix)
         im_copy3 = draw_axis_pose(img_copy, gt_R, centroid, intrinsic_matrix)
 
         cv2.imshow("pred_poses", im_copy2)
         cv2.imshow("gt_poses", im_copy3)
+        cv2.waitKey(0)
+
+        # ADD ROTATION CODES HERE
+        image_points = cuboid_2d.astype(np.float32)
+
+        # order the 2d cuboid points from tr to bl. 
+        opts, opts_idx = order_4corner_points(image_points[:4])  # returns [tl,tr,br,bl]
+        ordering = opts_idx[[1,2,0,3]] # tr, br, tl, bl
+        # then select matching rotation code, for consistent ordering
+        for c in rotation_code_values:
+            if (ordering == c[:4]).all() or (ordering == c[4:8]).all():
+                ordering = c
+                break
+        print(ordering)
+        image_points = image_points[ordering]
+
+        # get dimensions i.e. length of all 3 sides of the 2d cuboid
+        side_mapping = [[0,4],[0,1],[0,2]] # x (left-right), y (bottom-top), z (front-back)
+        sides = np.zeros((3), dtype=np.float32)
+        for ix,m in enumerate(side_mapping):
+            dist = np.linalg.norm(image_points[m[0]] - image_points[m[1]]) 
+            sides[ix] = dist / 2
+        unit_cube_model_points = unit_cube * sides
+
+        # run pnp on the 2d cuboid dimensions to get the initial rotation vector 
+        s,rvec2,t = cv2.solvePnP(unit_cube_model_points, image_points, intrinsic_matrix, dist_coeffs)
+        R2, j = cv2.Rodrigues(rvec2)
+
+        final_ordering = get_cuboid_ordering(R2, pred_R, rotation_codes)
+        final_image_points = image_points[final_ordering]
+        s,rvec3,t = cv2.solvePnP(cuboid, final_image_points, intrinsic_matrix, dist_coeffs)
+        tvec = t.squeeze()
+        R3, j = cv2.Rodrigues(rvec3)
+        im3 = img.copy()
+        draw_cuboid_2d(im3, final_image_points, (255,0,0)) 
+        im3 = draw_axis_pose(im3, R3, tvec, intrinsic_matrix, dist_coeffs)
+
+        # Display image
+        cv2.imshow("pred_poses_refined", im3)
         cv2.waitKey(0)
 
         # load depth
@@ -359,7 +381,8 @@ def test(model, dg, batch_sz = 8, visualize=True):
         # add translation to quaternion
         centroid = meta['centroid']
         final_pose = np.zeros(7, dtype=np.float32)
-        M = pred_R # gt_R
+        pred_R_refined = R3
+        M = pred_R_refined # gt_R
 
         # for i in range(3):
         #     sym = axis_symmetry[i]

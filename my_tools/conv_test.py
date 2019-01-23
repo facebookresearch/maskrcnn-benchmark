@@ -229,6 +229,46 @@ class DataGenerator():
             tmgt = tmgt.cuda()
         return tm, tmgt
 
+def draw_cuboid_2d(img2, cuboid, color):
+    assert len(cuboid) == 8
+    points = [tuple(pt) for pt in cuboid]
+    for ix in range(len(points)):
+        pt = points[ix]
+        cv2.putText(img2, "%d"%(ix), pt, cv2.FONT_HERSHEY_COMPLEX, 0.4, color)
+        cv2.circle(img2, pt, 2, (0,255,0), -1)
+
+    lines = [[0,1],[0,2],[1,3],[2,3],
+         [4,5],[4,6],[5,7],[6,7],
+         [0,4],[1,5],[2,6],[3,7]]
+
+    for line in lines:
+        pt1 = points[line[0]]
+        pt2 = points[line[1]]
+        cv2.line(img2, pt1, pt2, color)
+
+def draw_axis_pose(img, rvec, centroid, intrinsic_matrix, dist_coeffs=np.zeros((4,1))):
+    """
+    rvec: (3,3) rotation matrix
+    centroid: (3) vector
+    intrinsic_matrix: (3,3) matrix
+    """
+    # draw 3 axis pose
+    # from https://github.com/jerryhouuu/Face-Yaw-Roll-Pitch-from-Pose-Estimation-using-OpenCV/blob/master/pose_estimation.py
+
+    axis_vectors = rvec.T
+    avec = axis_vectors * 0.1  # convert from metres (100cm) to 10 cm
+    points = np.vstack((avec, centroid))
+    imgpts, _ = cv2.projectPoints(points, np.identity(3), centroid, intrinsic_matrix, dist_coeffs)
+    imgpts = np.round(imgpts).astype(np.int32)
+
+    im_copy2 = img.copy()
+    center_pt = tuple(imgpts[-1].ravel())
+    cv2.line(im_copy2, center_pt, tuple(imgpts[0].ravel()), (255, 0, 0), 3)  # BLUE
+    cv2.line(im_copy2, center_pt, tuple(imgpts[1].ravel()), (0, 255, 0), 3)  # GREEN
+    cv2.line(im_copy2, center_pt, tuple(imgpts[2].ravel()), (0, 0, 255), 3)  # RED
+    return im_copy2
+
+
 def get_4x4_transform(pose):
     object_pose_matrix4f = np.identity(4)
     object_pose = np.array(pose)
