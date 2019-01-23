@@ -244,6 +244,10 @@ class Bottleneck(nn.Module):
                 ),
                 norm_func(out_channels),
             )
+            for modules in [self.downsample,]:
+                for l in modules.modules():
+                    if isinstance(l, Conv2d):
+                        nn.init.kaiming_uniform_(l.weight, a=1)
 
         if dilation > 1:
             stride = 1 # reset to be 1
@@ -280,6 +284,9 @@ class Bottleneck(nn.Module):
         )
         self.bn3 = norm_func(out_channels)
 
+        for l in [self.conv1, self.conv2, self.conv3,]:
+            nn.init.kaiming_uniform_(l.weight, a=1)
+
     def forward(self, x):
         identity = x
 
@@ -313,6 +320,9 @@ class BaseStem(nn.Module):
             3, out_channels, kernel_size=7, stride=2, padding=3, bias=False
         )
         self.bn1 = norm_func(out_channels)
+
+        for l in [self.conv1,]:
+            nn.init.kaiming_uniform_(l.weight, a=1)
 
     def forward(self, x):
         x = self.conv1(x)
