@@ -83,9 +83,18 @@ ln -s /path_to_coco_dataset/annotations datasets/coco/annotations
 ln -s /path_to_coco_dataset/train2014 datasets/coco/train2014
 ln -s /path_to_coco_dataset/test2014 datasets/coco/test2014
 ln -s /path_to_coco_dataset/val2014 datasets/coco/val2014
+# or use COCO 2017 version
+ln -s /path_to_coco_dataset/annotations datasets/coco/annotations
+ln -s /path_to_coco_dataset/train2017 datasets/coco/train2017
+ln -s /path_to_coco_dataset/test2017 datasets/coco/test2017
+ln -s /path_to_coco_dataset/val2017 datasets/coco/val2017
+
 # for pascal voc dataset:
 ln -s /path_to_VOCdevkit_dir datasets/voc
 ```
+
+P.S. `COCO_2017_train` = `COCO_2014_train` + `valminusminival` , `COCO_2017_val` = `minival`
+      
 
 You can also configure your own paths to the datasets.
 For that, all you need to do is to modify `maskrcnn_benchmark/config/paths_catalog.py` to
@@ -216,6 +225,14 @@ howpublished = {\url{https://github.com/facebookresearch/maskrcnn-benchmark}},
 note = {Accessed: [Insert date here]}
 }
 ```
+
+## Projects using maskrcnn-benchmark
+
+- [RetinaMask: Learning to predict masks improves state-of-the-art single-shot detection for free](https://arxiv.org/abs/1901.03353). 
+  Cheng-Yang Fu, Mykhailo Shvets, and Alexander C. Berg.
+  Tech report, arXiv,1901.03353.
+
+
 
 ## License
 
