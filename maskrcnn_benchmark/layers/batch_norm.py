@@ -18,7 +18,7 @@ class FrozenBatchNorm2d(nn.Module):
         self.register_buffer("running_var", torch.ones(n))
 
     def forward(self, x):
-        if not self.training:
+        if torch._C._get_tracing_state():
             return F.batch_norm(
                 x,
                 self.running_mean,
