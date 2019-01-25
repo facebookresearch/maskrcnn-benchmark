@@ -15,4 +15,6 @@ from .sigmoid_focal_loss import SigmoidFocalLoss
 
 __all__ = ["nms", "roi_align", "ROIAlign", "roi_pool", "ROIPool",
            "smooth_l1_loss", "Conv2d", "ConvTranspose2d", "interpolate",
-           "FrozenBatchNorm2d", "SigmoidFocalLoss"]
+           "FrozenBatchNorm2d", "SigmoidFocalLoss"
+          ]
+
