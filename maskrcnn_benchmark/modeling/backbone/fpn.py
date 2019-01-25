@@ -67,7 +67,11 @@ class FPN(nn.Module):
             last_inner = inner_lateral + inner_top_down
             results.insert(0, getattr(self, layer_block)(last_inner))
 
-        if self.top_blocks is not None:
+        # if self.top_blocks is not None:
+        if isinstance(self.top_blocks, LastLevelP6P7):
+            last_results = self.top_blocks(x[-1], results[-1])
+            results.extend(last_results)
+        elif isinstance(self.top_blocks, LastLevelMaxPool):
             last_results = self.top_blocks(results[-1])
             results.extend(last_results)
 
@@ -83,15 +87,17 @@ class LastLevelP6P7(nn.Module):
     """
     This module is used in RetinaNet to generate extra layers, P6 and P7.
     """
-    def __init__(self, out_channels):
+    def __init__(self, in_channels, out_channels):
         super(LastLevelP6P7, self).__init__()
-        self.p6 = nn.Conv2d(out_channels, out_channels, 3, 2, 1)
+        self.p6 = nn.Conv2d(in_channels, out_channels, 3, 2, 1)
         self.p7 = nn.Conv2d(out_channels, out_channels, 3, 2, 1)
         for module in [self.p6, self.p7]:
             nn.init.kaiming_uniform_(module.weight, a=1)
             nn.init.constant_(module.bias, 0)
+        self.use_P5 = in_channels == out_channels
 
-    def forward(self, x):
+    def forward(self, c5, p5):
+        x = p5 if self.use_P5 else c5
         p6 = self.p6(x)
         p7 = self.p7(F.relu(p6))
         return [p6, p7]

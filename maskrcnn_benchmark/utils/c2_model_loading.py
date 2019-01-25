@@ -143,6 +143,7 @@ C2_FORMAT_LOADER = Registry()
 @C2_FORMAT_LOADER.register("R-50-FPN")
 @C2_FORMAT_LOADER.register("R-101-FPN")
 @C2_FORMAT_LOADER.register("R-50-FPN-RETINANET")
+@C2_FORMAT_LOADER.register("R-101-FPN-RETINANET")
 def load_resnet_c2_format(cfg, f):
     state_dict = _load_c2_pickled_weights(f)
     conv_body = cfg.MODEL.BACKBONE.CONV_BODY

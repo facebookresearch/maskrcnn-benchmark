@@ -243,6 +243,9 @@ _C.MODEL.RETINANET.STRADDLE_THRESH = 0
 _C.MODEL.RETINANET.OCTAVE = 2.0
 _C.MODEL.RETINANET.SCALES_PER_OCTAVE = 3
 
+# Use C5 or P5 to generate P6
+_C.MODEL.RETINANET.USE_C5 = True
+
 # Convolutions to use in the cls and bbox tower
 # NOTE: this doesn't include the last conv for logits
 _C.MODEL.RETINANET.NUM_CONVS = 4
