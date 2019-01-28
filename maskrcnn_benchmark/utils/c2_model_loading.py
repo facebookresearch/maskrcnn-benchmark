@@ -163,6 +163,7 @@ def load_resnet_c2_format(cfg, f):
     state_dict = _load_c2_pickled_weights(f)
     conv_body = cfg.MODEL.BACKBONE.CONV_BODY
     arch = conv_body.replace("-C4", "").replace("-C5", "").replace("-FPN", "")
+    arch = arch.replace("-RETINANET", "")
     stages = _C2_STAGE_NAMES[arch]
     state_dict = _rename_weights_for_resnet(state_dict, stages)
     return dict(model=state_dict)
