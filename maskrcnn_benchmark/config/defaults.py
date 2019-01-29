@@ -298,11 +298,11 @@ _C.MODEL.RETINANET.PRE_NMS_TOP_N = 1000
 
 # IoU overlap ratio for labeling an anchor as positive
 # Anchors with >= iou overlap are labeled positive
-_C.MODEL.RETINANET.POSITIVE_OVERLAP = 0.5
+_C.MODEL.RETINANET.FG_IOU_THRESHOLD = 0.5
 
 # IoU overlap ratio for labeling an anchor as negative
 # Anchors with < iou overlap are labeled negative
-_C.MODEL.RETINANET.NEGATIVE_OVERLAP = 0.4
+_C.MODEL.RETINANET.BG_IOU_THRESHOLD = 0.4
 
 # Focal loss parameter: alpha
 _C.MODEL.RETINANET.LOSS_ALPHA = 0.25

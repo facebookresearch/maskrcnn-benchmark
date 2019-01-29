@@ -27,6 +27,8 @@ MODEL:
   RETINANET:
     SCALES_PER_OCTAVE: 3
     STRADDLE_THRESH: -1
+    FG_IOU_THRESHOLD: 0.5
+    BG_IOU_THRESHOLD: 0.4
 DATASETS:
   TRAIN: ("coco_2014_minival",)
   TEST: ("coco_2014_minival",)

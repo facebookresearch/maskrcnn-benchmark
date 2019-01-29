@@ -13,15 +13,18 @@ from maskrcnn_benchmark.modeling.matcher import Matcher
 from maskrcnn_benchmark.modeling.utils import cat
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
+from maskrcnn_benchmark.modeling.rpn.loss import RPNLossComputation
 
-
-class RetinaNetLossComputation(object):
+class RetinaNetLossComputation(RPNLossComputation):
     """
     This class computes the RetinaNet loss.
     """
 
     # TODO see if we can remove the cfg
-    def __init__(self, cfg, proposal_matcher, box_coder):
+    def __init__(self, proposal_matcher, box_coder,
+                 generate_labels_func,
+                 sigmoid_focal_loss,
+                 bbox_reg_beta=0.11):
         """
         Arguments:
             proposal_matcher (Matcher)
@@ -29,67 +32,12 @@ class RetinaNetLossComputation(object):
         """
         self.proposal_matcher = proposal_matcher
         self.box_coder = box_coder
-        # TODO infer num_classes at runtime and use
-        # the functional interface
-        self.num_classes = cfg.MODEL.RETINANET.NUM_CLASSES - 1
-        self.box_cls_loss_func = SigmoidFocalLoss(
-            # self.num_classes,
-            cfg.MODEL.RETINANET.LOSS_GAMMA,
-            cfg.MODEL.RETINANET.LOSS_ALPHA
-        )
-        self.bbox_reg_weight = cfg.MODEL.RETINANET.BBOX_REG_WEIGHT
-        self.bbox_reg_beta = cfg.MODEL.RETINANET.BBOX_REG_BETA
+        self.box_cls_loss_func = sigmoid_focal_loss
+        self.bbox_reg_beta = bbox_reg_beta
+        self.copied_fields = ['labels']
+        self.generate_labels_func = generate_labels_func
+        self.discard_cases = ['between_thresholds']
 
-    # TODO exactly equal to FastRCNNLossComputation
-    # make base class?
-    def match_targets_to_anchors(self, anchor, target):
-        match_quality_matrix = boxlist_iou(target, anchor)
-        matched_idxs = self.proposal_matcher(match_quality_matrix)
-        target = target.copy_with_fields(['labels'])
-        # get the targets corresponding GT for each anchor
-        # NB: need to clamp the indices because we can have a single
-        # GT in the image, and matched_idxs can be -2, which goes
-        # out of bounds
-        matched_targets = target[matched_idxs.clamp(min=0)]
-        matched_targets.add_field("matched_idxs", matched_idxs)
-        return matched_targets
-
-    # TODO exactly equal to FastRCNNLossComputation
-    # make base class?
-    def prepare_targets(self, anchors, targets):
-        labels = []
-        regression_targets = []
-        for anchors_per_image, targets_per_image in zip(anchors, targets):
-            matched_targets = self.match_targets_to_anchors(
-                anchors_per_image, targets_per_image
-            )
-
-            matched_idxs = matched_targets.get_field("matched_idxs")
-            # TODO don't need the clone
-            labels_per_image = matched_targets.get_field("labels").clone()
-
-            # Background (negative examples)
-            bg_indices = matched_idxs == Matcher.BELOW_LOW_THRESHOLD
-            labels_per_image[bg_indices] = 0
-
-            # discard indices that are between thresholds 
-            # -1 will be ignored in SigmoidFocalLoss
-            inds_to_discard = matched_idxs == Matcher.BETWEEN_THRESHOLDS
-            labels_per_image[inds_to_discard] = -1
-
-            labels_per_image = labels_per_image.to(dtype=torch.float32)
-            # compute regression targets
-            regression_targets_per_image = self.box_coder.encode(
-                matched_targets.bbox, anchors_per_image.bbox
-            )
-
-            labels.append(labels_per_image)
-            regression_targets.append(regression_targets_per_image)
-
-        return labels, regression_targets
-
-    # TODO there is similarities with RPNLossComputation and
-    # FastRCNNLossComputation. Can we reduce code duplication?
     def __call__(self, anchors, box_cls, box_regression, targets):
         """
         Arguments:
@@ -105,33 +53,9 @@ class RetinaNetLossComputation(object):
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]
         labels, regression_targets = self.prepare_targets(anchors, targets)
 
-        box_cls_flattened = []
-        box_regression_flattened = []
-        # for each feature level, permute the outputs to make them be in the
-        # same format as the labels. Note that the labels are computed for
-        # all feature levels concatenated, so we keep the same representation
-        # for the box_cls and the box_regression
-        # TODO can we make some helper functions
-        for box_cls_per_level, box_regression_per_level in zip(
-            box_cls, box_regression
-        ):
-            N, AxC, H, W = box_cls_per_level.shape
-            Ax4 = box_regression_per_level.shape[1]
-            A = Ax4 // 4
-            C = AxC // A
-            box_cls_per_level = box_cls_per_level.view(N, -1, C, H, W)
-            box_cls_per_level = box_cls_per_level.permute(0, 3, 4, 1, 2)
-            box_cls_per_level = box_cls_per_level.reshape(N, -1, C)
-            box_regression_per_level = box_regression_per_level.view(N, -1, 4, H, W)
-            box_regression_per_level = box_regression_per_level.permute(0, 3, 4, 1, 2)
-            box_regression_per_level = box_regression_per_level.reshape(N, -1, 4)
-            box_cls_flattened.append(box_cls_per_level)
-            box_regression_flattened.append(box_regression_per_level)
-        # concatenate on the first dimension (representing the feature levels), to
-        # take into account the way the labels were generated (with all feature maps
-        # being concatenated as well)
-        box_cls = cat(box_cls_flattened, dim=1).reshape(-1, C)
-        box_regression = cat(box_regression_flattened, dim=1).reshape(-1, 4)
+        NUMBER_PREDICTION_LAYERS = len(box_cls)
+        box_cls, box_regression = \
+                self.concat_flattened_box_layers(box_cls, box_regression)
 
         labels = torch.cat(labels, dim=0)
         regression_targets = torch.cat(regression_targets, dim=0)
@@ -142,26 +66,39 @@ class RetinaNetLossComputation(object):
             regression_targets[pos_inds],
             beta=self.bbox_reg_beta,
             size_average=False,
-        ) / (pos_inds.numel() * 4) * self.bbox_reg_weight
+        ) / (pos_inds.numel() * 4)
 
         labels = labels.int()
 
         retinanet_cls_loss = self.box_cls_loss_func(
             box_cls,
             labels
-        ) / (pos_inds.numel() + N)  # TODO why the N?
+        ) / (pos_inds.numel() + NUMBER_PREDICTION_LAYERS)
 
         return retinanet_cls_loss, retinanet_regression_loss
 
 
+def generate_retinanet_labels(matched_targets):
+    labels_per_image = matched_targets.get_field("labels")
+    return labels_per_image
+
+
 def make_retinanet_loss_evaluator(cfg, box_coder):
     matcher = Matcher(
-        cfg.MODEL.RPN.FG_IOU_THRESHOLD,
-        cfg.MODEL.RPN.BG_IOU_THRESHOLD,
+        cfg.MODEL.RETINANET.FG_IOU_THRESHOLD,
+        cfg.MODEL.RETINANET.BG_IOU_THRESHOLD,
         allow_low_quality_matches=True,
+    )
+    sigmoid_focal_loss = SigmoidFocalLoss(
+        cfg.MODEL.RETINANET.LOSS_GAMMA,
+        cfg.MODEL.RETINANET.LOSS_ALPHA
     )
 
     loss_evaluator = RetinaNetLossComputation(
-        cfg, matcher, box_coder
+        matcher,
+        box_coder,
+        generate_retinanet_labels,
+        sigmoid_focal_loss,
+        bbox_reg_beta = cfg.MODEL.RETINANET.BBOX_REG_BETA,
     )
     return loss_evaluator
