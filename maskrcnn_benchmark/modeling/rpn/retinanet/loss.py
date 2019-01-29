@@ -20,7 +20,6 @@ class RetinaNetLossComputation(RPNLossComputation):
     This class computes the RetinaNet loss.
     """
 
-    # TODO see if we can remove the cfg
     def __init__(self, proposal_matcher, box_coder,
                  generate_labels_func,
                  sigmoid_focal_loss,
