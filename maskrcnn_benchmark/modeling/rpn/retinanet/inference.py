@@ -21,6 +21,7 @@ class RetinaNetPostProcessor(torch.nn.Module):
         nms_thresh,
         fpn_post_nms_top_n,
         min_size,
+        num_classes,
         box_coder=None,
     ):
         """
@@ -38,6 +39,7 @@ class RetinaNetPostProcessor(torch.nn.Module):
         self.nms_thresh = nms_thresh
         self.fpn_post_nms_top_n = fpn_post_nms_top_n
         self.min_size = min_size
+        self.num_classes = num_classes
 
         if box_coder is None:
             box_coder = BoxCoder(weights=(10., 10., 5., 5.))
@@ -151,8 +153,7 @@ class RetinaNetPostProcessor(torch.nn.Module):
             boxlist = boxlists[i]
             result = []
             # skip the background
-            # TODO remove hardcoded 81
-            for j in range(1, 81):
+            for j in range(1, self.num_classes):
                 inds = (labels == j).nonzero().view(-1)
 
                 scores_j = scores[inds]
@@ -200,7 +201,9 @@ def make_retinanet_postprocessor(config, rpn_box_coder, is_train):
         pre_nms_top_n=pre_nms_top_n,
         nms_thresh=nms_thresh,
         fpn_post_nms_top_n=fpn_post_nms_top_n,
+        min_size=min_size,
+        num_classes=config.MODEL.RETINANET.NUM_CLASSES
         box_coder=rpn_box_coder,
-        min_size=min_size
     )
+
     return box_selector

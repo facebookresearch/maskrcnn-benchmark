@@ -266,7 +266,7 @@ _C.MODEL.RESNETS.STEM_OUT_CHANNELS = 64
 # ---------------------------------------------------------------------------- #
 _C.MODEL.RETINANET = CN()
 
-# This is the number of foreground classes, background is not included.
+# This is the number of foreground classes and background.
 _C.MODEL.RETINANET.NUM_CLASSES = 81
 
 # Anchor aspect ratios to use
