@@ -6,6 +6,7 @@ file
 import torch
 from torch.nn import functional as F
 
+from ..utils import concat_box_prediction_layers
 
 from maskrcnn_benchmark.layers import smooth_l1_loss
 from maskrcnn_benchmark.layers import SigmoidFocalLoss
@@ -54,7 +55,7 @@ class RetinaNetLossComputation(RPNLossComputation):
 
         NUMBER_PREDICTION_LAYERS = len(box_cls)
         box_cls, box_regression = \
-                self.concat_flattened_box_layers(box_cls, box_regression)
+                concat_box_prediction_layers(box_cls, box_regression)
 
         labels = torch.cat(labels, dim=0)
         regression_targets = torch.cat(regression_targets, dim=0)

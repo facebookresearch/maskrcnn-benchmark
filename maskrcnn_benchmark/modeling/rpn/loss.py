@@ -7,6 +7,8 @@ file
 import torch
 from torch.nn import functional as F
 
+from .utils import concat_box_prediction_layers
+
 from ..balanced_positive_negative_sampler import BalancedPositiveNegativeSampler
 from ..utils import cat
 
@@ -86,37 +88,6 @@ class RPNLossComputation(object):
 
         return labels, regression_targets
 
-    def concat_flattened_box_layers(self, box_cls, box_regression):
-
-        box_cls_flattened = []
-        box_regression_flattened = []
-        # for each feature level, permute the outputs to make them be in the
-        # same format as the labels. Note that the labels are computed for
-        # all feature levels concatenated, so we keep the same representation
-        # for the objectness and the box_regression
-        for box_cls_per_level, box_regression_per_level in zip(
-            box_cls, box_regression
-        ):
-            N, AxC, H, W = box_cls_per_level.shape
-            Ax4 = box_regression_per_level.shape[1]
-            A = Ax4 // 4
-            C = AxC // A
-            box_cls_per_level = box_cls_per_level.view(N, -1, C, H, W)
-            box_cls_per_level = box_cls_per_level.permute(0, 3, 4, 1, 2)
-            box_cls_per_level = box_cls_per_level.reshape(N, -1, C)
-            box_cls_flattened.append(box_cls_per_level)
-
-            box_regression_per_level = box_regression_per_level.view(N, -1, 4, H, W)
-            box_regression_per_level = box_regression_per_level.permute(0, 3, 4, 1, 2)
-            box_regression_per_level = box_regression_per_level.reshape(N, -1, 4)
-            box_regression_flattened.append(box_regression_per_level)
-        # concatenate on the first dimension (representing the feature levels), to
-        # take into account the way the labels were generated (with all feature maps
-        # being concatenated as well)
-        box_cls = cat(box_cls_flattened, dim=1).reshape(-1, C)
-        box_regression = cat(box_regression_flattened, dim=1).reshape(-1, 4)
-        return box_cls, box_regression
-
 
     def __call__(self, anchors, objectness, box_regression, targets):
         """
@@ -139,7 +110,8 @@ class RPNLossComputation(object):
         sampled_inds = torch.cat([sampled_pos_inds, sampled_neg_inds], dim=0)
 
         objectness, box_regression = \
-                self.concat_flattened_box_layers(objectness, box_regression)
+                concat_box_prediction_layers(objectness, box_regression)
+
         objectness = objectness.squeeze()
 
         labels = torch.cat(labels, dim=0)

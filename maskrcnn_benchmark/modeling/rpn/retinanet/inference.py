@@ -1,5 +1,8 @@
 import torch
 
+from ..inference import RPNPostProcessor
+from ..utils import permute_and_flatten
+
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 from maskrcnn_benchmark.modeling.utils import cat
 from maskrcnn_benchmark.structures.bounding_box import BoxList
@@ -8,8 +11,8 @@ from maskrcnn_benchmark.structures.boxlist_ops import boxlist_nms
 from maskrcnn_benchmark.structures.boxlist_ops import remove_small_boxes
 
 
-
-class RetinaNetPostProcessor(torch.nn.Module):
+class RetinaNetPostProcessor(RPNPostProcessor):
+#class RetinaNetPostProcessor(torch.nn.Module):
     """
     Performs post-processing on the outputs of the RetinaNet boxes.
     This is only used in the testing.
@@ -31,9 +34,12 @@ class RetinaNetPostProcessor(torch.nn.Module):
             nms_thresh (float)
             fpn_post_nms_top_n (int)
             min_size (int)
+            num_classes (int)
             box_coder (BoxCoder)
         """
-        super(RetinaNetPostProcessor, self).__init__()
+        super(RetinaNetPostProcessor, self).__init__(
+            pre_nms_thresh, 0, nms_thresh, min_size
+        )
         self.pre_nms_thresh = pre_nms_thresh
         self.pre_nms_top_n = pre_nms_top_n
         self.nms_thresh = nms_thresh
@@ -44,9 +50,15 @@ class RetinaNetPostProcessor(torch.nn.Module):
         if box_coder is None:
             box_coder = BoxCoder(weights=(10., 10., 5., 5.))
         self.box_coder = box_coder
+ 
+    def add_gt_proposals(self, proposals, targets):
+        """
+        This function is not used in RetinaNet
+        """
+        pass
 
     def forward_for_single_feature_map(
-            self, anchors, box_cls, box_regression, pre_nms_thresh=0.05):
+            self, anchors, box_cls, box_regression):
         """
         Arguments:
             anchors: list[BoxList]
@@ -59,18 +71,15 @@ class RetinaNetPostProcessor(torch.nn.Module):
         C = box_cls.size(1) // A
 
         # put in the same format as anchors
-        box_cls = box_cls.view(N, -1, C, H, W).permute(0, 3, 4, 1, 2)
-        box_cls = box_cls.reshape(N, -1, C)
+        box_cls = permute_and_flatten(box_cls, N, A, C, H, W)
         box_cls = box_cls.sigmoid()
 
-        box_regression = box_regression.view(N, -1, 4, H, W)
-        box_regression = box_regression.permute(0, 3, 4, 1, 2)
+        box_regression = permute_and_flatten(box_regression, N, A, 4, H, W)
         box_regression = box_regression.reshape(N, -1, 4)
 
         num_anchors = A * H * W
 
-        # results = [[] for _ in range(N)]
-        candidate_inds = box_cls > pre_nms_thresh
+        candidate_inds = box_cls > self.pre_nms_thresh
 
         pre_nms_top_n = candidate_inds.view(N, -1).sum(1)
         pre_nms_top_n = pre_nms_top_n.clamp(max=self.pre_nms_top_n)
@@ -114,6 +123,7 @@ class RetinaNetPostProcessor(torch.nn.Module):
         return results
 
     # TODO almost exactly the same as RPNPostProcessor
+    '''
     def forward(self, anchors, box_cls, box_regression, targets=None):
         """
         Arguments:
@@ -131,7 +141,7 @@ class RetinaNetPostProcessor(torch.nn.Module):
         for l, (a, o, b) in enumerate(zip(anchors, box_cls, box_regression)):
             sampled_boxes.append(
                 self.forward_for_single_feature_map(
-                    a, o, b, self.pre_nms_thresh
+                    a, o, b
                 )
             )
 
@@ -140,6 +150,7 @@ class RetinaNetPostProcessor(torch.nn.Module):
         boxlists = self.select_over_all_levels(boxlists)
 
         return boxlists
+    '''
 
     # TODO very similar to filter_results from PostProcessor
     # but filter_results is per image
@@ -202,7 +213,7 @@ def make_retinanet_postprocessor(config, rpn_box_coder, is_train):
         nms_thresh=nms_thresh,
         fpn_post_nms_top_n=fpn_post_nms_top_n,
         min_size=min_size,
-        num_classes=config.MODEL.RETINANET.NUM_CLASSES
+        num_classes=config.MODEL.RETINANET.NUM_CLASSES,
         box_coder=rpn_box_coder,
     )
 
