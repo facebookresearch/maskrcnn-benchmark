@@ -22,6 +22,21 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
                 if len(self.coco.getAnnIds(imgIds=img_id, iscrowd=None)) > 0
             ]
 
+            ids_to_remove = []
+            for img_id in self.ids:
+                ann_ids = self.coco.getAnnIds(imgIds=img_id)
+                anno = self.coco.loadAnns(ann_ids)
+                if all(
+                    any(o <= 1 for o in obj["bbox"][2:])
+                    for obj in anno
+                    if obj["iscrowd"] == 0
+                ):
+                    ids_to_remove.append(img_id)
+
+            self.ids = [
+                img_id for img_id in self.ids if img_id not in ids_to_remove
+            ]
+
         self.json_category_id_to_contiguous_id = {
             v: i + 1 for i, v in enumerate(self.coco.getCatIds())
         }
