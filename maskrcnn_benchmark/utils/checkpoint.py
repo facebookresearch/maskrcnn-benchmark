@@ -42,6 +42,8 @@ class Checkpointer(object):
             data["optimizer"] = self.optimizer.state_dict()
         if self.scheduler is not None:
             data["scheduler"] = self.scheduler.state_dict()
+        if self.classes is not None:
+            data["classes"] = self.classes
         data.update(kwargs)
 
         save_file = os.path.join(self.save_dir, "{}.pth".format(name))
@@ -66,6 +68,8 @@ class Checkpointer(object):
         if "scheduler" in checkpoint and self.scheduler:
             self.logger.info("Loading scheduler from {}".format(f))
             self.scheduler.load_state_dict(checkpoint.pop("scheduler"))
+        if "classes" in checkpoint:
+            self.classes = checkpoint.pop("classes")
 
         # return any further checkpoint data
         return checkpoint
