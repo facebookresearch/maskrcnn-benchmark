@@ -3,10 +3,11 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from maskrcnn_benchmark.modeling.box_coder import BoxCoder
+from .inference import  make_retinanet_postprocessor
 from .loss import make_retinanet_loss_evaluator
 from ..anchor_generator import make_anchor_generator_retinanet
-from .inference import  make_retinanet_postprocessor
+
+from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 
 
 class RetinaNetHead(torch.nn.Module):
@@ -87,8 +88,8 @@ class RetinaNetHead(torch.nn.Module):
 
 class RetinaNetModule(torch.nn.Module):
     """
-    Module for RetinaNet computation. Takes feature maps from the backbone and RPN
-    proposals and losses.
+    Module for RetinaNet computation. Takes feature maps from the backbone and
+    RetinaNet outputs and losses. Only Test on FPN now.
     """
 
     def __init__(self, cfg):
