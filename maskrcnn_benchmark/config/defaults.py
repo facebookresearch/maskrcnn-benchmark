@@ -176,7 +176,7 @@ _C.MODEL.ROI_HEADS.BG_IOU_THRESHOLD = 0.5
 _C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 5., 5.)
 # RoI minibatch size *per image* (number of regions of interest [ROIs])
 # Total number of RoIs per training minibatch =
-#   TRAIN.BATCH_SIZE_PER_IM * TRAIN.IMS_PER_BATCH * NUM_GPUS
+#   TRAIN.BATCH_SIZE_PER_IM * TRAIN.IMS_PER_BATCH
 # E.g., a common configuration is: 512 * 2 * 8 = 8192
 _C.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512
 # Target fraction of RoI minibatch that is labeled foreground (i.e. class > 0)
