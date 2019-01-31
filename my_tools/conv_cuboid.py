@@ -33,7 +33,7 @@ class FATDataLoader4(FATDataLoader):
                 self.points_min[ix] = np.min(pts, axis=0)
                 self.points_max[ix] = np.max(pts, axis=0)
 
-    def next_batch(self, batch_sz):
+    def next_batch(self, batch_sz, max_pad=50, random_crop=False):
         perm = self.get_next_batch_perm(batch_sz)
         annots = [self.annots[idx] for idx in perm]
 
@@ -76,7 +76,6 @@ class FATDataLoader4(FATDataLoader):
             cuboid_2d = np.round(cuboid_2d).astype(np.int32)
             x1,y1 = np.min(cuboid_2d, axis=0)
             x2,y2 = np.max(cuboid_2d, axis=0)
-            max_pad = 50
 
             ih,iw = img.shape[:2]
             min_x = max(0, x1 - max_pad)
@@ -86,10 +85,16 @@ class FATDataLoader4(FATDataLoader):
 
             qx = (max_x - min_x) // 3
             qy = (max_y - min_y) // 3
-            x1 = npr.randint(min_x, min_x + qx)
-            y1 = npr.randint(min_y, min_y + qy)
-            x2 = npr.randint(max_x - qx, max_x)
-            y2 = npr.randint(max_y - qy, max_y)
+            if random_crop:
+                x1 = npr.randint(min_x, min_x + qx)
+                y1 = npr.randint(min_y, min_y + qy)
+                x2 = npr.randint(max_x - qx, max_x)
+                y2 = npr.randint(max_y - qy, max_y)
+            else:
+                x1 = min_x
+                x2 = max_x
+                y1 = min_y
+                y2 = max_y
 
             cropped_img = img[y1:y2, x1:x2]
             cuboid_2d -= np.array([x1, y1])
