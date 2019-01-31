@@ -12,7 +12,6 @@ from maskrcnn_benchmark.structures.boxlist_ops import remove_small_boxes
 
 
 class RetinaNetPostProcessor(RPNPostProcessor):
-#class RetinaNetPostProcessor(torch.nn.Module):
     """
     Performs post-processing on the outputs of the RetinaNet boxes.
     This is only used in the testing.
@@ -96,22 +95,20 @@ class RetinaNetPostProcessor(RPNPostProcessor):
             # Sort and select TopN
             # TODO most of this can be made out of the loop for
             # all images. 
-            # TODO:Yang, Not easy to do. Numbers of detections vary on 
-            # images. In Detectron,
-            # Inference is executed in each image separately. 
+            # TODO:Yang: Not easy to do. Because the numbers of detections are
+            # different in each image. Therefore, this part needs to be done
+            # per image. 
             per_box_cls = per_box_cls[per_candidate_inds]
-            per_candidate_nonzeros = per_candidate_inds.nonzero()
+ 
+            per_box_cls, top_k_indices = \
+                    per_box_cls.topk(per_pre_nms_top_n, sorted=False)
+
+            per_candidate_nonzeros = \
+                    per_candidate_inds.nonzero()[top_k_indices, :]
+
             per_box_loc = per_candidate_nonzeros[:, 0]
             per_class = per_candidate_nonzeros[:, 1]
             per_class += 1
-
-            ## TODO maybe run this unconditionally?
-            #if per_candidate_inds.sum().item() > per_pre_nms_top_n.item():
-            if True:
-                per_box_cls, top_k_indices = \
-                        per_box_cls.topk(per_pre_nms_top_n, sorted=False)
-                per_box_loc = per_box_loc[top_k_indices]
-                per_class = per_class[top_k_indices]
 
             detections = self.box_coder.decode(
                 per_box_regression[per_box_loc, :].view(-1, 4),
@@ -127,38 +124,10 @@ class RetinaNetPostProcessor(RPNPostProcessor):
 
         return results
 
-    # TODO almost exactly the same as RPNPostProcessor
-    '''
-    def forward(self, anchors, box_cls, box_regression, targets=None):
-        """
-        Arguments:
-            anchors: list[list[BoxList]]
-            box_cls: list[tensor]
-            box_regression: list[tensor]
-
-        Returns:
-            boxlists (list[BoxList]): the post-processed anchors, after
-                applying box decoding and NMS
-        """
-        sampled_boxes = []
-        num_levels = len(box_cls)
-        anchors = list(zip(*anchors))
-        for l, (a, o, b) in enumerate(zip(anchors, box_cls, box_regression)):
-            sampled_boxes.append(
-                self.forward_for_single_feature_map(
-                    a, o, b
-                )
-            )
-
-        boxlists = list(zip(*sampled_boxes))
-        boxlists = [cat_boxlist(boxlist) for boxlist in boxlists]
-        boxlists = self.select_over_all_levels(boxlists)
-
-        return boxlists
-    '''
-
     # TODO very similar to filter_results from PostProcessor
     # but filter_results is per image
+    # TODO Yang: solve this issue in the future. No good solution
+    # right now.
     def select_over_all_levels(self, boxlists):
         num_images = len(boxlists)
         results = []
