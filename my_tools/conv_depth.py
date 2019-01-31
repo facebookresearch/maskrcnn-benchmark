@@ -14,7 +14,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from conv_test import conv_transpose2d_by_factor, create_cloud, backproject_camera
+from conv_test import conv_transpose2d_by_factor, create_cloud, backproject_camera, get_random_color
 
 class persistent_locals(object):
     def __init__(self, func):
@@ -97,8 +97,6 @@ def show_depth_cloud2(depth, img, intrinsics, factor_depth=1):
     scene_cloud = create_cloud(X.T, colors=rgb)
     open3d.draw_geometries([scene_cloud])
 
-def get_random_color():
-    return (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
 
 def get_seg_mask_from_coco_annot(annot, img_h, img_w):
     mask = np.zeros((img_h, img_w), dtype=np.uint8)
@@ -133,6 +131,8 @@ class FATDataLoader(object):
 
         self.img_index = dict((a['id'], ix) for ix,a in enumerate(images))
         self.total_annots = len(annots)
+        self.total_images = len(images)
+        self.total_cnt = self.total_annots  # total set to annots by default. change to image if needed
         self.images = images
         self.annots = annots
         self.data = data
@@ -170,17 +170,21 @@ class FATDataLoader(object):
 
 
     def _reset_permutation(self):
-        total = self.total_annots
+        total = self.total_cnt
         self.permutation = npr.permutation(total) if self.shuffle else np.arange(total)
 
-    def next_batch(self, batch_sz):
+    def get_next_batch_perm(self, batch_sz):
         start_idx = self.cur_idx
         self.cur_idx += batch_sz
         perm = self.permutation[start_idx:self.cur_idx]
-        if self.cur_idx >= self.total_annots:
+        if self.cur_idx >= self.total_cnt:
             self._reset_permutation()
-            self.cur_idx -= self.total_annots
+            self.cur_idx -= self.total_cnt
             perm = np.hstack((perm, self.permutation[:self.cur_idx]))
+        return perm
+
+    def next_batch(self, batch_sz):
+        perm = self.get_next_batch_perm(batch_sz)
         annots = [self.annots[idx] for idx in perm]
 
         image_list = []

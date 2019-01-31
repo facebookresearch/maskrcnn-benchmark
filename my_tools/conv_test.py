@@ -246,6 +246,26 @@ def draw_cuboid_2d(img2, cuboid, color):
         pt2 = points[line[1]]
         cv2.line(img2, pt1, pt2, color)
 
+def get_cuboid_from_min_max(min_pt, max_pt):
+    assert len(min_pt) == 3 and len(max_pt) == 3
+    return np.array([
+        [min_pt[0], min_pt[1], min_pt[2]],
+        [min_pt[0], max_pt[1], min_pt[2]],
+        [min_pt[0], min_pt[1], max_pt[2]],
+        [min_pt[0], max_pt[1], max_pt[2]],
+        [max_pt[0], min_pt[1], min_pt[2]],
+        [max_pt[0], max_pt[1], min_pt[2]],
+        [max_pt[0], min_pt[1], max_pt[2]],
+        [max_pt[0], max_pt[1], max_pt[2]]
+    ])
+
+    # lines = [[0,1],[0,2],[1,3],[2,3],
+    #      [4,5],[4,6],[5,7],[6,7],
+    #      [0,4],[1,5],[2,6],[3,7]]
+
+def get_random_color():
+    return (np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255))
+
 def draw_axis_pose(img, rvec, centroid, intrinsic_matrix, dist_coeffs=np.zeros((4,1))):
     """
     rvec: (3,3) rotation matrix

@@ -16,7 +16,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from conv_depth import FATDataLoader, FT, conv_transpose2d_by_factor, get_random_color, create_cloud#, backproject_camera,
-from conv_test import ConvNet, get_4x4_transform, average_point_distance_metric, draw_cuboid_2d, draw_axis_pose
+from conv_test import ConvNet, get_4x4_transform, average_point_distance_metric, draw_cuboid_2d, draw_axis_pose, get_cuboid_from_min_max
 from conv_pose import render_object_pose
 from pnp_test import get_cube_rotation_codes, order_4corner_points, get_cuboid_ordering
 
@@ -52,24 +52,6 @@ def euclidean_distance_loss(input, target):
 
 def resize_tensor(t, H, W, mode='bilinear'):
     return F.upsample(t, size=(H, W), mode=mode)
-
-def get_cuboid_from_min_max(min_pt, max_pt):
-    assert len(min_pt) == 3 and len(max_pt) == 3
-    return np.array([
-        [min_pt[0], min_pt[1], min_pt[2]],
-        [min_pt[0], max_pt[1], min_pt[2]],
-        [min_pt[0], min_pt[1], max_pt[2]],
-        [min_pt[0], max_pt[1], max_pt[2]],
-        [max_pt[0], min_pt[1], min_pt[2]],
-        [max_pt[0], max_pt[1], min_pt[2]],
-        [max_pt[0], min_pt[1], max_pt[2]],
-        [max_pt[0], max_pt[1], max_pt[2]]
-    ])
-
-    # lines = [[0,1],[0,2],[1,3],[2,3],
-    #      [4,5],[4,6],[5,7],[6,7],
-    #      [0,4],[1,5],[2,6],[3,7]]
-
 
 class FATDataLoader3(FATDataLoader):
     def __init__(self, root_dir, ann_file, use_scaled_depth=False, shuffle=True):
