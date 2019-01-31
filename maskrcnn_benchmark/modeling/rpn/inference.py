@@ -82,7 +82,7 @@ class RPNPostProcessor(torch.nn.Module):
         N, A, H, W = objectness.shape
 
         # put in the same format as anchors
-        objectness = permute_and_flatten(objectness, N, A, 1, H, W).squeeze()
+        objectness = permute_and_flatten(objectness, N, A, 1, H, W).view(N, -1)
         objectness = objectness.sigmoid()
 
         box_regression = permute_and_flatten(box_regression, N, A, 4, H, W)
