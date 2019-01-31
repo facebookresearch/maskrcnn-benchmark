@@ -37,6 +37,7 @@ def get_extensions():
             "-D__CUDA_NO_HALF_OPERATORS__",
             "-D__CUDA_NO_HALF_CONVERSIONS__",
             "-D__CUDA_NO_HALF2_OPERATORS__",
+            "-DCUDA_HOST_COMPILER=/usr/bin/gcc-5",
         ]
 
     sources = [os.path.join(extensions_dir, s) for s in sources]
