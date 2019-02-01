@@ -12,6 +12,8 @@ import open3d
 from transforms3d.quaternions import quat2mat#, mat2quat
 
 
+PIXEL_MEAN = [102.9801, 115.9465, 122.7717]
+
 def create_cloud(points, normals=[], colors=[], T=None):
     cloud = open3d.PointCloud()
     cloud.points = open3d.Vector3dVector(points)

@@ -9,14 +9,15 @@ import os
 import os.path as osp
 # import open3d
 from transforms3d.quaternions import quat2mat, mat2quat
+import copy
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from conv_depth import FATDataLoader, FT
-from conv_test import get_cuboid_from_min_max, draw_cuboid_2d, get_random_color
+from conv_depth import FATDataLoader, FT, LT
+from conv_test import get_cuboid_from_min_max, draw_cuboid_2d, get_random_color, conv_transpose2d_by_factor, PIXEL_MEAN
 
 
 class FATDataLoader4(FATDataLoader):
@@ -33,7 +34,7 @@ class FATDataLoader4(FATDataLoader):
                 self.points_min[ix] = np.min(pts, axis=0)
                 self.points_max[ix] = np.max(pts, axis=0)
 
-    def next_batch(self, batch_sz, max_pad=50, random_crop=False):
+    def next_batch(self, batch_sz, max_pad=50, random_crop=False, flip_prob=0.0):
         perm = self.get_next_batch_perm(batch_sz)
         annots = [self.annots[idx] for idx in perm]
 
@@ -97,7 +98,17 @@ class FATDataLoader4(FATDataLoader):
                 y2 = max_y
 
             cropped_img = img[y1:y2, x1:x2]
+            h, w = cropped_img.shape[:2]
             cuboid_2d -= np.array([x1, y1])
+
+            rand = npr.rand(1)[0]
+            if rand < flip_prob:
+                if npr.rand(1)[0] < 0.5:
+                    cropped_img = np.fliplr(cropped_img) # flip about vertical axis
+                    cuboid_2d[:, 0] = w - 1 - cuboid_2d[:, 0]
+                else:
+                    cropped_img = np.flipud(cropped_img)  # flip about horizontal axis
+                    cuboid_2d[:, 1] = h - 1 - cuboid_2d[:, 1]
 
             image_list.append(cropped_img)
             labels_list.append(cls)
@@ -120,14 +131,221 @@ class FATDataLoader4(FATDataLoader):
             cv2.imshow("img", img)
             cv2.waitKey(0)
 
+    def convert_data_batch_to_tensor(self, data, resize_height=480, resize_width=800, radius=4, use_cuda=False):
+        image_list, labels_list, cuboids_list, _ = data
+        N = len(image_list)
+
+        if N == 0:
+            return []
+
+        t_image_list = np.zeros((N, resize_height, resize_width, 3), dtype=np.float32)
+        t_mask_list = np.zeros((N, resize_height, resize_width), dtype=np.float32)
+        t_mask_weights_list = t_mask_list - 1  # set all to -1
+        for ix, im in enumerate(image_list):
+            
+            h,w = im.shape[:2]
+            t_im = cv2.resize(im, (resize_width, resize_height), interpolation=cv2.INTER_LINEAR)
+            t_im = t_im.astype(np.float32) / 255  # assumes 0-255!
+            t_image_list[ix] = t_im
+
+            factor_w = float(resize_width) / w
+            factor_h = float(resize_height) / h
+            t_mask = t_mask_list[ix]
+            t_mask_weights = t_mask_weights_list[ix]
+
+            cuboid = cuboids_list[ix].astype(np.float32)
+            cuboid[:,0] *= factor_w
+            cuboid[:,1] *= factor_h
+            cuboid = np.round(cuboid).astype(np.int32)
+            # set weights of pixels surrounding a keypoint to 0 (i.e. radius of 2 pix)
+            # radius = 2
+            for pt in cuboid:
+                cv2.circle(t_mask_weights, tuple(pt), radius, 1, -1)
+            for pt in cuboid:
+                if pt[1] >= resize_height or pt[0] >= resize_width:
+                    continue
+                t_mask[pt[1],pt[0]] = 1
+                t_mask_weights[pt[1],pt[0]] = 1
+
+            total_neg = np.sum(t_mask_weights==-1)
+            total_pos = np.sum(t_mask_weights == 1)
+            t_mask_weights[t_mask_weights==-1] = 0.5 / total_neg
+            t_mask_weights[t_mask_weights == 1] = 0.5 / total_pos
+
+        t_image_list = np.transpose(t_image_list, [0,3,1,2])  # (N,H,W,3) to (N,3,H,W)
+        t_image_tensor = FT(t_image_list)
+        t_mask_tensor = FT(t_mask_list)
+        t_mask_weights_tensor = FT(t_mask_weights_list)
+        t_labels_tensor = LT(labels_list)
+        if use_cuda:
+            t_image_tensor = t_image_tensor.cuda()
+            t_mask_tensor = t_mask_tensor.cuda()
+            t_mask_weights_tensor = t_mask_weights_tensor.cuda()
+            t_labels_tensor = t_labels_tensor.cuda()
+
+        return t_image_tensor, t_labels_tensor, t_mask_tensor, t_mask_weights_tensor
+
+class ConvNet(nn.Module):
+    def __init__(self, in_channels=3, out_channels=1):
+        super(ConvNet, self).__init__()
+
+        conv1_filters = 64
+        conv2_filters = 128
+        conv3_filters = 256
+
+        self.conv1 = nn.Conv2d(in_channels, conv1_filters, kernel_size=5, stride=2, padding=1)
+        self.conv2 = nn.Conv2d(conv1_filters, conv2_filters, kernel_size=5, stride=2, padding=1)
+        self.conv3 = nn.Conv2d(conv2_filters, conv3_filters, kernel_size=3, stride=2, padding=1)
+        self.bn1 = nn.BatchNorm2d(conv1_filters)
+        self.bn2 = nn.BatchNorm2d(conv2_filters)
+        self.bn3 = nn.BatchNorm2d(conv3_filters)
+
+        conv_t_filters = 512
+        self.conv_t1 = conv_transpose2d_by_factor(conv3_filters, conv_t_filters, factor=2)
+        self.conv_t2 = conv_transpose2d_by_factor(conv_t_filters, conv_t_filters, factor=2)
+        self.conv_t3 = conv_transpose2d_by_factor(conv_t_filters, conv_t_filters, factor=2)
+        self.depth_reg = nn.Conv2d(conv_t_filters, 64, kernel_size=5, stride=1, padding=5 // 2)
+        self.depth_reg2 = nn.Conv2d(64, out_channels, kernel_size=5, stride=1, padding=5 // 2)
+
+    def forward(self, x):
+        # batch_sz = len(x)
+        c1 = F.relu(self.bn1(self.conv1(x)))
+        c2 = F.relu(self.bn2(self.conv2(c1)))
+        c3 = F.relu(self.bn3(self.conv3(c2)))
+        # c1 = F.relu(self.conv1(x))
+        # c2 = F.relu(self.conv2(c1))
+        # c3 = F.relu(self.conv3(c2))
+        ct1 = F.relu(self.conv_t1(c3))
+        ct2 = F.relu(self.conv_t2(ct1))
+        ct3 = F.relu(self.conv_t3(ct2))
+        out = F.relu(self.depth_reg(ct3))
+        out = self.depth_reg2(out)
+        return out
+
+
+def train(model, dg, n_iters=1000, batch_sz = 4, lr=1e-3):
+    # from tensorboardX import SummaryWriter
+    # writer = SummaryWriter()
+
+    model.train()
+
+    optimizer = optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999))
+
+    criterion = nn.BCELoss(reduce=False)
+
+    all_losses = []
+    losses = []
+    flip_prob = 0.5
+    for iter in range(n_iters):
+        data = dg.next_batch(batch_sz, flip_prob=flip_prob)
+
+        # normalize the pixels by pixel mean
+        image_list = data[0]
+        for ix,im in enumerate(image_list):
+            image_list[ix] = im.astype(np.float32) - PIXEL_MEAN
+
+        image_tensor, labels_tensor, mask_tensor, mask_weights_tensor = dg.convert_data_batch_to_tensor(data, 
+                    resize_height=56, resize_width=56, radius=2, use_cuda=True)
+        optimizer.zero_grad()
+
+        pred = model(image_tensor)
+        N = pred.size(0)
+
+        if N == 0:
+            continue
+
+        pos_inds = torch.arange(N)
+        pred = pred[pos_inds, labels_tensor]  # (N,H,W)
+        pred = torch.sigmoid(pred) 
+
+        # loss
+        entropy_loss = criterion(pred, mask_tensor)
+        weighted_loss = torch.mul(entropy_loss, mask_weights_tensor)
+        loss = weighted_loss.sum(dim=(1,2)).mean()
+        loss.backward()
+        optimizer.step()
+        loss_value = loss.item()
+
+        losses.append(loss_value)
+        all_losses.append(loss_value)
+
+        # writer.add_scalar('data/cuboid_binary_entropy_loss', loss_value, iter)
+
+        if iter % 20 == 0 and iter > 0:
+            print("iter %d of %d -> Total loss: %.4f, Avg loss: %.4f"%(iter, n_iters, np.mean(losses), np.mean(all_losses)))
+            losses = []
+
+    print("iter %d of %d -> Total loss: %.4f, Avg loss: %.4f"%(iter, n_iters, np.mean(losses), np.mean(all_losses)))
+    # writer.close()
+
+def test(model, dg, batch_sz = 8):
+    model.eval()
+
+    data = dg.next_batch(batch_sz, flip_prob=0)
+    image_list, labels_list, cuboids_list, annots = data
+
+    # normalize the pixels by pixel mean
+    image_list = data[0]
+    ori_image_list = copy.copy(image_list)
+    for ix,im in enumerate(image_list):
+        image_list[ix] = im.astype(np.float32) - PIXEL_MEAN
+
+    image_tensor, labels_tensor, mask_tensor, mask_weights_tensor = dg.convert_data_batch_to_tensor(data, resize_height=56, resize_width=56, radius=2, use_cuda=True)
+
+    preds = model(image_tensor)
+    preds = torch.sigmoid(preds).detach().cpu().numpy()#.squeeze()
+
+    for ix,pred in enumerate(preds):
+        img = ori_image_list[ix]
+        cls = labels_list[ix]
+
+        # pred
+        img2 = img.copy()
+        m = pred[cls]
+        h,w = img.shape[:2]
+
+        m = cv2.resize(m, (w,h), interpolation=cv2.INTER_LINEAR)
+        m[m >= 0.5] = 1
+        m[m < 0.5] = 0
+        img2[m==1] = [0,255,0]
+        cv2.imshow("pred", img2)
+
+        # gt
+        cuboid = cuboids_list[ix]
+        for pt in cuboid:
+            cv2.circle(img, tuple(pt), 3, (0,0,255), -1)
+        cv2.imshow("gt", img)
+        
+        cv2.waitKey(0)
+
+
 if __name__ == '__main__':
 
     dataset_dir = "./datasets/FAT"
     root_dir = osp.join(dataset_dir, "data")
-    ann_file = osp.join(dataset_dir, "coco_fat_debug.json")
+    # ann_file = osp.join(dataset_dir, "coco_fat_debug.json")
+    ann_file = osp.join(dataset_dir, "coco_fat_train_3500.json")
 
     data_loader = FATDataLoader4(root_dir, ann_file)
-    data = data_loader.next_batch(8)
-    data_loader.visualize(data)
-    # data_loader.convert_data_batch_to_tensor(data)
+    # data = data_loader.next_batch(8, flip_prob=0.5)
+    # data_loader.visualize(data)
+    # data_loader.convert_data_batch_to_tensor(data, resize_height=56, resize_width=56)
 
+    out_channels = data_loader.num_classes
+    model = ConvNet(in_channels=3, out_channels=out_channels)
+    model.cuda()
+
+    save_path = "model_cuboids_0.pth"
+    # model.load_state_dict(torch.load(save_path))
+    # print("Loaded %s"%(save_path))
+
+    n_iters = 1000
+    lr = 1e-3
+    batch_sz = 32
+    train(model, data_loader, n_iters=n_iters, batch_sz = batch_sz, lr=lr)
+    # torch.save(model.state_dict(), save_path)
+
+    # test_ann_file = osp.join(dataset_dir, "coco_fat_test_500.json")
+    # test_data_loader = FATDataLoader4(root_dir, test_ann_file, shuffle=False)
+    test_data_loader = data_loader
+    test(model, test_data_loader, batch_sz=8)
