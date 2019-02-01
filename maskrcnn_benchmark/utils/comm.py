@@ -40,22 +40,9 @@ def synchronize():
     if not dist.is_initialized():
         return
     world_size = dist.get_world_size()
-    rank = dist.get_rank()
     if world_size == 1:
         return
-
-    def _send_and_wait(r):
-        if rank == r:
-            tensor = torch.tensor(0, device="cuda")
-        else:
-            tensor = torch.tensor(1, device="cuda")
-        dist.broadcast(tensor, r)
-        while tensor.item() == 1:
-            time.sleep(1)
-
-    _send_and_wait(0)
-    # now sync on the main process
-    _send_and_wait(1)
+    dist.barrier()
 
 
 def all_gather(data):
