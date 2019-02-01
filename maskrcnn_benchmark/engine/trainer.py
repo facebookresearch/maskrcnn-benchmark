@@ -106,7 +106,7 @@ def do_train(
 
         test_loss_dict_reduced = reduce_loss_dict(test_loss_dict)
         test_losses_reduced = sum(loss for loss in test_loss_dict_reduced.values())
-        test_meters.update(loss=test_losses_reduced, **loss_dict_reduced)
+        test_meters.update(loss=test_losses_reduced, **test_loss_dict_reduced)
     logger.debug("Test: ", str(test_meters))
 
     total_training_time = time.time() - start_training_time
