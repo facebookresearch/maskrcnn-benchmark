@@ -5,6 +5,7 @@ Utility functions minipulating the prediction layers
 
 import torch
 
+from ..utils import cat
 
 def permute_and_flatten(layer, N, A, C, H, W):
     layer = layer.view(N, -1, C, H, W)
