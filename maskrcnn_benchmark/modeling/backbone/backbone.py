@@ -4,12 +4,15 @@ from collections import OrderedDict
 from torch import nn
 
 from maskrcnn_benchmark.modeling import registry
-
+from maskrcnn_benchmark.modeling.make_layers import conv_with_kaiming_uniform
 from . import fpn as fpn_module
 from . import resnet
 
 
 @registry.BACKBONES.register("R-50-C4")
+@registry.BACKBONES.register("R-50-C5")
+@registry.BACKBONES.register("R-101-C4")
+@registry.BACKBONES.register("R-101-C5")
 def build_resnet_backbone(cfg):
     body = resnet.ResNet(cfg)
     model = nn.Sequential(OrderedDict([("body", body)]))
@@ -18,6 +21,7 @@ def build_resnet_backbone(cfg):
 
 @registry.BACKBONES.register("R-50-FPN")
 @registry.BACKBONES.register("R-101-FPN")
+@registry.BACKBONES.register("R-152-FPN")
 def build_resnet_fpn_backbone(cfg):
     body = resnet.ResNet(cfg)
     in_channels_stage2 = cfg.MODEL.RESNETS.RES2_OUT_CHANNELS
@@ -30,6 +34,9 @@ def build_resnet_fpn_backbone(cfg):
             in_channels_stage2 * 8,
         ],
         out_channels=out_channels,
+        conv_block=conv_with_kaiming_uniform(
+            cfg.MODEL.FPN.USE_GN, cfg.MODEL.FPN.USE_RELU
+        ),
         top_blocks=fpn_module.LastLevelMaxPool(),
     )
     model = nn.Sequential(OrderedDict([("body", body), ("fpn", fpn)]))
