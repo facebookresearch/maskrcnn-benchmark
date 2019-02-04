@@ -53,7 +53,7 @@ class RetinaNetLossComputation(RPNLossComputation):
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]
         labels, regression_targets = self.prepare_targets(anchors, targets)
 
-        NUMBER_PREDICTION_LAYERS = len(box_cls)
+        N = len(labels)
         box_cls, box_regression = \
                 concat_box_prediction_layers(box_cls, box_regression)
 
@@ -66,14 +66,14 @@ class RetinaNetLossComputation(RPNLossComputation):
             regression_targets[pos_inds],
             beta=self.bbox_reg_beta,
             size_average=False,
-        ) / (pos_inds.numel() * 4)
+        ) / (max(1, pos_inds.numel() * 4))
 
         labels = labels.int()
 
         retinanet_cls_loss = self.box_cls_loss_func(
             box_cls,
             labels
-        ) / (pos_inds.numel() + NUMBER_PREDICTION_LAYERS)
+        ) / (pos_inds.numel() + N)
 
         return retinanet_cls_loss, retinanet_regression_loss
 
