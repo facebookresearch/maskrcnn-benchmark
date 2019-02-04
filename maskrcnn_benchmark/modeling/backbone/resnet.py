@@ -71,7 +71,11 @@ ResNet101FPNStagesTo5 = tuple(
     StageSpec(index=i, block_count=c, return_features=r)
     for (i, c, r) in ((1, 3, True), (2, 4, True), (3, 23, True), (4, 3, True))
 )
-
+# ResNet-152-FPN (including all stages)
+ResNet152FPNStagesTo5 = tuple(
+    StageSpec(index=i, block_count=c, return_features=r)
+    for (i, c, r) in ((1, 3, True), (2, 8, True), (3, 36, True), (4, 3, True))
+)
 
 class ResNet(nn.Module):
     def __init__(self, cfg):
@@ -239,11 +243,15 @@ class Bottleneck(nn.Module):
             down_stride = stride if dilation == 1 else 1
             self.downsample = nn.Sequential(
                 Conv2d(
-                    in_channels, out_channels, 
+                    in_channels, out_channels,
                     kernel_size=1, stride=down_stride, bias=False
                 ),
                 norm_func(out_channels),
             )
+            for modules in [self.downsample,]:
+                for l in modules.modules():
+                    if isinstance(l, Conv2d):
+                        nn.init.kaiming_uniform_(l.weight, a=1)
 
         if dilation > 1:
             stride = 1 # reset to be 1
@@ -280,6 +288,9 @@ class Bottleneck(nn.Module):
         )
         self.bn3 = norm_func(out_channels)
 
+        for l in [self.conv1, self.conv2, self.conv3,]:
+            nn.init.kaiming_uniform_(l.weight, a=1)
+
     def forward(self, x):
         identity = x
 
@@ -313,6 +324,9 @@ class BaseStem(nn.Module):
             3, out_channels, kernel_size=7, stride=2, padding=3, bias=False
         )
         self.bn1 = norm_func(out_channels)
+
+        for l in [self.conv1,]:
+            nn.init.kaiming_uniform_(l.weight, a=1)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -399,4 +413,5 @@ _STAGE_SPECS = Registry({
     "R-50-FPN-RETINANET": ResNet50FPNStagesTo5,
     "R-101-FPN": ResNet101FPNStagesTo5,
     "R-101-FPN-RETINANET": ResNet101FPNStagesTo5,
+    "R-152-FPN": ResNet152FPNStagesTo5,
 })
