@@ -146,6 +146,7 @@ def _load_c2_pickled_weights(file_path):
 _C2_STAGE_NAMES = {
     "R-50": ["1.2", "2.3", "3.5", "4.2"],
     "R-101": ["1.2", "2.3", "3.22", "4.2"],
+    "R-152": ["1.2", "2.7", "3.35", "4.2"],
 }
 
 C2_FORMAT_LOADER = Registry()
@@ -157,6 +158,7 @@ C2_FORMAT_LOADER = Registry()
 @C2_FORMAT_LOADER.register("R-101-C5")
 @C2_FORMAT_LOADER.register("R-50-FPN")
 @C2_FORMAT_LOADER.register("R-101-FPN")
+@C2_FORMAT_LOADER.register("R-152-FPN")
 def load_resnet_c2_format(cfg, f):
     state_dict = _load_c2_pickled_weights(f)
     conv_body = cfg.MODEL.BACKBONE.CONV_BODY
