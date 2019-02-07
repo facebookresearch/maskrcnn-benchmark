@@ -3,25 +3,29 @@ from torch import nn
 
 
 class KeypointPostProcessor(nn.Module):
-    def __init__(self, masker=None):
+    def __init__(self, keypointer=None):
         super(KeypointPostProcessor, self).__init__()
-        self.masker = masker
+        self.keypointer = keypointer
 
     def forward(self, x, boxes):
         mask_prob = x
 
-        if self.masker:
-            mask_prob = self.masker(x, boxes)
+        scores = None
+        if self.keypointer:
+            mask_prob, scores = self.keypointer(x, boxes)
 
+        assert len(boxes) == 1, "Only non-batched inference supported for now"
         boxes_per_image = [box.bbox.size(0) for box in boxes]
         mask_prob = mask_prob.split(boxes_per_image, dim=0)
+        scores = scores.split(boxes_per_image, dim=0)
 
         results = []
-        for prob, box in zip(mask_prob, boxes):
+        for prob, box, score in zip(mask_prob, boxes, scores):
             bbox = BoxList(box.bbox, box.size, mode="xyxy")
             for field in box.fields():
                 bbox.add_field(field, box.get_field(field))
             prob = PersonKeypoints(prob, box.size)
+            prob.add_field("logits", score)
             bbox.add_field("keypoints", prob)
             results.append(bbox)
 
@@ -58,6 +62,7 @@ def heatmaps_to_keypoints(maps, rois):
     min_size = 0  # cfg.KRCNN.INFERENCE_MIN_SIZE
     num_keypoints = 17
     xy_preds = np.zeros((len(rois), 3, num_keypoints), dtype=np.float32)
+    end_scores = np.zeros((len(rois), num_keypoints), dtype=np.float32)
     for i in range(len(rois)):
         if min_size > 0:
             roi_map_width = int(np.maximum(widths_ceil[i], min_size))
@@ -85,8 +90,9 @@ def heatmaps_to_keypoints(maps, rois):
             xy_preds[i, 0, k] = x + offset_x[i]
             xy_preds[i, 1, k] = y + offset_y[i]
             xy_preds[i, 2, k] = 1
+            end_scores[i, k] = roi_map[k, y_int, x_int]
 
-    return np.transpose(xy_preds, [0, 2, 1])
+    return np.transpose(xy_preds, [0, 2, 1]), end_scores
 
 
 from maskrcnn_benchmark.structures.bounding_box import BoxList
@@ -102,43 +108,16 @@ class Keypointer(object):
     def __init__(self, padding=0):
         self.padding = padding
 
-    # TODO make it work better for batches
-    def forward_single_image(self, masks, boxes):
-        boxes = boxes.convert("xyxy")
-        if self.padding:
-            boxes = BoxList(boxes.bbox.clone(), boxes.size, boxes.mode)
-            masks, scale = expand_masks(masks, self.padding)
-            boxes.bbox = expand_boxes(boxes.bbox, scale)
-
-        flow_field = self.compute_flow_field(boxes)
-        result = torch.nn.functional.grid_sample(masks, flow_field)
-        return result
-
-    def to_points(self, masks):
-        height, width = masks.shape[-2:]
-        m = masks.view(masks.shape[:2] + (-1,))
-        scores, pos = m.max(-1)
-        x_int = pos % width
-        y_int = (pos - x_int) // width
-
-        result = torch.stack(
-            [x_int.float(), y_int.float(), torch.ones_like(x_int, dtype=torch.float32)],
-            dim=2,
-        )
-        return result
-
     def __call__(self, masks, boxes):
         # TODO do this properly
         if isinstance(boxes, BoxList):
             boxes = [boxes]
         assert len(boxes) == 1
 
-        # result = self.forward_single_image(masks, boxes[0])
-        # result = self.to_points(result)
-        result = heatmaps_to_keypoints(
+        result, scores = heatmaps_to_keypoints(
             masks.detach().cpu().numpy(), boxes[0].bbox.cpu().numpy()
         )
-        return torch.from_numpy(result).to(masks.device)
+        return torch.from_numpy(result).to(masks.device), torch.as_tensor(scores, device=masks.device)
 
 
 def make_roi_keypoint_post_processor(cfg):

@@ -1,6 +1,6 @@
 MODEL:
   META_ARCHITECTURE: "GeneralizedRCNN"
-  WEIGHT: "/private/home/fmassa/detectron_c2_models/e2e_keypoint_rcnn_R50_fpn_1x.pkl"
+  WEIGHT: "catalog://Caffe2Detectron/COCO/37697547/e2e_keypoint_rcnn_R-50-FPN_1x"
   BACKBONE:
     CONV_BODY: "R-50-FPN"
     OUT_CHANNELS: 256

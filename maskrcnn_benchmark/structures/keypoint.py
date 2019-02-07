@@ -12,9 +12,7 @@ class Keypoints(object):
         device = keypoints.device if isinstance(keypoints, torch.Tensor) else torch.device('cpu')
         keypoints = torch.as_tensor(keypoints, dtype=torch.float32, device=device)
         num_keypoints = keypoints.shape[0]
-        # TODO remove once support or zero in dim is in
-        if num_keypoints > 0:
-            keypoints = keypoints.view(num_keypoints, -1, 3)
+        keypoints = keypoints.view(num_keypoints, -1, 3)
         
         # TODO should I split them?
         # self.visibility = keypoints[..., 2]
@@ -22,6 +20,7 @@ class Keypoints(object):
 
         self.size = size
         self.mode = mode
+        self.extra_fields = {}
 
     def crop(self, box):
         raise NotImplementedError()
@@ -32,8 +31,10 @@ class Keypoints(object):
         resized_data = self.keypoints.clone()
         resized_data[..., 0] *= ratio_w
         resized_data[..., 1] *= ratio_h
-        return type(self)(resized_data, size, self.mode)
-        
+        keypoints = type(self)(resized_data, size, self.mode)
+        for k, v in self.extra_fields.items():
+            keypoints.add_field(k, v)
+        return keypoints
 
     def transpose(self, method):
         if method not in (FLIP_LEFT_RIGHT,):
@@ -53,10 +54,24 @@ class Keypoints(object):
         return type(self)(flipped_data, self.size, self.mode)
 
     def to(self, *args, **kwargs):
-        return type(self)(self.keypoints.to(*args, **kwargs), self.size, self.mode)
+        keypoints = type(self)(self.keypoints.to(*args, **kwargs), self.size, self.mode)
+        for k, v in self.extra_fields.items():
+            if hasattr(v, "to"):
+                v = v.to(*args, **kwargs)
+            keypoints.add_field(k, v)
+        return keypoints
 
     def __getitem__(self, item):
-        return type(self)(self.keypoints[item], self.size, self.mode)
+        keypoints = type(self)(self.keypoints[item], self.size, self.mode)
+        for k, v in self.extra_fields.items():
+            keypoints.add_field(k, v[item])
+        return keypoints
+
+    def add_field(self, field, field_data):
+        self.extra_fields[field] = field_data
+
+    def get_field(self, field):
+        return self.extra_fields[field]
 
     def __repr__(self):
         s = self.__class__.__name__ + '('
