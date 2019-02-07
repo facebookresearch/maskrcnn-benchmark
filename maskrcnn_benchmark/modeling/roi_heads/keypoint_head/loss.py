@@ -44,7 +44,6 @@ def _within_box(points, boxes):
     y_within = (points[..., 1] >= boxes[:, 1, None]) & (points[..., 1] <= boxes[:, 3, None])
     return x_within & y_within
 
-_TOTAL_SKIPPED = 0
 
 class KeypointRCNNLossComputation(object):
 
@@ -93,8 +92,6 @@ class KeypointRCNNLossComputation(object):
 
 
             keypoints_per_image = matched_targets.get_field('keypoints')
-            # TODO remove conditional  when better support for zero-dim is in
-            # if keypoints_per_image.keypoints.numel() > 0:
             within_box = _within_box(keypoints_per_image.keypoints, matched_targets.bbox)
             vis_kp = keypoints_per_image.keypoints[..., 2] > 0
             is_visible = (within_box & vis_kp).sum(1) > 0
@@ -136,7 +133,6 @@ class KeypointRCNNLossComputation(object):
         for img_idx, (pos_inds_img, neg_inds_img) in enumerate(
             zip(sampled_pos_inds, sampled_neg_inds)
         ):
-            # img_sampled_inds = torch.nonzero(pos_inds_img | neg_inds_img).squeeze(1)
             img_sampled_inds = torch.nonzero(pos_inds_img).squeeze(1)
             proposals_per_image = proposals[img_idx][img_sampled_inds]
             proposals[img_idx] = proposals_per_image
@@ -157,15 +153,9 @@ class KeypointRCNNLossComputation(object):
         valid = cat(valid, dim=0).to(dtype=torch.uint8)
         valid = torch.nonzero(valid).squeeze(1)
 
-
-        MIN_KEYPOINT_COUNT_FOR_VALID_MINIBATCH = 20
-        num_valid = len(valid)
         # torch.mean (in binary_cross_entropy_with_logits) does'nt
         # accept empty tensors, so handle it sepaartely
-        if keypoint_targets.numel() == 0 or valid.numel() == 0 or num_valid <= MIN_KEYPOINT_COUNT_FOR_VALID_MINIBATCH:
-            global _TOTAL_SKIPPED
-            _TOTAL_SKIPPED += 1
-            print("Non valid, skipping {}", _TOTAL_SKIPPED)
+        if keypoint_targets.numel() == 0 or len(valid) == 0:
             return keypoint_logits.sum() * 0
 
         N, K, H, W = keypoint_logits.shape

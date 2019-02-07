@@ -33,7 +33,7 @@ class DatasetCatalog(object):
         },
         "keypoints_coco_2014_train": {
             "img_dir": "coco/train2014",
-            "ann_file": "annotations/person_keypoints_train2017_train_mod.json",
+            "ann_file": "annotations/person_keypoints_train2017_train_mod2.json",
         },
         "keypoints_coco_2014_val": {
             "img_dir": "coco/val2014",
@@ -45,7 +45,7 @@ class DatasetCatalog(object):
         },
         "keypoints_coco_2014_valminusminival": {
             "img_dir": "coco/val2014",
-            "ann_file": "annotations/person_keypoints_train2017_valminusminival_mod.json",
+            "ann_file": "annotations/person_keypoints_train2017_valminusminival_mod2.json",
         },
         "voc_2007_train": {
             "data_dir": "voc/VOC2007",

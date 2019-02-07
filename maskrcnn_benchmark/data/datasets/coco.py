@@ -7,6 +7,9 @@ from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
 from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
 
 
+min_keypoints_per_image = 10
+
+
 class COCODataset(torchvision.datasets.coco.CocoDetection):
     def __init__(
         self, ann_file, root, remove_images_without_annotations, transforms=None
@@ -17,11 +20,25 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
 
         # filter images without detection annotations
         if remove_images_without_annotations:
+            """
             self.ids = [
                 img_id
                 for img_id in self.ids
                 if len(self.coco.getAnnIds(imgIds=img_id, iscrowd=None)) > 0
             ]
+            """
+            ids = []
+            for img_id in self.ids:
+                ann_ids = self.coco.getAnnIds(imgIds=img_id, iscrowd=None)
+                anno = self.coco.loadAnns(ann_ids)
+                if len(ann_ids) > 0:
+                    if anno and "keypoints" in anno[0]:
+                        if sum(sum(1 for v in ann["keypoints"][2::3] if v > 0) for ann in anno) >= min_keypoints_per_image:
+                            ids.append(img_id)
+                    else:
+                        ids.append(img_id)
+            print("Before {}, after {}".format(len(self.ids), len(ids)))
+            self.ids = ids
 
             ids_to_remove = []
             for img_id in self.ids:
