@@ -68,5 +68,6 @@ class ROIKeypointHead(torch.nn.Module):
 
         return x, proposals, dict(loss_kp=loss_kp)
 
+
 def build_roi_keypoint_head(cfg):
     return ROIKeypointHead(cfg)

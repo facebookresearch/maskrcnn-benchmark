@@ -25,10 +25,9 @@ class KeypointRCNNFeatureExtractor(nn.Module):
         next_feature = input_features
         self.blocks = []
         for layer_idx, layer_features in enumerate(layers, 1):
-            layer_name = 'conv_fcn{}'.format(layer_idx)
-            module = Conv2d(next_feature, layer_features, 3,
-                    stride=1, padding=1)
-            nn.init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
+            layer_name = "conv_fcn{}".format(layer_idx)
+            module = Conv2d(next_feature, layer_features, 3, stride=1, padding=1)
+            nn.init.kaiming_normal_(module.weight, mode="fan_out", nonlinearity="relu")
             nn.init.constant_(module.bias, 0)
             self.add_module(layer_name, module)
             next_feature = layer_features
@@ -42,10 +41,12 @@ class KeypointRCNNFeatureExtractor(nn.Module):
 
 
 _ROI_KEYPOINT_FEATURE_EXTRACTORS = {
-    "KeypointRCNNFeatureExtractor": KeypointRCNNFeatureExtractor,
+    "KeypointRCNNFeatureExtractor": KeypointRCNNFeatureExtractor
 }
 
 
 def make_roi_keypoint_feature_extractor(cfg):
-    func = _ROI_KEYPOINT_FEATURE_EXTRACTORS[cfg.MODEL.ROI_KEYPOINT_HEAD.FEATURE_EXTRACTOR]
+    func = _ROI_KEYPOINT_FEATURE_EXTRACTORS[
+        cfg.MODEL.ROI_KEYPOINT_HEAD.FEATURE_EXTRACTOR
+    ]
     return func(cfg)

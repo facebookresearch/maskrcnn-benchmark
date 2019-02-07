@@ -4,7 +4,7 @@ from torch.nn import functional as F
 from maskrcnn_benchmark.modeling.matcher import Matcher
 
 from maskrcnn_benchmark.modeling.balanced_positive_negative_sampler import (
-    BalancedPositiveNegativeSampler
+    BalancedPositiveNegativeSampler,
 )
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 from maskrcnn_benchmark.modeling.utils import cat
@@ -15,14 +15,16 @@ from maskrcnn_benchmark.structures.keypoint import keypoints_to_heat_map
 
 
 def project_keypoints_to_heatmap(keypoints, proposals, discretization_size):
-    proposals = proposals.convert('xyxy')
-    return keypoints_to_heat_map(keypoints.keypoints, proposals.bbox, discretization_size)
+    proposals = proposals.convert("xyxy")
+    return keypoints_to_heat_map(
+        keypoints.keypoints, proposals.bbox, discretization_size
+    )
 
 
 def cat_boxlist_with_keypoints(boxlists):
     assert all(boxlist.has_field("keypoints") for boxlist in boxlists)
 
-    kp = [boxlist.get_field('keypoints').keypoints for boxlist in boxlists]
+    kp = [boxlist.get_field("keypoints").keypoints for boxlist in boxlists]
     kp = cat(kp, 0)
 
     fields = boxlists[0].get_fields()
@@ -40,13 +42,16 @@ def _within_box(points, boxes):
     boxes: Nx4
     output: NxK
     """
-    x_within = (points[..., 0] >= boxes[:, 0, None]) & (points[..., 0] <= boxes[:, 2, None])
-    y_within = (points[..., 1] >= boxes[:, 1, None]) & (points[..., 1] <= boxes[:, 3, None])
+    x_within = (points[..., 0] >= boxes[:, 0, None]) & (
+        points[..., 0] <= boxes[:, 2, None]
+    )
+    y_within = (points[..., 1] >= boxes[:, 1, None]) & (
+        points[..., 1] <= boxes[:, 3, None]
+    )
     return x_within & y_within
 
 
 class KeypointRCNNLossComputation(object):
-
     def __init__(self, proposal_matcher, fg_bg_sampler, discretization_size):
         """
         Arguments:
@@ -89,10 +94,10 @@ class KeypointRCNNLossComputation(object):
             neg_inds = matched_idxs == Matcher.BELOW_LOW_THRESHOLD
             labels_per_image[neg_inds] = 0
 
-
-
-            keypoints_per_image = matched_targets.get_field('keypoints')
-            within_box = _within_box(keypoints_per_image.keypoints, matched_targets.bbox)
+            keypoints_per_image = matched_targets.get_field("keypoints")
+            within_box = _within_box(
+                keypoints_per_image.keypoints, matched_targets.bbox
+            )
             vis_kp = keypoints_per_image.keypoints[..., 2] > 0
             is_visible = (within_box & vis_kp).sum(1) > 0
 
@@ -102,7 +107,6 @@ class KeypointRCNNLossComputation(object):
             keypoints.append(keypoints_per_image)
 
         return labels, keypoints
-
 
     def subsample(self, proposals, targets):
         """
@@ -124,9 +128,7 @@ class KeypointRCNNLossComputation(object):
             labels, keypoints, proposals
         ):
             proposals_per_image.add_field("labels", labels_per_image)
-            proposals_per_image.add_field(
-                "keypoints", keypoints_per_image
-            )
+            proposals_per_image.add_field("keypoints", keypoints_per_image)
 
         # distributed sampled proposals, that were obtained on all feature maps
         # concatenated via the fg_bg_sampler, into individual feature map levels
@@ -145,7 +147,9 @@ class KeypointRCNNLossComputation(object):
         valid = []
         for proposals_per_image in proposals:
             kp = proposals_per_image.get_field("keypoints")
-            heatmaps_per_image, valid_per_image = project_keypoints_to_heatmap(kp, proposals_per_image, self.discretization_size)
+            heatmaps_per_image, valid_per_image = project_keypoints_to_heatmap(
+                kp, proposals_per_image, self.discretization_size
+            )
             heatmaps.append(heatmaps_per_image.view(-1))
             valid.append(valid_per_image.view(-1))
 
@@ -161,8 +165,7 @@ class KeypointRCNNLossComputation(object):
         N, K, H, W = keypoint_logits.shape
         keypoint_logits = keypoint_logits.view(N * K, H * W)
 
-        keypoint_loss = F.cross_entropy(
-                keypoint_logits[valid], keypoint_targets[valid])
+        keypoint_loss = F.cross_entropy(keypoint_logits[valid], keypoint_targets[valid])
         return keypoint_loss
 
 
