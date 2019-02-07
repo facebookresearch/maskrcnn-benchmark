@@ -52,7 +52,6 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
                 anno = self.coco.loadAnns(ann_ids)
                 if has_valid_annotation(anno):
                     ids.append(img_id)
-            print(len(self.ids), len(ids))
             self.ids = ids
 
         self.json_category_id_to_contiguous_id = {
