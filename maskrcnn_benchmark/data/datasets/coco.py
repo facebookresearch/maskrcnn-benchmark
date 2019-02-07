@@ -10,13 +10,20 @@ from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
 min_keypoints_per_image = 10
 
 
-def count_visible_keypoints(anno):
+def _count_visible_keypoints(anno):
     return sum(sum(1 for v in ann["keypoints"][2::3] if v > 0) for ann in anno)
+
+
+def _has_only_empty_bbox(anno):
+    return all(any(o <= 1 for o in obj["bbox"][2:]) for obj in anno)
 
 
 def has_valid_annotation(anno):
     # if it's empty, there is no annotation
     if len(anno) == 0:
+        return False
+    # if all boxes have close to zero area, there is no annotation
+    if _has_only_empty_bbox(anno):
         return False
     # keypoints task have a slight different critera for considering
     # if an annotation is valid
@@ -24,7 +31,7 @@ def has_valid_annotation(anno):
         return True
     # for keypoint detection tasks, only consider valid images those
     # containing at least min_keypoints_per_image
-    if count_visible_keypoints(anno) >= min_keypoints_per_image:
+    if _count_visible_keypoints(anno) >= min_keypoints_per_image:
         return True
     return False
 
@@ -45,22 +52,8 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
                 anno = self.coco.loadAnns(ann_ids)
                 if has_valid_annotation(anno):
                     ids.append(img_id)
+            print(len(self.ids), len(ids))
             self.ids = ids
-
-            ids_to_remove = []
-            for img_id in self.ids:
-                ann_ids = self.coco.getAnnIds(imgIds=img_id)
-                anno = self.coco.loadAnns(ann_ids)
-                if all(
-                    any(o <= 1 for o in obj["bbox"][2:])
-                    for obj in anno
-                    if obj["iscrowd"] == 0
-                ):
-                    ids_to_remove.append(img_id)
-
-            self.ids = [
-                img_id for img_id in self.ids if img_id not in ids_to_remove
-            ]
 
         self.json_category_id_to_contiguous_id = {
             v: i + 1 for i, v in enumerate(self.coco.getCatIds())
