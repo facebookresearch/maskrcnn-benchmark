@@ -337,7 +337,7 @@ class COCOResults(object):
             "ARm@1000",
             "ARl@1000",
         ],
-        "keypoint": ["AP", "AP50", "AP75", "APm", "APl"],
+        "keypoints": ["AP", "AP50", "AP75", "APm", "APl"],
     }
 
     def __init__(self, *iou_types):
