@@ -60,7 +60,7 @@ def heatmaps_to_keypoints(maps, rois):
     # NCHW to NHWC for use with OpenCV
     maps = np.transpose(maps, [0, 2, 3, 1])
     min_size = 0  # cfg.KRCNN.INFERENCE_MIN_SIZE
-    num_keypoints = 17
+    num_keypoints = maps.shape[3]
     xy_preds = np.zeros((len(rois), 3, num_keypoints), dtype=np.float32)
     end_scores = np.zeros((len(rois), num_keypoints), dtype=np.float32)
     for i in range(len(rois)):
@@ -79,18 +79,17 @@ def heatmaps_to_keypoints(maps, rois):
         roi_map = np.transpose(roi_map, [2, 0, 1])
         # roi_map_probs = scores_to_probs(roi_map.copy())
         w = roi_map.shape[2]
-        for k in range(num_keypoints):
-            pos = roi_map[k, :, :].argmax()
-            x_int = pos % w
-            y_int = (pos - x_int) // w
-            # assert (roi_map_probs[k, y_int, x_int] ==
-            #         roi_map_probs[k, :, :].max())
-            x = (x_int + 0.5) * width_correction
-            y = (y_int + 0.5) * height_correction
-            xy_preds[i, 0, k] = x + offset_x[i]
-            xy_preds[i, 1, k] = y + offset_y[i]
-            xy_preds[i, 2, k] = 1
-            end_scores[i, k] = roi_map[k, y_int, x_int]
+        pos = roi_map.reshape(num_keypoints, -1).argmax(axis=1)
+        x_int = pos % w
+        y_int = (pos - x_int) // w
+        # assert (roi_map_probs[k, y_int, x_int] ==
+        #         roi_map_probs[k, :, :].max())
+        x = (x_int + 0.5) * width_correction
+        y = (y_int + 0.5) * height_correction
+        xy_preds[i, 0, :] = x + offset_x[i]
+        xy_preds[i, 1, :] = y + offset_y[i]
+        xy_preds[i, 2, :] = 1
+        end_scores[i, :] = roi_map[np.arange(num_keypoints), y_int, x_int]
 
     return np.transpose(xy_preds, [0, 2, 1]), end_scores
 

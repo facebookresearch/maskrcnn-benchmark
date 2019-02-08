@@ -300,7 +300,7 @@ class COCODemo(object):
         return composite
 
     def overlay_keypoints(self, image, predictions):
-        keypoints = predictions.get_field("keypoints")#.keypoints.numpy()
+        keypoints = predictions.get_field("keypoints")
         kps = keypoints.keypoints
         scores = keypoints.get_field("logits")
         kps = torch.cat((kps[:, :, 0:2], scores[:, :, None]), dim=2).numpy()
@@ -372,32 +372,13 @@ class COCODemo(object):
 import numpy as np
 import matplotlib.pyplot as plt
 from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
-def kp_connections(keypoints):
-    kp_lines = [
-        [keypoints.index('left_eye'), keypoints.index('right_eye')],
-        [keypoints.index('left_eye'), keypoints.index('nose')],
-        [keypoints.index('right_eye'), keypoints.index('nose')],
-        [keypoints.index('right_eye'), keypoints.index('right_ear')],
-        [keypoints.index('left_eye'), keypoints.index('left_ear')],
-        [keypoints.index('right_shoulder'), keypoints.index('right_elbow')],
-        [keypoints.index('right_elbow'), keypoints.index('right_wrist')],
-        [keypoints.index('left_shoulder'), keypoints.index('left_elbow')],
-        [keypoints.index('left_elbow'), keypoints.index('left_wrist')],
-        [keypoints.index('right_hip'), keypoints.index('right_knee')],
-        [keypoints.index('right_knee'), keypoints.index('right_ankle')],
-        [keypoints.index('left_hip'), keypoints.index('left_knee')],
-        [keypoints.index('left_knee'), keypoints.index('left_ankle')],
-        [keypoints.index('right_shoulder'), keypoints.index('left_shoulder')],
-        [keypoints.index('right_hip'), keypoints.index('left_hip')],
-    ]
-    return kp_lines
 
 def vis_keypoints(img, kps, kp_thresh=2, alpha=0.7):
     """Visualizes keypoints (adapted from vis_one_image).
     kps has shape (4, #keypoints) where 4 rows are (x, y, logit, prob).
     """
     dataset_keypoints = PersonKeypoints.NAMES
-    kp_lines = kp_connections(dataset_keypoints)
+    kp_lines = PersonKeypoints.CONNECTIONS
 
     # Convert from plt 0-1 RGBA colors to 0-255 BGR colors for opencv.
     cmap = plt.get_cmap('rainbow')

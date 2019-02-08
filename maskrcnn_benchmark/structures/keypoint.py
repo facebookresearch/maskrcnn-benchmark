@@ -51,7 +51,11 @@ class Keypoints(object):
         # Maintain COCO convention that if visibility == 0, then x, y = 0
         inds = flipped_data[..., 2] == 0
         flipped_data[inds] = 0
-        return type(self)(flipped_data, self.size, self.mode)
+
+        keypoints = type(self)(flipped_data, self.size, self.mode)
+        for k, v in self.extra_fields.items():
+            keypoints.add_field(k, v)
+        return keypoints
 
     def to(self, *args, **kwargs):
         keypoints = type(self)(self.keypoints.to(*args, **kwargs), self.size, self.mode)
@@ -123,7 +127,26 @@ class PersonKeypoints(Keypoints):
 
 # TODO this doesn't look great
 PersonKeypoints.FLIP_INDS = _create_flip_indices(PersonKeypoints.NAMES, PersonKeypoints.FLIP_MAP)
-
+def kp_connections(keypoints):
+    kp_lines = [
+        [keypoints.index('left_eye'), keypoints.index('right_eye')],
+        [keypoints.index('left_eye'), keypoints.index('nose')],
+        [keypoints.index('right_eye'), keypoints.index('nose')],
+        [keypoints.index('right_eye'), keypoints.index('right_ear')],
+        [keypoints.index('left_eye'), keypoints.index('left_ear')],
+        [keypoints.index('right_shoulder'), keypoints.index('right_elbow')],
+        [keypoints.index('right_elbow'), keypoints.index('right_wrist')],
+        [keypoints.index('left_shoulder'), keypoints.index('left_elbow')],
+        [keypoints.index('left_elbow'), keypoints.index('left_wrist')],
+        [keypoints.index('right_hip'), keypoints.index('right_knee')],
+        [keypoints.index('right_knee'), keypoints.index('right_ankle')],
+        [keypoints.index('left_hip'), keypoints.index('left_knee')],
+        [keypoints.index('left_knee'), keypoints.index('left_ankle')],
+        [keypoints.index('right_shoulder'), keypoints.index('left_shoulder')],
+        [keypoints.index('right_hip'), keypoints.index('left_hip')],
+    ]
+    return kp_lines
+PersonKeypoints.CONNECTIONS = kp_connections(PersonKeypoints.NAMES)
 
 
 # TODO make this nicer, this is a direct translation from C2 (but removing the inner loop)
@@ -162,75 +185,3 @@ def keypoints_to_heat_map(keypoints, rois, heatmap_size):
     heatmaps = lin_ind * valid
 
     return heatmaps, valid
-
-
-class HeatMaps(object):
-    """
-    Not used
-    """
-    def __init__(self, heatmaps, boxes, size, mode=None):
-        self.heatmaps = heatmaps
-        self.boxes = boxes
-        self.size = size
-        self.mode = mode
-
-    def heatmaps_to_keypoints(self):
-        """Extract predicted keypoint locations from heatmaps. Output has shape
-        (#rois, 4, #keypoints) with the 4 rows corresponding to (x, y, logit, prob)
-        for each keypoint.
-        """
-        # This function converts a discrete image coordinate in a HEATMAP_SIZE x
-        # HEATMAP_SIZE image to a continuous keypoint coordinate. We maintain
-        # consistency with keypoints_to_heatmap_labels by using the conversion from
-        # Heckbert 1990: c = d + 0.5, where d is a discrete coordinate and c is a
-        # continuous coordinate.
-
-        maps = self.heatmaps
-        rois = self.boxes.bbox
-
-        offset_x = rois[:, 0]
-        offset_y = rois[:, 1]
-
-        widths = rois[:, 2] - rois[:, 0]
-        heights = rois[:, 3] - rois[:, 1]
-        widths = widths.clamp(min=1)
-        heights = heights.clamp(min=1)
-        widths_ceil = torch.ceil(widths)
-        heights_ceil = torch.ceil(heights)
-
-        # NCHW to NHWC for use with OpenCV
-        # maps = torch.permute(maps, [0, 2, 3, 1])
-        xy_preds = torch.zeros(
-            (len(rois), 4, cfg.KRCNN.NUM_KEYPOINTS), dtype=torch.float32)
-        for i in range(len(rois)):
-            roi_map_width = widths_ceil[i]
-            roi_map_height = heights_ceil[i]
-            width_correction = widths[i] / roi_map_width
-            height_correction = heights[i] / roi_map_height
-
-            roi_map = torch.nn.functional.upsample(maps[i][None],
-                    size=(roi_map_height, roi_map_width), mode='bilinear', align_corners=False)
-            # roi_map = Image.fromarray(maps[i])
-            # roi_map = roi_map.resize((roi_map_width, roi_map_height),
-            #         resample=Image.BICUBIC)
-            # roi_map = torch.from_numpy(np.array(roi_map, copy=False))
-
-            # Bring back to CHW
-            # roi_map = torch.permute(roi_map, [2, 0, 1])
-            roi_map_probs = scores_to_probs(roi_map.copy())
-            w = roi_map.shape[2]
-            for k in range(cfg.KRCNN.NUM_KEYPOINTS):
-                pos = roi_map[k, :, :].argmax()
-                x_int = pos % w
-                y_int = (pos - x_int) // w
-                assert (roi_map_probs[k, y_int, x_int] ==
-                        roi_map_probs[k, :, :].max())
-                x = (x_int + 0.5) * width_correction
-                y = (y_int + 0.5) * height_correction
-                xy_preds[i, 0, k] = x + offset_x[i]
-                xy_preds[i, 1, k] = y + offset_y[i]
-                xy_preds[i, 2, k] = roi_map[k, y_int, x_int]
-                xy_preds[i, 3, k] = roi_map_probs[k, y_int, x_int]
-
-        return xy_preds
-
