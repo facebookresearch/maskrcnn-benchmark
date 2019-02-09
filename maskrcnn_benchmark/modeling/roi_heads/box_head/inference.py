@@ -122,6 +122,7 @@ class PostProcessor(nn.Module):
             boxes_j = boxes[inds, j * 4 : (j + 1) * 4]
             boxlist_for_class = BoxList(boxes_j, boxlist.size, mode="xyxy")
             boxlist_for_class.add_field("scores", scores_j)
+            boxlist_for_class.add_field("orig_inds", inds) # preserve indices of encoded features for each bbox
             boxlist_for_class = boxlist_nms(
                 boxlist_for_class, self.nms, score_field="scores"
             )
