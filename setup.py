@@ -3,6 +3,7 @@
 
 import glob
 import os
+import sys
 
 import torch
 from setuptools import find_packages
@@ -13,6 +14,7 @@ from torch.utils.cpp_extension import CUDAExtension
 
 requirements = ["torch", "torchvision"]
 
+_IS_MACOS = 'darwin' == sys.platform
 
 def get_extensions():
     this_dir = os.path.dirname(os.path.abspath(__file__))
@@ -25,7 +27,13 @@ def get_extensions():
     sources = main_file + source_cpu
     extension = CppExtension
 
-    extra_compile_args = {"cxx": []}
+    if _IS_MACOS:
+        os.environ["CC"] = "clang"
+        os.environ["CXX"] = "clang++"
+        extra_compile_args = {"cxx": ["-stdlib=libc++"]}
+    else:
+        extra_compile_args = {"cxx": []}
+
     define_macros = []
 
     if torch.cuda.is_available() and CUDA_HOME is not None:
