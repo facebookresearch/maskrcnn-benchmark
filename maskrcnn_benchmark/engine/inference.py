@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from maskrcnn_benchmark.data.datasets.evaluation import evaluate
 from ..utils.comm import is_main_process
-from ..utils.comm import scatter_gather
+from ..utils.comm import all_gather
 from ..utils.comm import synchronize
 
 
@@ -30,7 +30,7 @@ def compute_on_dataset(model, data_loader, device):
 
 
 def _accumulate_predictions_from_multiple_gpus(predictions_per_gpu):
-    all_predictions = scatter_gather(predictions_per_gpu)
+    all_predictions = all_gather(predictions_per_gpu)
     if not is_main_process():
         return
     # merge the list of dicts
