@@ -68,6 +68,8 @@ def main():
     iou_types = ("bbox",)
     if cfg.MODEL.MASK_ON:
         iou_types = iou_types + ("segm",)
+    if cfg.MODEL.KEYPOINT_ON:
+        iou_types = iou_types + ("keypoints",)
     output_folders = [None] * len(cfg.DATASETS.TEST)
     dataset_names = cfg.DATASETS.TEST
     if cfg.OUTPUT_DIR:

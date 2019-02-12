@@ -23,6 +23,7 @@ _C = CN()
 _C.MODEL = CN()
 _C.MODEL.RPN_ONLY = False
 _C.MODEL.MASK_ON = False
+_C.MODEL.KEYPOINT_ON = False
 _C.MODEL.DEVICE = "cuda"
 _C.MODEL.META_ARCHITECTURE = "GeneralizedRCNN"
 _C.MODEL.CLS_AGNOSTIC_BBOX_REG = False
@@ -38,7 +39,7 @@ _C.MODEL.WEIGHT = ""
 # -----------------------------------------------------------------------------
 _C.INPUT = CN()
 # Size of the smallest side of the image during training
-_C.INPUT.MIN_SIZE_TRAIN = 800  # (800,)
+_C.INPUT.MIN_SIZE_TRAIN = (800,)  # (800,)
 # Maximum size of the side of the image during training
 _C.INPUT.MAX_SIZE_TRAIN = 1333
 # Size of the smallest side of the image during testing
@@ -231,6 +232,18 @@ _C.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS_THRESHOLD = 0.5
 _C.MODEL.ROI_MASK_HEAD.DILATION = 1
 # GN
 _C.MODEL.ROI_MASK_HEAD.USE_GN = False
+
+_C.MODEL.ROI_KEYPOINT_HEAD = CN()
+_C.MODEL.ROI_KEYPOINT_HEAD.FEATURE_EXTRACTOR = "KeypointRCNNFeatureExtractor"
+_C.MODEL.ROI_KEYPOINT_HEAD.PREDICTOR = "KeypointRCNNPredictor"
+_C.MODEL.ROI_KEYPOINT_HEAD.POOLER_RESOLUTION = 14
+_C.MODEL.ROI_KEYPOINT_HEAD.POOLER_SAMPLING_RATIO = 0
+_C.MODEL.ROI_KEYPOINT_HEAD.POOLER_SCALES = (1.0 / 16,)
+_C.MODEL.ROI_KEYPOINT_HEAD.MLP_HEAD_DIM = 1024
+_C.MODEL.ROI_KEYPOINT_HEAD.CONV_LAYERS = tuple(512 for _ in range(8))
+_C.MODEL.ROI_KEYPOINT_HEAD.RESOLUTION = 14
+_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
+_C.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR = True
 
 # ---------------------------------------------------------------------------- #
 # ResNe[X]t options (ResNets = {ResNet, ResNeXt}
