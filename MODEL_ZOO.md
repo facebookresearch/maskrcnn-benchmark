@@ -28,7 +28,9 @@ R-101-FPN | Mask | 1x | 2 | 7.9 | 0.5665 | 14.2 | 0.15384 + 0.034 | 40.1 | 36.1 
 X-101-32x8d-FPN | Mask | 1x | 1 | 7.8 | 0.7562 | 37.8 | 0.21739 + 0.034 | 42.2 | 37.8 | [6358718](https://download.pytorch.org/models/maskrcnn/e2e_mask_rcnn_X_101_32x8d_FPN_1x.pth)
 
 For person keypoint detection:
+
 backbone | type | lr sched | im / gpu | train mem(GB) | train time (s/iter) | total train time(hr) | inference time(s/im) | box AP | keypoint AP | model id
+-- | -- | -- | -- | -- | -- | -- | -- | -- | -- | --
 R-50-FPN | Keypoint | 1x | 2 | 5.7 | 0.3771 | 9.4 | 0.10941 | 53.7 | 64.3 | 9981060
 
 
