@@ -115,6 +115,8 @@ void ROIAlignForward_cpu_kernel(
     const int nthreads,
     const T* bottom_data,
     const T& spatial_scale,
+    const int n_rois,
+    const int roi_cols,
     const int channels,
     const int height,
     const int width,
@@ -122,25 +124,19 @@ void ROIAlignForward_cpu_kernel(
     const int pooled_width,
     const int sampling_ratio,
     const T* bottom_rois,
-    //int roi_cols,
     T* top_data) {
-  //AT_ASSERT(roi_cols == 4 || roi_cols == 5);
-  int roi_cols = 5;
 
-  int n_rois = nthreads / channels / pooled_width / pooled_height;
+  AT_ASSERT(roi_cols == 5)
+
   // (n, c, ph, pw) is an element in the pooled output
   // can be parallelized using omp
   // #pragma omp parallel for num_threads(32)
   for (int n = 0; n < n_rois; n++) {
     int index_n = n * channels * pooled_width * pooled_height;
 
-    // roi could have 4 or 5 columns
     const T* offset_bottom_rois = bottom_rois + n * roi_cols;
-    int roi_batch_ind = 0;
-    if (roi_cols == 5) {
-      roi_batch_ind = offset_bottom_rois[0];
-      offset_bottom_rois++;
-    }
+    int roi_batch_ind = offset_bottom_rois[0];
+    offset_bottom_rois++;
 
     // Do not using rounding; this implementation detail is critical
     T roi_start_w = offset_bottom_rois[0] * spatial_scale;
@@ -187,7 +183,7 @@ void ROIAlignForward_cpu_kernel(
         roi_bin_grid_w,
         pre_calc);
 
-      for (int c = 0; c < channels; c++) {
+    for (int c = 0; c < channels; c++) {
       int index_n_c = index_n + c * pooled_width * pooled_height;
       const T* offset_bottom_data =
           bottom_data + (roi_batch_ind * channels + c) * height * width;
@@ -228,6 +224,7 @@ at::Tensor ROIAlign_forward_cpu(const at::Tensor& input,
   AT_ASSERTM(!rois.type().is_cuda(), "rois must be a CPU tensor");
 
   auto num_rois = rois.size(0);
+  auto roi_cols = rois.size(1);
   auto channels = input.size(1);
   auto height = input.size(2);
   auto width = input.size(3);
@@ -244,6 +241,8 @@ at::Tensor ROIAlign_forward_cpu(const at::Tensor& input,
          output_size,
          input.data<scalar_t>(),
          spatial_scale,
+         num_rois,
+         roi_cols,
          channels,
          height,
          width,
