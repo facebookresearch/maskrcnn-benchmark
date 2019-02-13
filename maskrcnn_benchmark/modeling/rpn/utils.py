@@ -43,8 +43,3 @@ def concat_box_prediction_layers(box_cls, box_regression):
     box_cls = cat(box_cls_flattened, dim=1).reshape(-1, C)
     box_regression = cat(box_regression_flattened, dim=1).reshape(-1, 4)
     return box_cls, box_regression
-
-
-
-
-

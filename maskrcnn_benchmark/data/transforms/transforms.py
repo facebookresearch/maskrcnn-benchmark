@@ -61,19 +61,6 @@ class Resize(object):
         return image, target
 
 
-class MultiScaleResize(object):
-    def __init__(self, min_sizes, max_size):
-        self.resizers = []
-        for min_size in min_sizes:
-            self.resizers.append(Resize(min_size, max_size))
-
-    def __call__(self, image, target):
-        resizer = random.choice(self.resizers)
-        image, target = resizer(image, target)
-
-        return image, target
-
-
 class RandomHorizontalFlip(object):
     def __init__(self, prob=0.5):
         self.prob = prob

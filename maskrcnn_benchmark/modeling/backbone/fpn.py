@@ -64,7 +64,6 @@ class FPN(nn.Module):
             last_inner = inner_lateral + inner_top_down
             results.insert(0, getattr(self, layer_block)(last_inner))
 
-        # if self.top_blocks is not None:
         if isinstance(self.top_blocks, LastLevelP6P7):
             last_results = self.top_blocks(x[-1], results[-1])
             results.extend(last_results)
