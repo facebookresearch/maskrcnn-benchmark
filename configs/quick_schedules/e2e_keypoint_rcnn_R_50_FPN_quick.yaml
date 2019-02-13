@@ -20,20 +20,21 @@ MODEL:
     POOLER_SAMPLING_RATIO: 2
     FEATURE_EXTRACTOR: "FPN2MLPFeatureExtractor"
     PREDICTOR: "FPNPredictor"
-  ROI_MASK_HEAD:
+    NUM_CLASSES: 2
+  ROI_KEYPOINT_HEAD:
     POOLER_SCALES: (0.25, 0.125, 0.0625, 0.03125)
-    FEATURE_EXTRACTOR: "MaskRCNNFPNFeatureExtractor"
-    PREDICTOR: "MaskRCNNC4Predictor"
+    FEATURE_EXTRACTOR: "KeypointRCNNFeatureExtractor"
+    PREDICTOR: "KeypointRCNNPredictor"
     POOLER_RESOLUTION: 14
     POOLER_SAMPLING_RATIO: 2
-    RESOLUTION: 28
+    RESOLUTION: 56
     SHARE_BOX_FEATURE_EXTRACTOR: False
-  MASK_ON: True
+  KEYPOINT_ON: True
 DATASETS:
-  TRAIN: ("coco_2014_minival",)
-  TEST: ("coco_2014_minival",)
+  TRAIN: ("keypoints_coco_2014_minival",)
+  TEST: ("keypoints_coco_2014_minival",)
 INPUT:
-  MIN_SIZE_TRAIN: (600,)
+  MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
   MAX_SIZE_TRAIN: 1000
   MIN_SIZE_TEST: 800
   MAX_SIZE_TEST: 1000
