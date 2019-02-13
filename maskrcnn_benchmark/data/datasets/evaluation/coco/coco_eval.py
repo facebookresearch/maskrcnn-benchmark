@@ -75,9 +75,9 @@ def prepare_for_coco_detection(predictions, dataset):
         if len(prediction) == 0:
             continue
 
-        # TODO replace with get_img_info?
-        image_width = dataset.coco.imgs[original_id]["width"]
-        image_height = dataset.coco.imgs[original_id]["height"]
+        img_info = dataset.get_img_info(image_id)
+        image_width = img_info["width"]
+        image_height = img_info["height"]
         prediction = prediction.resize((image_width, image_height))
         prediction = prediction.convert("xywh")
 
@@ -113,9 +113,9 @@ def prepare_for_coco_segmentation(predictions, dataset):
         if len(prediction) == 0:
             continue
 
-        # TODO replace with get_img_info?
-        image_width = dataset.coco.imgs[original_id]["width"]
-        image_height = dataset.coco.imgs[original_id]["height"]
+        img_info = dataset.get_img_info(image_id)
+        image_width = img_info["width"]
+        image_height = img_info["height"]
         prediction = prediction.resize((image_width, image_height))
         masks = prediction.get_field("mask")
         # t = time.time()
@@ -223,9 +223,9 @@ def evaluate_box_proposals(
     for image_id, prediction in enumerate(predictions):
         original_id = dataset.id_to_img_map[image_id]
 
-        # TODO replace with get_img_info?
-        image_width = dataset.coco.imgs[original_id]["width"]
-        image_height = dataset.coco.imgs[original_id]["height"]
+        img_info = dataset.get_img_info(image_id)
+        image_width = img_info["width"]
+        image_height = img_info["height"]
         prediction = prediction.resize((image_width, image_height))
 
         # sort predictions in descending order
