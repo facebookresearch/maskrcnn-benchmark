@@ -288,7 +288,7 @@ _C.MODEL.RETINANET.USE_C5 = True
 _C.MODEL.RETINANET.NUM_CONVS = 4
 
 # Weight for bbox_regression loss
-_C.MODEL.RETINANET.BBOX_REG_WEIGHT = 1.0
+_C.MODEL.RETINANET.BBOX_REG_WEIGHT = 4.0
 
 # Smooth L1 loss beta for bbox regression
 _C.MODEL.RETINANET.BBOX_REG_BETA = 0.11

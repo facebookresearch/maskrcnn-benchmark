@@ -24,7 +24,8 @@ class RetinaNetLossComputation(RPNLossComputation):
     def __init__(self, proposal_matcher, box_coder,
                  generate_labels_func,
                  sigmoid_focal_loss,
-                 bbox_reg_beta=0.11):
+                 bbox_reg_beta=0.11,
+                 regress_norm=1.0):
         """
         Arguments:
             proposal_matcher (Matcher)
@@ -37,6 +38,7 @@ class RetinaNetLossComputation(RPNLossComputation):
         self.copied_fields = ['labels']
         self.generate_labels_func = generate_labels_func
         self.discard_cases = ['between_thresholds']
+        self.regress_norm = regress_norm
 
     def __call__(self, anchors, box_cls, box_regression, targets):
         """
@@ -66,7 +68,7 @@ class RetinaNetLossComputation(RPNLossComputation):
             regression_targets[pos_inds],
             beta=self.bbox_reg_beta,
             size_average=False,
-        ) / (max(1, pos_inds.numel() * 4))
+        ) / (max(1, pos_inds.numel() * self.regress_norm))
 
         labels = labels.int()
 
@@ -100,5 +102,6 @@ def make_retinanet_loss_evaluator(cfg, box_coder):
         generate_retinanet_labels,
         sigmoid_focal_loss,
         bbox_reg_beta = cfg.MODEL.RETINANET.BBOX_REG_BETA,
+        regress_norm = cfg.MODEL.RETINANET.BBOX_REG_WEIGHT,
     )
     return loss_evaluator
