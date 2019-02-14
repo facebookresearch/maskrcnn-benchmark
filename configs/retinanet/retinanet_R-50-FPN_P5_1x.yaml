@@ -31,8 +31,8 @@ MODEL:
     FG_IOU_THRESHOLD: 0.5
     BG_IOU_THRESHOLD: 0.4
 DATASETS:
-  TRAIN: ("coco_2017_train",)
-  TEST: ("coco_2017_val",)
+  TRAIN: ("coco_2014_train", "coco_2014_valminusminival")
+  TEST: ("coco_2014_minival",)
 INPUT:
   MIN_SIZE_TRAIN: (800,)
   MAX_SIZE_TRAIN: 1333
@@ -47,8 +47,3 @@ SOLVER:
   STEPS: (120000, 160000)
   MAX_ITER: 180000
   IMS_PER_BATCH: 8
-  # BASE_LR: 0.01
-  # WEIGHT_DECAY: 0.0001
-  # STEPS: (60000, 80000)
-  # MAX_ITER: 90000
-  # IMS_PER_BATCH: 16
