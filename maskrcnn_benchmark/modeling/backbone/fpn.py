@@ -11,7 +11,9 @@ class FPN(nn.Module):
     order, and must be consecutive
     """
 
-    def __init__(self, in_channels_list, out_channels, top_blocks=None):
+    def __init__(
+        self, in_channels_list, out_channels, conv_block, top_blocks=None
+    ):
         """
         Arguments:
             in_channels_list (list[int]): number of channels for each feature map that
@@ -27,13 +29,8 @@ class FPN(nn.Module):
         for idx, in_channels in enumerate(in_channels_list, 1):
             inner_block = "fpn_inner{}".format(idx)
             layer_block = "fpn_layer{}".format(idx)
-            inner_block_module = nn.Conv2d(in_channels, out_channels, 1)
-            layer_block_module = nn.Conv2d(out_channels, out_channels, 3, 1, 1)
-            for module in [inner_block_module, layer_block_module]:
-                # Caffe2 implementation uses XavierFill, which in fact
-                # corresponds to kaiming_uniform_ in PyTorch
-                nn.init.kaiming_uniform_(module.weight, a=1)
-                nn.init.constant_(module.bias, 0)
+            inner_block_module = conv_block(in_channels, out_channels, 1)
+            layer_block_module = conv_block(out_channels, out_channels, 3, 1)
             self.add_module(inner_block, inner_block_module)
             self.add_module(layer_block, layer_block_module)
             self.inner_blocks.append(inner_block)

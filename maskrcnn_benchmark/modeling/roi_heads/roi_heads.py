@@ -3,6 +3,7 @@ import torch
 
 from .box_head.box_head import build_roi_box_head
 from .mask_head.mask_head import build_roi_mask_head
+from .keypoint_head.keypoint_head import build_roi_keypoint_head
 
 class CombinedROIHeads(torch.nn.ModuleDict):
     """
@@ -15,12 +16,15 @@ class CombinedROIHeads(torch.nn.ModuleDict):
         self.cfg = cfg.clone()
         if cfg.MODEL.MASK_ON and cfg.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             self.mask.feature_extractor = self.box.feature_extractor
+
         if cfg.MODEL.VERTEX_ON and cfg.MODEL.ROI_VERTEX_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             self.vertex.feature_extractor = self.box.feature_extractor
         if cfg.MODEL.POSE_ON and cfg.MODEL.ROI_POSE_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             self.pose.feature_extractor = self.box.feature_extractor
         if cfg.MODEL.DEPTH_ON and cfg.MODEL.ROI_DEPTH_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             self.depth.feature_extractor = self.box.feature_extractor
+        if cfg.MODEL.KEYPOINT_ON and cfg.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
+            self.keypoint.feature_extractor = self.box.feature_extractor
 
     def forward(self, features, proposals, targets=None):
         losses = {}
@@ -56,7 +60,6 @@ class CombinedROIHeads(torch.nn.ModuleDict):
             x, depth_pred, detections, loss_depth = self.depth(depth_features, detections, targets)
             losses.update(loss_depth)
 
-
         if self.cfg.MODEL.VERTEX_ON:
             vertex_features = features
             if (
@@ -87,6 +90,19 @@ class CombinedROIHeads(torch.nn.ModuleDict):
             x, pose_pred, detections, loss_pose = self.pose(pose_features, detections, targets)
             losses.update(loss_pose)
 
+        if self.cfg.MODEL.KEYPOINT_ON:
+            keypoint_features = features
+            # optimization: during training, if we share the feature extractor between
+            # the box and the mask heads, then we can reuse the features already computed
+            if (
+                self.training
+                and self.cfg.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR
+            ):
+                keypoint_features = x
+            # During training, self.box() will return the unaltered proposals as "detections"
+            # this makes the API consistent during training and testing
+            x, detections, loss_keypoint = self.keypoint(keypoint_features, detections, targets)
+            losses.update(loss_keypoint)
         return x, detections, losses
 
 
@@ -107,6 +123,8 @@ def build_roi_heads(cfg):
     if cfg.MODEL.POSE_ON:
         from .pose_head.pose_head import build_roi_pose_head
         roi_heads.append(("pose", build_roi_pose_head(cfg)))
+    if cfg.MODEL.KEYPOINT_ON:
+        roi_heads.append(("keypoint", build_roi_keypoint_head(cfg)))
 
     # combine individual heads in a single module
     if roi_heads:

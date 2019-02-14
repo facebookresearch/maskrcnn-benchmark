@@ -7,6 +7,14 @@ import os
 class DatasetCatalog(object):
     DATA_DIR = "datasets"
     DATASETS = {
+        "coco_2017_train": {
+            "img_dir": "coco/train2017",
+            "ann_file": "coco/annotations/instances_train2017.json"
+        },
+        "coco_2017_val": {
+            "img_dir": "coco/val2017",
+            "ann_file": "coco/annotations/instances_val2017.json"
+        },
         "coco_2014_train": {
             "img_dir": "coco/train2014",
             "ann_file": "coco/annotations/instances_train2014.json"
@@ -26,6 +34,22 @@ class DatasetCatalog(object):
         "cocopose_2014_debug": {
             "img_dir": "LOV/data",
             "ann_file": "LOV/coco_lov_debug.json"
+        },
+        "keypoints_coco_2014_train": {
+            "img_dir": "coco/train2014",
+            "ann_file": "annotations/person_keypoints_train2014.json",
+        },
+        "keypoints_coco_2014_val": {
+            "img_dir": "coco/val2014",
+            "ann_file": "coco/annotations/instances_val2014.json"
+        },
+        "keypoints_coco_2014_minival": {
+            "img_dir": "coco/val2014",
+            "ann_file": "annotations/person_keypoints_minival2014.json",
+        },
+        "keypoints_coco_2014_valminusminival": {
+            "img_dir": "coco/val2014",
+            "ann_file": "annotations/person_keypoints_valminusminival2014.json",
         },
         "voc_2007_train": {
             "data_dir": "voc/VOC2007",
@@ -118,11 +142,13 @@ class ModelCatalog(object):
     S3_C2_DETECTRON_URL = "https://dl.fbaipublicfiles.com/detectron"
     C2_IMAGENET_MODELS = {
         "MSRA/R-50": "ImageNetPretrained/MSRA/R-50.pkl",
+        "MSRA/R-50-GN": "ImageNetPretrained/47261647/R-50-GN.pkl",
         "MSRA/R-101": "ImageNetPretrained/MSRA/R-101.pkl",
+        "MSRA/R-101-GN": "ImageNetPretrained/47592356/R-101-GN.pkl",
         "FAIR/20171220/X-101-32x8d": "ImageNetPretrained/20171220/X-101-32x8d.pkl",
     }
 
-    C2_DETECTRON_SUFFIX = "output/train/coco_2014_train%3Acoco_2014_valminusminival/generalized_rcnn/model_final.pkl"
+    C2_DETECTRON_SUFFIX = "output/train/{}coco_2014_train%3A{}coco_2014_valminusminival/generalized_rcnn/model_final.pkl"
     C2_DETECTRON_MODELS = {
         "35857197/e2e_faster_rcnn_R-50-C4_1x": "01_33_49.iAX0mXvW",
         "35857345/e2e_faster_rcnn_R-50-FPN_1x": "01_36_30.cUF7QR7I",
@@ -132,6 +158,9 @@ class ModelCatalog(object):
         "35858933/e2e_mask_rcnn_R-50-FPN_1x": "01_48_14.DzEQe4wC",
         "35861795/e2e_mask_rcnn_R-101-FPN_1x": "02_31_37.KqyEK4tT",
         "36761843/e2e_mask_rcnn_X-101-32x8d-FPN_1x": "06_35_59.RZotkLKI",
+        "37129812/e2e_mask_rcnn_X-152-32x8d-FPN-IN5k_1.44x": "09_35_36.8pzTQKYK",
+        # keypoints
+        "37697547/e2e_keypoint_rcnn_R-50-FPN_1x": "08_42_54.kdzV35ao"
     }
 
     @staticmethod
@@ -156,7 +185,8 @@ class ModelCatalog(object):
         # prefix/<model_id>/2012_2017_baselines/<model_name>.yaml.<signature>/suffix
         # we use as identifiers in the catalog Caffe2Detectron/COCO/<model_id>/<model_name>
         prefix = ModelCatalog.S3_C2_DETECTRON_URL
-        suffix = ModelCatalog.C2_DETECTRON_SUFFIX
+        dataset_tag = "keypoints_" if "keypoint" in name else ""
+        suffix = ModelCatalog.C2_DETECTRON_SUFFIX.format(dataset_tag, dataset_tag)
         # remove identification prefix
         name = name[len("Caffe2Detectron/COCO/"):]
         # split in <model_id> and <model_name>

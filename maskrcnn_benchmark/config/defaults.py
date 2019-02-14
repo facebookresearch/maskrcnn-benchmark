@@ -25,8 +25,10 @@ _C.MODEL.RPN_ONLY = False
 _C.MODEL.MASK_ON = False
 _C.MODEL.VERTEX_ON = False
 _C.MODEL.POSE_ON = False
+_C.MODEL.KEYPOINT_ON = False
 _C.MODEL.DEVICE = "cuda"
 _C.MODEL.META_ARCHITECTURE = "GeneralizedRCNN"
+_C.MODEL.CLS_AGNOSTIC_BBOX_REG = False
 
 # If the WEIGHT starts with a catalog://, like :R-50, the code will look for
 # the path in paths_catalog. Else, it will use it as the specified absolute
@@ -39,7 +41,7 @@ _C.MODEL.WEIGHT = ""
 # -----------------------------------------------------------------------------
 _C.INPUT = CN()
 # Size of the smallest side of the image during training
-_C.INPUT.MIN_SIZE_TRAIN = 800  # (800,)
+_C.INPUT.MIN_SIZE_TRAIN = (800,)  # (800,)
 # Maximum size of the side of the image during training
 _C.INPUT.MAX_SIZE_TRAIN = 1333
 # Size of the smallest side of the image during testing
@@ -79,6 +81,7 @@ _C.DATALOADER.SIZE_DIVISIBILITY = 0
 # are not batched with portrait images.
 _C.DATALOADER.ASPECT_RATIO_GROUPING = True
 
+
 # ---------------------------------------------------------------------------- #
 # Backbone options
 # ---------------------------------------------------------------------------- #
@@ -93,6 +96,28 @@ _C.MODEL.BACKBONE.CONV_BODY = "R-50-C4"
 # Add StopGrad at a specified stage so the bottom layers are frozen
 _C.MODEL.BACKBONE.FREEZE_CONV_BODY_AT = 2
 _C.MODEL.BACKBONE.OUT_CHANNELS = 256 * 4
+# GN for backbone
+_C.MODEL.BACKBONE.USE_GN = False
+
+
+# ---------------------------------------------------------------------------- #
+# FPN options
+# ---------------------------------------------------------------------------- #
+_C.MODEL.FPN = CN()
+_C.MODEL.FPN.USE_GN = False
+_C.MODEL.FPN.USE_RELU = False
+
+
+# ---------------------------------------------------------------------------- #
+# Group Norm options
+# ---------------------------------------------------------------------------- #
+_C.MODEL.GROUP_NORM = CN()
+# Number of dimensions per group in GroupNorm (-1 if using NUM_GROUPS)
+_C.MODEL.GROUP_NORM.DIM_PER_GP = -1
+# Number of groups in GroupNorm (-1 if using DIM_PER_GP)
+_C.MODEL.GROUP_NORM.NUM_GROUPS = 32
+# GroupNorm's small constant in the denominator
+_C.MODEL.GROUP_NORM.EPSILON = 1e-5
 
 
 # ---------------------------------------------------------------------------- #
@@ -157,7 +182,7 @@ _C.MODEL.ROI_HEADS.BG_IOU_THRESHOLD = 0.5
 _C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 5., 5.)
 # RoI minibatch size *per image* (number of regions of interest [ROIs])
 # Total number of RoIs per training minibatch =
-#   TRAIN.BATCH_SIZE_PER_IM * TRAIN.IMS_PER_BATCH * NUM_GPUS
+#   TRAIN.BATCH_SIZE_PER_IM * TRAIN.IMS_PER_BATCH
 # E.g., a common configuration is: 512 * 2 * 8 = 8192
 _C.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512
 # Target fraction of RoI minibatch that is labeled foreground (i.e. class > 0)
@@ -186,6 +211,12 @@ _C.MODEL.ROI_BOX_HEAD.POOLER_SCALES = (1.0 / 16,)
 _C.MODEL.ROI_BOX_HEAD.NUM_CLASSES = 81
 # Hidden layer dimension when using an MLP for the RoI box head
 _C.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM = 1024
+# GN
+_C.MODEL.ROI_BOX_HEAD.USE_GN = False
+# Dilation
+_C.MODEL.ROI_BOX_HEAD.DILATION = 1
+_C.MODEL.ROI_BOX_HEAD.CONV_HEAD_DIM = 256
+_C.MODEL.ROI_BOX_HEAD.NUM_STACKED_CONVS = 4
 
 
 _C.MODEL.ROI_MASK_HEAD = CN()
@@ -201,6 +232,22 @@ _C.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR = True
 # Whether or not resize and translate masks to the input image.
 _C.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS = False
 _C.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS_THRESHOLD = 0.5
+# Dilation
+_C.MODEL.ROI_MASK_HEAD.DILATION = 1
+# GN
+_C.MODEL.ROI_MASK_HEAD.USE_GN = False
+
+_C.MODEL.ROI_KEYPOINT_HEAD = CN()
+_C.MODEL.ROI_KEYPOINT_HEAD.FEATURE_EXTRACTOR = "KeypointRCNNFeatureExtractor"
+_C.MODEL.ROI_KEYPOINT_HEAD.PREDICTOR = "KeypointRCNNPredictor"
+_C.MODEL.ROI_KEYPOINT_HEAD.POOLER_RESOLUTION = 14
+_C.MODEL.ROI_KEYPOINT_HEAD.POOLER_SAMPLING_RATIO = 0
+_C.MODEL.ROI_KEYPOINT_HEAD.POOLER_SCALES = (1.0 / 16,)
+_C.MODEL.ROI_KEYPOINT_HEAD.MLP_HEAD_DIM = 1024
+_C.MODEL.ROI_KEYPOINT_HEAD.CONV_LAYERS = tuple(512 for _ in range(8))
+_C.MODEL.ROI_KEYPOINT_HEAD.RESOLUTION = 14
+_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
+_C.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR = True
 
 # NEW: Added for vertex head
 _C.MODEL.ROI_VERTEX_HEAD = CN()

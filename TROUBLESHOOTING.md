@@ -28,6 +28,24 @@ This means that `maskrcnn-benchmark` has not been properly installed.
 Refer to https://github.com/facebookresearch/maskrcnn-benchmark/issues/22 for a few possible issues.
 Note that we now support Python 2 as well.
 
+
+## ImportError: Undefined symbol: __cudaPopCallConfiguration error when import _C
+
+This probably means that the inconsistent version of NVCC compile and your conda CUDAToolKit package. This is firstly mentioned in https://github.com/facebookresearch/maskrcnn-benchmark/issues/45 . All you need to do is:
+
+```
+# Check the NVCC compile version(e.g.)
+/usr/cuda-9.2/bin/nvcc --version
+# Check the CUDAToolKit version(e.g.)
+~/anaconda3/bin/conda list | grep cuda
+
+# If you need to update your CUDAToolKit
+~/anaconda3/bin/conda install -c anaconda cudatoolkit==9.2
+```
+
+Both of them should have the **same** version. For example, if NVCC==9.2 and CUDAToolKit==9.2, this will be fine while when NVCC==9.2 but CUDAToolKit==9, it fails.
+
+
 ## Segmentation fault (core dumped) when running the library
 This probably means that you have compiled the library using GCC < 4.9, which is ABI incompatible with PyTorch.
 Indeed, during installation, you probably saw a message like
@@ -45,3 +63,5 @@ to install GCC 4.9 or higher, and try recompiling `maskrcnn-benchmark` again, af
 ```
 rm -rf build
 ```
+
+
