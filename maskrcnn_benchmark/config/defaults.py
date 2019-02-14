@@ -30,6 +30,8 @@ _C.MODEL.DEVICE = "cuda"
 _C.MODEL.META_ARCHITECTURE = "GeneralizedRCNN"
 _C.MODEL.CLS_AGNOSTIC_BBOX_REG = False
 
+_C.MODEL.DEPTH_ON = False
+
 # If the WEIGHT starts with a catalog://, like :R-50, the code will look for
 # the path in paths_catalog. Else, it will use it as the specified absolute
 # path
@@ -265,6 +267,14 @@ _C.MODEL.ROI_POSE_HEAD.SHARE_BOX_FEATURE_EXTRACTOR = True
 # _C.MODEL.ROI_POSE_HEAD.CONV_LAYERS = (256, )
 # _C.MODEL.ROI_POSE_HEAD.MAX_BATCH_SIZE_PER_IMAGE = 64  # maximum size for pose regression
 _C.MODEL.ROI_POSE_HEAD.FG_IOU_THRESHOLD = 0.7
+
+# NEW: Added for depth head
+_C.MODEL.ROI_DEPTH_HEAD = CN()
+_C.MODEL.ROI_DEPTH_HEAD.FEATURE_EXTRACTOR = "ResNet50Conv5ROIFeatureExtractor"
+_C.MODEL.ROI_DEPTH_HEAD.SHARE_BOX_FEATURE_EXTRACTOR = True
+_C.MODEL.ROI_DEPTH_HEAD.FG_IOU_THRESHOLD = 0.5
+_C.MODEL.ROI_DEPTH_HEAD.UPSAMPLE_FACTOR = 8   # POOLER_RESOLUTION / 2 * THIS FACTOR
+
 
 # ---------------------------------------------------------------------------- #
 # ResNe[X]t options (ResNets = {ResNet, ResNeXt}

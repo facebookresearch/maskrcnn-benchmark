@@ -7,6 +7,25 @@ import os
 class DatasetCatalog(object):
     DATA_DIR = "datasets"
     DATASETS = {
+        # CUSTOM STUFF START
+        "cocopose_2014_debug": {
+            "img_dir": "LOV/data",
+            "ann_file": "LOV/coco_lov_debug.json"
+        },
+        "cocopose_fat_debug": {
+            "img_dir": "FAT/data",
+            "ann_file": "FAT/coco_fat_debug.json"
+        },
+        "cocopose_fat_mixed_temple": {
+            "img_dir": "FAT/data",
+            "ann_file": "FAT/coco_fat_mixed_temple_0.json"
+        },
+        "coco_rebin": {
+            "img_dir": "/home/bot/Downloads/Rebin/labelled/data",
+            "ann_file": "/home/bot/Downloads/Rebin/labelled/coco_rebin.json"
+        },
+        # CUSTOM STUFF END
+
         "coco_2017_train": {
             "img_dir": "coco/train2017",
             "ann_file": "coco/annotations/instances_train2017.json"
@@ -30,10 +49,6 @@ class DatasetCatalog(object):
         "coco_2014_valminusminival": {
             "img_dir": "coco/val2014",
             "ann_file": "coco/annotations/instances_valminusminival2014.json"
-        },
-        "cocopose_2014_debug": {
-            "img_dir": "LOV/data",
-            "ann_file": "LOV/coco_lov_debug.json"
         },
         "keypoints_coco_2014_train": {
             "img_dir": "coco/train2014",

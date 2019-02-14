@@ -37,10 +37,11 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True, cfg=
         # during training
         if data["factory"] in ["COCODataset", "COCOPoseDataset"]:
             args["remove_images_without_annotations"] = is_train
+            if data["factory"] == "COCOPoseDataset":
+                if cfg is not None:
+                    args["cfg"] = cfg
         if data["factory"] == "PascalVOCDataset":
             args["use_difficult"] = not is_train
-        if cfg is not None:
-            args["cfg"] = cfg
         args["transforms"] = transforms
         # make dataset from factory
         dataset = factory(**args)
