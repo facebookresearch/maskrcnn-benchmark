@@ -5,7 +5,7 @@ from torch.autograd.function import once_differentiable
 
 from maskrcnn_benchmark import _C
 
-
+# TODO: Use JIT to replace CUDA implementation in the future.
 class _SigmoidFocalLoss(Function):
     @staticmethod
     def forward(ctx, logits, targets, gamma, alpha):
