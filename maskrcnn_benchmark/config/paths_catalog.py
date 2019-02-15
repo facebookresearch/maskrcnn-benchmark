@@ -33,6 +33,12 @@ class DatasetCatalog(object):
         "bdd100k_val": (
             "bdd100k/images/100k/val", "bdd100k/labels/bdd100k_labels_images_val.json"
         ),
+        "kitti_tracking_train": (
+            "kitti_tracking/train", ""
+        ),
+        "kitti_tracking_val": (
+            "kitti_tracking/val", ""
+        ),
     }
 
     @staticmethod
@@ -62,7 +68,7 @@ class DatasetCatalog(object):
 
 
 class ModelCatalog(object):
-    S3_C2_DETECTRON_URL = "https://s3-us-west-2.amazonaws.com/detectron"
+    S3_C2_DETECTRON_URL = "https://dl.fbaipublicfiles.com/detectron"
     C2_IMAGENET_MODELS = {
         "MSRA/R-50": "ImageNetPretrained/MSRA/R-50.pkl",
         "MSRA/R-101": "ImageNetPretrained/MSRA/R-101.pkl",

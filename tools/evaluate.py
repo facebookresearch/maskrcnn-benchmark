@@ -11,6 +11,9 @@ import os.path as osp
 import numpy as np
 from PIL import Image
 
+import matplotlib.pyplot as plt
+from matplotlib import patches
+
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.data import make_data_loader
 
@@ -18,6 +21,7 @@ def parse_args():
     """Use argparse to get command line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument('--result', type=str, help='path to results to be evaluated')
+    parser.add_argument('--fig_dir', type=str, help='path to save output figures', default='')
     parser.add_argument(
         "opts",
         help="Modify config options using the command-line",
@@ -138,26 +142,68 @@ def cat_pc(gt, predictions, thresholds):
     
     if (np.max(recalls) > 1 or np.max(precisions) > 1 or np.max(ap) > 1):
         print(np.max(recalls), np.max(precisions), np.max(ap))
+    
     return recalls, precisions, ap
 
 
-def evaluate_detection(gt, pred, class_id_dict):
+def evaluate_detection(gt, pred, class_id_dict, fig_dir, model_name):
 
-    thresholds = [0.5]
+    thresholds = [0.5, 0.75]
     aps = np.zeros((len(thresholds), len(class_id_dict.keys())))
     cat_list = [class_id_dict[k] for k in class_id_dict]
-    
+    counters = np.zeros(len(cat_list))
     for idx in range(len(gt)):
         cat_gt = group_by_key(gt[idx]['labels'], 'category')
         cat_pred = group_by_key(pred[idx]['labels'], 'category')
+        image = Image.open(gt[idx]['name'])
         for i, cat in enumerate(cat_list):
+            
             if cat in cat_pred and cat in cat_gt:
                 r, p, ap = cat_pc(cat_gt[cat], cat_pred[cat], thresholds)
-                aps[:, i] += ap
                 
-    aps /= len(gt)
-    mAP = np.mean(aps)
+                aps[:, i] += ap
+                counters[i] += 1
+                if len(fig_dir) > 0 and idx % 100 == 0 and False:
+                    fig, ax = plt.figure(), plt.gca()
+                    ax.imshow(image)
+
+                    for l in cat_pred[cat]:
+                        x1, y1, x2, y2 = l['box2d']['x1'], l['box2d']['y1'], l['box2d']['x2'], l['box2d']['y2']
+                        ax.add_patch(
+                            patches.Rectangle(
+                                (x1, y1),
+                                x2 - x1,
+                                y2 - y1,
+                                edgecolor='r',
+                                linewidth=1,
+                                fill=False
+                            )
+                        )
+
+                    for l in cat_gt[cat]:
+                        x1, y1, x2, y2 = l['box2d']['x1'], l['box2d']['y1'], l['box2d']['x2'], l['box2d']['y2']
+                        ax.add_patch(
+                            patches.Rectangle(
+                                (x1, y1),
+                                x2 - x1,
+                                y2 - y1,
+                                edgecolor='g',
+                                linewidth=1,
+                                fill=False
+                            )
+                        )        
+
+                    plt.axis('scaled')
+                    plt.tight_layout()
+                    fn = '{}_{}_{}.jpg'.format(cat, idx, model_name)
+                    plt.savefig(os.path.join(fig_dir, fn))
+                    plt.close(fig)
+        
+    for i in range(len(counters)):
+        if counters[i] > 0:
+            aps[:, i] /= counters[i]
     print(aps)
+    mAP = np.mean(aps)
     return mAP, aps.flatten().tolist()
 
 
@@ -166,21 +212,29 @@ def main():
     
     cfg.merge_from_list(args.opts)
 
+    data_loader = make_data_loader(cfg, is_train=False, is_distributed=False)[0]
+    gt = data_loader.dataset.get_gt_labels()
+    class_id_dict = data_loader.dataset.get_classes_ids()
+        
+    best = 0
+    best_json = ''
     for r in sorted(os.listdir(args.result)):
         if not r.endswith('.json'):
             continue
         print('evaluating {}...'.format(r))
         with open(os.path.join(args.result, r)) as f:
             result = json.load(f)
-
-        data_loader = make_data_loader(cfg, is_train=False, is_distributed=False)[0]
-        gt = data_loader.dataset.get_gt_labels()
-        class_id_dict = data_loader.dataset.get_classes_ids()
-        mean, breakdown = evaluate_detection(gt, result, class_id_dict)
+        
+        mean, breakdown = evaluate_detection(gt, result, class_id_dict, args.fig_dir, r[:-5])
 
         print('{:.2f}'.format(mean),
               ', '.join(['{:.2f}'.format(n) for n in breakdown]))
-
+        
+        if mean > best:
+            best = mean
+            best_json = r
+            
+    print(best, best_json)
 
 if __name__ == '__main__':
     main()

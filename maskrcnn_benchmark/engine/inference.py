@@ -54,10 +54,12 @@ def _accumulate_predictions_from_multiple_gpus(predictions_per_gpu):
     return predictions
 
 
-def save_as_bdd_format(preds, path, name):
+def save_as_bdd_format(preds, path, name, img_names):
     preds_bdd = []        
-    for pred in preds:
+    for j in range(len(preds)):
+        pred = preds[j]
         pred_bdd = {
+            'name': img_names[j],
             'labels': []
         }
         boxes = pred.bbox.numpy().tolist()
@@ -122,6 +124,6 @@ def inference(
         det_path = os.path.join(output_folder, "detections")
         if not os.path.exists(det_path):
             os.makedirs(det_path)
-        save_as_bdd_format(predictions, det_path, name)
+        save_as_bdd_format(predictions, det_path, name, dataset.image_paths)
     
     return

@@ -41,6 +41,7 @@ def pred_with_weight(args):
     logger.info("\n" + collect_env_info())
 
     model = build_detection_model(cfg)
+    model.eval()
     model.to(cfg.MODEL.DEVICE)
     
     for weight in args.weights:
