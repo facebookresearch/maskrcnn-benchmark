@@ -15,6 +15,22 @@ class DatasetCatalog(object):
             "img_dir": "coco/val2017",
             "ann_file": "coco/annotations/instances_val2017.json"
         },
+        "coco_2017_train_sub_6": {
+            "img_dir": "coco/train2017",
+            "ann_file": "coco/annotations/instances_train2017_subset_6.json"
+        },
+        "coco_2017_val_sub_6": {
+            "img_dir": "coco/val2017",
+            "ann_file": "coco/annotations/instances_val2017_subset_6.json"
+        },
+        "coco_2017_train_sub_20": {
+            "img_dir": "coco/train2017",
+            "ann_file": "coco/annotations/instances_train2017_subset_20.json"
+        },
+        "coco_2017_val_sub_20": {
+            "img_dir": "coco/val2017",
+            "ann_file": "coco/annotations/instances_val2017_subset_20.json"
+        },
         "coco_2014_train": {
             "img_dir": "coco/train2014",
             "ann_file": "coco/annotations/instances_train2014.json"
