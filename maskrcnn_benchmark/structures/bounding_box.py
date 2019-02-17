@@ -224,24 +224,26 @@ class BoxList(object):
         return self
 
     def area(self):
-        if self.mode == 'xyxy':
+        box = self.bbox
+        if self.mode == "xyxy":
             TO_REMOVE = 1
-            box = self.bbox
             area = (box[:, 2] - box[:, 0] + TO_REMOVE) * (box[:, 3] - box[:, 1] + TO_REMOVE)
-        elif self.mode == 'xywh':
-            box = self.bbox
+        elif self.mode == "xywh":
             area = box[:, 2] * box[:, 3]
         else:
             raise RuntimeError("Should not be here")
-            
+
         return area
 
-    def copy_with_fields(self, fields):
+    def copy_with_fields(self, fields, skip_missing=False):
         bbox = BoxList(self.bbox, self.size, self.mode)
         if not isinstance(fields, (list, tuple)):
             fields = [fields]
         for field in fields:
-            bbox.add_field(field, self.get_field(field))
+            if self.has_field(field):
+                bbox.add_field(field, self.get_field(field))
+            elif not skip_missing:
+                raise KeyError("Field '{}' not found in {}".format(field, self))
         return bbox
 
     def __repr__(self):
