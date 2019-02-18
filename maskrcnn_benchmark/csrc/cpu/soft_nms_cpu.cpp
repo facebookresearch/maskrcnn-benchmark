@@ -3,22 +3,25 @@
 
 
 template <typename scalar_t>
-at::Tensor soft_nms_cpu_kernel(const at::Tensor& dets,
-                               at::Tensor& scores,
-                               const float threshold,
-                               const float sigma) {
+std::pair<at::Tensor, at::Tensor> soft_nms_cpu_kernel(const at::Tensor& dets,
+                                                      const at::Tensor& scores,
+                                                      const float threshold,
+                                                      const float sigma) {
   AT_ASSERTM(!dets.type().is_cuda(), "dets must be a CPU tensor");
   AT_ASSERTM(!scores.type().is_cuda(), "scores must be a CPU tensor");
   AT_ASSERTM(dets.type() == scores.type(), "dets should have the same type as scores");
 
   if (dets.numel() == 0) {
-    return at::empty({0}, dets.options().dtype(at::kLong).device(at::kCPU));
+    return std::make_pair(at::empty({0}, dets.options().dtype(at::kLong).device(at::kCPU)),
+                          at::empty({0}, scores.options().dtype(at::kFloat).device(at::kCPU)));
   }
 
   auto x1_t = dets.select(1, 0).contiguous();
   auto y1_t = dets.select(1, 1).contiguous();
   auto x2_t = dets.select(1, 2).contiguous();
   auto y2_t = dets.select(1, 3).contiguous();
+
+  auto scores_t = scores.clone();
 
   at::Tensor areas_t = (x2_t - x1_t + 1) * (y2_t - y1_t + 1);
   auto ndets = dets.size(0);
@@ -28,7 +31,7 @@ at::Tensor soft_nms_cpu_kernel(const at::Tensor& dets,
   auto y1 = y1_t.data<scalar_t>();
   auto x2 = x2_t.data<scalar_t>();
   auto y2 = y2_t.data<scalar_t>();
-  auto s = scores.data<scalar_t>();
+  auto s = scores_t.data<scalar_t>();
   auto inds = inds_t.data<int64_t>();
   auto areas = areas_t.data<scalar_t>();
 
@@ -42,7 +45,7 @@ at::Tensor soft_nms_cpu_kernel(const at::Tensor& dets,
     auto ii = inds[i];
     auto iarea = areas[i];
 
-    auto maxpos = scores.slice(0, i, ndets).argmax().item<int64_t>();
+    auto maxpos = scores_t.slice(0, i, ndets).argmax().item<int64_t>() + i;
 
     // add max box as a detection
     x1[i] = x1[maxpos];
@@ -99,14 +102,14 @@ at::Tensor soft_nms_cpu_kernel(const at::Tensor& dets,
       }
     }
   }
-  return inds_t.slice(0, 0, ndets);
+  return std::make_pair(inds_t.slice(0, 0, ndets), scores_t.slice(0, 0, ndets));
 }
 
-at::Tensor soft_nms_cpu(const at::Tensor& dets,
-                        at::Tensor& scores,
-                        const float threshold,
-                        const float sigma) {
-  at::Tensor result;
+std::pair<at::Tensor, at::Tensor> soft_nms_cpu(const at::Tensor& dets,
+                                               const at::Tensor& scores,
+                                               const float threshold,
+                                               const float sigma) {
+  std::pair<at::Tensor, at::Tensor> result;
   AT_DISPATCH_FLOATING_TYPES(dets.type(), "soft_nms", [&] {
     result = soft_nms_cpu_kernel<scalar_t>(dets, scores, threshold, sigma);
   });
