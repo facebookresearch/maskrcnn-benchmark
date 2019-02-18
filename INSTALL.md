@@ -18,7 +18,7 @@
 # right path. From a clean conda env, this is what you need to do
 
 conda create --name maskrcnn_benchmark
-source activate maskrcnn_benchmark
+conda activate maskrcnn_benchmark
 
 # this installs the right pip and dependencies for the fresh python
 conda install ipython
@@ -28,22 +28,23 @@ pip install ninja yacs cython matplotlib
 
 # follow PyTorch installation in https://pytorch.org/get-started/locally/
 # we give the instructions for CUDA 9.0
-conda install pytorch-nightly -c pytorch
+conda install pytorch-nightly cudatoolkit=9.0 -c pytorch
 
+export MASKRCNN_BENCHMARK_INSTALL_DIR=$PWD
 # install torchvision
-cd ~/github
+cd $INSTALL_DIR
 git clone https://github.com/pytorch/vision.git
 cd vision
 python setup.py install
 
 # install pycocotools
-cd ~/github
+cd $INSTALL_DIR
 git clone https://github.com/cocodataset/cocoapi.git
 cd cocoapi/PythonAPI
 python setup.py build_ext install
 
 # install PyTorch Detection
-cd ~/github
+cd $INSTALL_DIR
 git clone https://github.com/facebookresearch/maskrcnn-benchmark.git
 cd maskrcnn-benchmark
 # the following will install the lib with
@@ -51,6 +52,8 @@ cd maskrcnn-benchmark
 # the files if you want and won't need to
 # re-build it
 python setup.py build develop
+
+unset MASKRCNN_BENCHMARK_INSTALL_DIR
 
 # or if you are on macOS
 # MACOSX_DEPLOYMENT_TARGET=10.9 CC=clang CXX=clang++ python setup.py build develop
