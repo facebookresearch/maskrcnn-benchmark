@@ -7,10 +7,10 @@
 #endif
 
 
-at::Tensor soft_nms(const at::Tensor& dets,
-                    at::Tensor& scores,
-                    const float threshold,
-                    const float sigma) {
+std::pair<at::Tensor, at::Tensor> soft_nms(const at::Tensor& dets,
+                                           const at::Tensor& scores,
+                                           const float threshold,
+                                           const float sigma) {
 
   if (dets.type().is_cuda()) {
 #ifdef WITH_CUDA
@@ -18,7 +18,7 @@ at::Tensor soft_nms(const at::Tensor& dets,
 #endif
   }
 
-  at::Tensor result = soft_nms_cpu(dets, scores, threshold, sigma);
+  std::pair<at::Tensor, at::Tensor> result = soft_nms_cpu(dets, scores, threshold, sigma);
 
   return result;
 }
