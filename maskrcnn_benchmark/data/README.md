@@ -76,7 +76,6 @@ cityscapes
    |_ gtFine
 ```
 3. Run the below commands to convert the annotations
-**NOTE: Detectron AND maskrcnn_benchmark is required**
 
 ```
 cd ~/github
