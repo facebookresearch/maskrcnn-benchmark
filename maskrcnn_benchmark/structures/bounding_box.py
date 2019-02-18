@@ -10,7 +10,7 @@ class BoxList(object):
     """
     This class represents a set of bounding boxes.
     The bounding boxes are represented as a Nx4 Tensor.
-    In order ot uniquely determine the bounding boxes with respect
+    In order to uniquely determine the bounding boxes with respect
     to an image, we also store the corresponding image dimensions.
     They can contain extra information that is specific to each bounding box, such as
     labels.
@@ -238,17 +238,26 @@ class BoxList(object):
         return self
 
     def area(self):
-        TO_REMOVE = 1
         box = self.bbox
-        area = (box[:, 2] - box[:, 0] + TO_REMOVE) * (box[:, 3] - box[:, 1] + TO_REMOVE)
+        if self.mode == "xyxy":
+            TO_REMOVE = 1
+            area = (box[:, 2] - box[:, 0] + TO_REMOVE) * (box[:, 3] - box[:, 1] + TO_REMOVE)
+        elif self.mode == "xywh":
+            area = box[:, 2] * box[:, 3]
+        else:
+            raise RuntimeError("Should not be here")
+
         return area
 
-    def copy_with_fields(self, fields):
+    def copy_with_fields(self, fields, skip_missing=False):
         bbox = BoxList(self.bbox, self.size, self.mode)
         if not isinstance(fields, (list, tuple)):
             fields = [fields]
         for field in fields:
-            bbox.add_field(field, self.get_field(field))
+            if self.has_field(field):
+                bbox.add_field(field, self.get_field(field))
+            elif not skip_missing:
+                raise KeyError("Field '{}' not found in {}".format(field, self))
         return bbox
 
     def __repr__(self):

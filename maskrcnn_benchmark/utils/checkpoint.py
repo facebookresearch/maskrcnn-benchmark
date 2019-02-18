@@ -79,6 +79,7 @@ class Checkpointer(object):
         try:
             with open(save_file, "r") as f:
                 last_saved = f.read()
+                last_saved = last_saved.strip()
         except IOError:
             # if file doesn't exist, maybe because it has just been
             # deleted by a separate process
