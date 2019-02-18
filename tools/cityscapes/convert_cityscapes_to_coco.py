@@ -29,8 +29,6 @@ import os
 import scipy.misc
 import sys
 
-import pdb
-
 import cityscapesscripts.evaluation.instances2dict_with_polygons as cs
 
 
@@ -152,7 +150,7 @@ def convert_cityscapes_instance_only(
         'motorcycle',
         'bicycle',
     ]
-#    pdb.set_trace()
+    
     for data_set, ann_dir in zip(sets, ann_dirs):
         print('Starting %s' % data_set)
         ann_dict = {}
@@ -210,11 +208,7 @@ def convert_cityscapes_instance_only(
                             ann['category_id'] = category_dict[object_cls]
                             ann['iscrowd'] = 0
                             ann['area'] = obj['pixelCount']
-                            '''
-                            ann['bbox'] = bboxs_util.xyxy_to_xywh(
-                                segms_util.polys_to_boxes(
-                                    [ann['segmentation']])).tolist()[0]
-                            '''
+                            
                             xyxy_box = poly_to_box(ann['segmentation'])
                             xywh_box = xyxy_to_xywh(xyxy_box)
                             ann['bbox'] = xywh_box
