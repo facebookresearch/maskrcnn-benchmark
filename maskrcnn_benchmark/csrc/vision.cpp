@@ -3,6 +3,7 @@
 #include "ROIAlign.h"
 #include "ROIPool.h"
 #include "soft_nms.h"
+#include "SigmoidFocalLoss.h"
 
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
@@ -12,4 +13,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("roi_align_backward", &ROIAlign_backward, "ROIAlign_backward");
   m.def("roi_pool_forward", &ROIPool_forward, "ROIPool_forward");
   m.def("roi_pool_backward", &ROIPool_backward, "ROIPool_backward");
+  m.def("sigmoid_focalloss_forward", &SigmoidFocalLoss_forward, "SigmoidFocalLoss_forward");
+  m.def("sigmoid_focalloss_backward", &SigmoidFocalLoss_backward, "SigmoidFocalLoss_backward");
 }

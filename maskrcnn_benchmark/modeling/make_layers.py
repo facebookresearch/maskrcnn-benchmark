@@ -77,7 +77,7 @@ def make_conv3x3(
     return conv
 
 
-def make_fc(dim_in, hidden_dim, use_gn):
+def make_fc(dim_in, hidden_dim, use_gn=False):
     '''
         Caffe2 implementation uses XavierFill, which in fact
         corresponds to kaiming_uniform_ in PyTorch

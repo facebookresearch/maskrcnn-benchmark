@@ -33,6 +33,7 @@ class ResNet50Conv5ROIFeatureExtractor(nn.Module):
             stride_in_1x1=config.MODEL.RESNETS.STRIDE_IN_1X1,
             stride_init=None,
             res2_out_channels=config.MODEL.RESNETS.RES2_OUT_CHANNELS,
+            dilation=config.MODEL.RESNETS.RES5_DILATION
         )
 
         self.pooler = pooler
@@ -131,7 +132,7 @@ class FPNXconv1fcFeatureExtractor(nn.Module):
 
         input_size = conv_head_dim * resolution ** 2
         representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
-        self.fc6 = make_fc(input_size, representation_size, use_gn)
+        self.fc6 = make_fc(input_size, representation_size, use_gn=False)
 
     def forward(self, x, proposals):
         x = self.pooler(x, proposals)

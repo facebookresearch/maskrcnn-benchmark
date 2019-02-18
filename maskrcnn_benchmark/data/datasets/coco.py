@@ -4,6 +4,36 @@ import torchvision
 
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
+from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
+
+
+min_keypoints_per_image = 10
+
+
+def _count_visible_keypoints(anno):
+    return sum(sum(1 for v in ann["keypoints"][2::3] if v > 0) for ann in anno)
+
+
+def _has_only_empty_bbox(anno):
+    return all(any(o <= 1 for o in obj["bbox"][2:]) for obj in anno)
+
+
+def has_valid_annotation(anno):
+    # if it's empty, there is no annotation
+    if len(anno) == 0:
+        return False
+    # if all boxes have close to zero area, there is no annotation
+    if _has_only_empty_bbox(anno):
+        return False
+    # keypoints task have a slight different critera for considering
+    # if an annotation is valid
+    if "keypoints" not in anno[0]:
+        return True
+    # for keypoint detection tasks, only consider valid images those
+    # containing at least min_keypoints_per_image
+    if _count_visible_keypoints(anno) >= min_keypoints_per_image:
+        return True
+    return False
 
 
 class COCODataset(torchvision.datasets.coco.CocoDetection):
@@ -16,11 +46,13 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
 
         # filter images without detection annotations
         if remove_images_without_annotations:
-            self.ids = [
-                img_id
-                for img_id in self.ids
-                if len(self.coco.getAnnIds(imgIds=img_id, iscrowd=None)) > 0
-            ]
+            ids = []
+            for img_id in self.ids:
+                ann_ids = self.coco.getAnnIds(imgIds=img_id, iscrowd=None)
+                anno = self.coco.loadAnns(ann_ids)
+                if has_valid_annotation(anno):
+                    ids.append(img_id)
+            self.ids = ids
 
         self.json_category_id_to_contiguous_id = {
             v: i + 1 for i, v in enumerate(self.coco.getCatIds())
@@ -50,6 +82,11 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         masks = [obj["segmentation"] for obj in anno]
         masks = SegmentationMask(masks, img.size)
         target.add_field("masks", masks)
+
+        if anno and "keypoints" in anno[0]:
+            keypoints = [obj["keypoints"] for obj in anno]
+            keypoints = PersonKeypoints(keypoints, img.size)
+            target.add_field("keypoints", keypoints)
 
         target = target.clip_to_image(remove_empty=True)
 
