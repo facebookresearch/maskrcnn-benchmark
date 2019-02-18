@@ -30,7 +30,7 @@ pip install ninja yacs cython matplotlib
 # we give the instructions for CUDA 9.0
 conda install pytorch-nightly cudatoolkit=9.0 -c pytorch
 
-export MASKRCNN_BENCHMARK_INSTALL_DIR=$PWD
+export INSTALL_DIR=$PWD
 # install torchvision
 cd $INSTALL_DIR
 git clone https://github.com/pytorch/vision.git
