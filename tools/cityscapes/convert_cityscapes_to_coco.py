@@ -150,14 +150,14 @@ def convert_cityscapes_instance_only(
         'motorcycle',
         'bicycle',
     ]
-    
+
     for data_set, ann_dir in zip(sets, ann_dirs):
         print('Starting %s' % data_set)
         ann_dict = {}
         images = []
         annotations = []
         ann_dir = os.path.join(data_dir, ann_dir)
-        print('ann_dir: %15s'%ann_dir)
+
         for root, _, files in os.walk(ann_dir):
             for filename in files:
                 if filename.endswith(ends_in % data_set.split('_')[0]):
