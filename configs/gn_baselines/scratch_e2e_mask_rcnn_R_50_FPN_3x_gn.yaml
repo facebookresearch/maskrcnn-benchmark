@@ -11,6 +11,7 @@ MODEL:
     OUT_CHANNELS: 256
     FREEZE_CONV_BODY_AT: 0 # finetune all layers
   RESNETS: # use GN for backbone
+    STRIDE_IN_1X1: False
     TRANS_FUNC: "BottleneckWithGN"
     STEM_FUNC: "StemWithGN"
   FPN:
