@@ -335,6 +335,44 @@ _C.MODEL.RETINANET.INFERENCE_TH = 0.05
 # NMS threshold used in RetinaNet
 _C.MODEL.RETINANET.NMS_TH = 0.4
 
+
+# ---------------------------------------------------------------------------- #
+# FBNet options
+# ---------------------------------------------------------------------------- #
+_C.MODEL.FBNET = CN()
+_C.MODEL.FBNET.ARCH = "default"
+# custom arch
+_C.MODEL.FBNET.ARCH_DEF = ""
+_C.MODEL.FBNET.BN_TYPE = "bn"
+_C.MODEL.FBNET.SCALE_FACTOR = 1.0
+# the output channels will be divisible by WIDTH_DIVISOR
+_C.MODEL.FBNET.WIDTH_DIVISOR = 1
+_C.MODEL.FBNET.DW_CONV_SKIP_BN = True
+_C.MODEL.FBNET.DW_CONV_SKIP_RELU = True
+
+# > 0 scale, == 0 skip, < 0 same dimension
+_C.MODEL.FBNET.DET_HEAD_LAST_SCALE = 1.0
+_C.MODEL.FBNET.DET_HEAD_BLOCKS = []
+# overwrite the stride for the head, 0 to use original value
+_C.MODEL.FBNET.DET_HEAD_STRIDE = 0
+
+# > 0 scale, == 0 skip, < 0 same dimension
+_C.MODEL.FBNET.KPTS_HEAD_LAST_SCALE = 0.0
+_C.MODEL.FBNET.KPTS_HEAD_BLOCKS = []
+# overwrite the stride for the head, 0 to use original value
+_C.MODEL.FBNET.KPTS_HEAD_STRIDE = 0
+
+# > 0 scale, == 0 skip, < 0 same dimension
+_C.MODEL.FBNET.MASK_HEAD_LAST_SCALE = 0.0
+_C.MODEL.FBNET.MASK_HEAD_BLOCKS = []
+# overwrite the stride for the head, 0 to use original value
+_C.MODEL.FBNET.MASK_HEAD_STRIDE = 0
+
+# 0 to use all blocks defined in arch_def
+_C.MODEL.FBNET.RPN_HEAD_BLOCKS = 0
+_C.MODEL.FBNET.RPN_BN_TYPE = ""
+
+
 # ---------------------------------------------------------------------------- #
 # Solver
 # ---------------------------------------------------------------------------- #
