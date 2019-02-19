@@ -1,11 +1,13 @@
 from torch import nn
 from torch.nn import functional as F
 
+from maskrcnn_benchmark.modeling import registry
 from maskrcnn_benchmark.modeling.poolers import Pooler
 
 from maskrcnn_benchmark.layers import Conv2d
 
 
+@registry.ROI_KEYPOINT_FEATURE_EXTRACTORS.register("KeypointRCNNFeatureExtractor")
 class KeypointRCNNFeatureExtractor(nn.Module):
     def __init__(self, cfg):
         super(KeypointRCNNFeatureExtractor, self).__init__()
@@ -40,13 +42,8 @@ class KeypointRCNNFeatureExtractor(nn.Module):
         return x
 
 
-_ROI_KEYPOINT_FEATURE_EXTRACTORS = {
-    "KeypointRCNNFeatureExtractor": KeypointRCNNFeatureExtractor
-}
-
-
 def make_roi_keypoint_feature_extractor(cfg):
-    func = _ROI_KEYPOINT_FEATURE_EXTRACTORS[
+    func = registry.ROI_KEYPOINT_FEATURE_EXTRACTORS[
         cfg.MODEL.ROI_KEYPOINT_HEAD.FEATURE_EXTRACTOR
     ]
     return func(cfg)

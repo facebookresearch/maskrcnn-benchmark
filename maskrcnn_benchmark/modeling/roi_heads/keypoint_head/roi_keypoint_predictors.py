@@ -2,8 +2,10 @@ from torch import nn
 from torch.nn import functional as F
 
 from maskrcnn_benchmark import layers
+from maskrcnn_benchmark.modeling import registry
 
 
+@registry.ROI_KEYPOINT_PREDICTOR.register("KeypointRCNNPredictor")
 class KeypointRCNNPredictor(nn.Module):
     def __init__(self, cfg):
         super(KeypointRCNNPredictor, self).__init__()
@@ -31,9 +33,6 @@ class KeypointRCNNPredictor(nn.Module):
         return x
 
 
-_ROI_KEYPOINT_PREDICTOR = {"KeypointRCNNPredictor": KeypointRCNNPredictor}
-
-
 def make_roi_keypoint_predictor(cfg):
-    func = _ROI_KEYPOINT_PREDICTOR[cfg.MODEL.ROI_KEYPOINT_HEAD.PREDICTOR]
+    func = registry.ROI_KEYPOINT_PREDICTOR[cfg.MODEL.ROI_KEYPOINT_HEAD.PREDICTOR]
     return func(cfg)

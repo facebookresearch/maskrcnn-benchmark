@@ -4,8 +4,10 @@ from torch.nn import functional as F
 
 from maskrcnn_benchmark.layers import Conv2d
 from maskrcnn_benchmark.layers import ConvTranspose2d
+from maskrcnn_benchmark.modeling import registry
 
 
+@registry.ROI_MASK_PREDICTOR.register("MaskRCNNC4Predictor")
 class MaskRCNNC4Predictor(nn.Module):
     def __init__(self, cfg):
         super(MaskRCNNC4Predictor, self).__init__()
@@ -36,9 +38,6 @@ class MaskRCNNC4Predictor(nn.Module):
         return self.mask_fcn_logits(x)
 
 
-_ROI_MASK_PREDICTOR = {"MaskRCNNC4Predictor": MaskRCNNC4Predictor}
-
-
 def make_roi_mask_predictor(cfg):
-    func = _ROI_MASK_PREDICTOR[cfg.MODEL.ROI_MASK_HEAD.PREDICTOR]
+    func = registry.ROI_MASK_PREDICTOR[cfg.MODEL.ROI_MASK_HEAD.PREDICTOR]
     return func(cfg)
