@@ -52,14 +52,13 @@ class RPNModule(torch.nn.Module):
     proposals and losses. Works for both FPN and non-FPN.
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, in_channels):
         super(RPNModule, self).__init__()
 
         self.cfg = cfg.clone()
 
         anchor_generator = make_anchor_generator(cfg)
 
-        in_channels = cfg.MODEL.BACKBONE.OUT_CHANNELS
         rpn_head = registry.RPN_HEADS[cfg.MODEL.RPN.RPN_HEAD]
         head = rpn_head(
             cfg, in_channels, anchor_generator.num_anchors_per_location()[0]
@@ -138,11 +137,11 @@ class RPNModule(torch.nn.Module):
         return boxes, {}
 
 
-def build_rpn(cfg):
+def build_rpn(cfg, in_channels):
     """
     This gives the gist of it. Not super important because it doesn't change as much
     """
     if cfg.MODEL.RETINANET_ON:
-        return build_retinanet(cfg)
+        return build_retinanet(cfg, in_channels)
 
-    return RPNModule(cfg)
+    return RPNModule(cfg, in_channels)

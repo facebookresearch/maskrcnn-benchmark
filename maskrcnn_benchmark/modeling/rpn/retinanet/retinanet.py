@@ -15,7 +15,7 @@ class RetinaNetHead(torch.nn.Module):
     Adds a RetinNet head with classification and regression heads
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, in_channels):
         """
         Arguments:
             in_channels (int): number of channels of the input feature
@@ -24,7 +24,6 @@ class RetinaNetHead(torch.nn.Module):
         super(RetinaNetHead, self).__init__()
         # TODO: Implement the sigmoid version first.
         num_classes = cfg.MODEL.RETINANET.NUM_CLASSES - 1
-        in_channels = cfg.MODEL.BACKBONE.OUT_CHANNELS
         num_anchors = len(cfg.MODEL.RETINANET.ASPECT_RATIOS) \
                         * cfg.MODEL.RETINANET.SCALES_PER_OCTAVE
 
@@ -92,13 +91,13 @@ class RetinaNetModule(torch.nn.Module):
     RetinaNet outputs and losses. Only Test on FPN now.
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, in_channels):
         super(RetinaNetModule, self).__init__()
 
         self.cfg = cfg.clone()
 
         anchor_generator = make_anchor_generator_retinanet(cfg)
-        head = RetinaNetHead(cfg)
+        head = RetinaNetHead(cfg, in_channels)
         box_coder = BoxCoder(weights=(10., 10., 5., 5.))
 
         box_selector_test = make_retinanet_postprocessor(cfg, box_coder, is_train=False)
@@ -149,5 +148,5 @@ class RetinaNetModule(torch.nn.Module):
         return boxes, {}
 
 
-def build_retinanet(cfg):
-    return RetinaNetModule(cfg)
+def build_retinanet(cfg, in_channels):
+    return RetinaNetModule(cfg, in_channels)
