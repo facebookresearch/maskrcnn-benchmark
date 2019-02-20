@@ -10,6 +10,66 @@ from .loss import make_rpn_loss_evaluator
 from .anchor_generator import make_anchor_generator
 from .inference import make_rpn_postprocessor
 
+
+class RPNHeadConvRegressor(nn.Module):
+    """
+    A simple RPN Head for classification and bbox regression
+    """
+
+    def __init__(self, cfg, in_channels, num_anchors):
+        """
+        Arguments:
+            cfg              : config
+            in_channels (int): number of channels of the input feature
+            num_anchors (int): number of anchors to be predicted
+        """
+        super(RPNHeadConvRegressor, self).__init__()
+        self.cls_logits = nn.Conv2d(in_channels, num_anchors, kernel_size=1, stride=1)
+        self.bbox_pred = nn.Conv2d(
+            in_channels, num_anchors * 4, kernel_size=1, stride=1
+        )
+
+        for l in [self.cls_logits, self.bbox_pred]:
+            torch.nn.init.normal_(l.weight, std=0.01)
+            torch.nn.init.constant_(l.bias, 0)
+
+    def forward(self, x):
+        assert isinstance(x, (list, tuple))
+        logits = [self.cls_logits(y) for y in x]
+        bbox_reg = [self.bbox_pred(y) for y in x]
+
+        return logits, bbox_reg
+
+
+class RPNHeadFeatureSingleConv(nn.Module):
+    """
+    Adds a simple RPN Head with one conv to extract the feature
+    """
+
+    def __init__(self, cfg, in_channels):
+        """
+        Arguments:
+            cfg              : config
+            in_channels (int): number of channels of the input feature
+        """
+        super(RPNHeadFeatureSingleConv, self).__init__()
+        self.conv = nn.Conv2d(
+            in_channels, in_channels, kernel_size=3, stride=1, padding=1
+        )
+
+        for l in [self.conv]:
+            torch.nn.init.normal_(l.weight, std=0.01)
+            torch.nn.init.constant_(l.bias, 0)
+
+        self.out_channels = in_channels
+
+    def forward(self, x):
+        assert isinstance(x, (list, tuple))
+        x = [F.relu(self.conv(z)) for z in x]
+
+        return x
+
+
 @registry.RPN_HEADS.register("SingleConvRPNHead")
 class RPNHead(nn.Module):
     """
@@ -52,14 +112,13 @@ class RPNModule(torch.nn.Module):
     proposals and losses. Works for both FPN and non-FPN.
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, in_channels):
         super(RPNModule, self).__init__()
 
         self.cfg = cfg.clone()
 
         anchor_generator = make_anchor_generator(cfg)
 
-        in_channels = cfg.MODEL.BACKBONE.OUT_CHANNELS
         rpn_head = registry.RPN_HEADS[cfg.MODEL.RPN.RPN_HEAD]
         head = rpn_head(
             cfg, in_channels, anchor_generator.num_anchors_per_location()[0]
@@ -138,11 +197,11 @@ class RPNModule(torch.nn.Module):
         return boxes, {}
 
 
-def build_rpn(cfg):
+def build_rpn(cfg, in_channels):
     """
     This gives the gist of it. Not super important because it doesn't change as much
     """
     if cfg.MODEL.RETINANET_ON:
-        return build_retinanet(cfg)
+        return build_retinanet(cfg, in_channels)
 
-    return RPNModule(cfg)
+    return RPNModule(cfg, in_channels)

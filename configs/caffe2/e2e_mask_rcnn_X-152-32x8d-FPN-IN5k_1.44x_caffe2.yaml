@@ -3,7 +3,8 @@ MODEL:
   WEIGHT: "catalog://Caffe2Detectron/COCO/37129812/e2e_mask_rcnn_X-152-32x8d-FPN-IN5k_1.44x"
   BACKBONE:
     CONV_BODY: "R-152-FPN"
-    OUT_CHANNELS: 256
+  RESNETS:
+    BACKBONE_OUT_CHANNELS: 256
   RPN:
     USE_FPN: True
     ANCHOR_STRIDE: (4, 8, 16, 32, 64)
