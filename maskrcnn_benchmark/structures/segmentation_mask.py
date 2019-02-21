@@ -1,116 +1,223 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+import cv2
+
 import torch
 import numpy as np
 from torch.nn.functional import interpolate
+
 import pycocotools.mask as mask_utils
 
 # transpose
 FLIP_LEFT_RIGHT = 0
 FLIP_TOP_BOTTOM = 1
 
-class Mask(object):
-    """
-    This class is unfinished and not meant for use yet
-    It is supposed to contain the mask for an object as
-    a 2d tensor
-    """
-    def __init__(self, segm, size, mode):
-        width, height = size
-        if isinstance(segm, Mask):
-            mask = segm.mask
-        else:
-            if type(segm) == list:
-                # polygons
-                mask = Polygons(segm, size, 'polygon').convert('mask').to(dtype=torch.float32)
-            elif type(segm) == dict and 'counts' in segm:
-                if type(segm['counts']) == list:
-                    # uncompressed RLE
-                    h, w = segm['size']
-                    rle = mask_utils.frPyObjects(segm, h, w)
-                    mask = mask_utils.decode(rle)
-                    mask = torch.from_numpy(mask).to(dtype=torch.float32)
-                else:
-                    # compressed RLE
-                    mask = mask_utils.decode(segm)
-                    mask = torch.from_numpy(mask).to(dtype=torch.float32)
-            else:
-                # binary mask
-                if type(segm) == np.ndarray:
-                    mask = torch.from_numpy(segm).to(dtype=torch.float32)
-                else: # torch.Tensor
-                    mask = segm.to(dtype=torch.float32)
-        self.mask = mask
-        self.size = size
-        self.mode = mode
+
+''' ABSTRACT
+Segmentations come in either:
+1) Binary masks
+2) Polygons
+
+Binary masks can be represented in a contiguous array
+and operations can be carried out more efficiently,
+Therefore BinaryMaskList handles them together.
+
+Polygons are handled separately for each instance,
+by PolygonInstance and instances are handled by
+PolygonList.
+
+SegmentationList is supposed to represent both,
+therefore it wraps the functions of BinaryMaskList
+and PolygonList to make it transparent.
+'''
+
+
+
+class BinaryMaskList(object):
+    '''
+    This class handles binary masks for all objects in the image
+    '''
+
+    def __init__(self, masks, size):
+        '''
+            Arguments:
+                masks: Either torch.tensor of [num_instances, H, W]
+                    or list of torch.tensors of [H, W] or
+                    BinaryMaskList.
+                size: absolute image size, width first
+        '''
+
+        if isinstance(masks, torch.Tensor):
+            pass
+        elif isinstance(masks, (list, tuple)):
+            masks = torch.stack(masks, dim=2)
+        elif isinstance(masks, BinaryMaskList):
+            masks = masks.masks
+
+        if len(masks.shape) == 2:
+            masks = masks[None]
+        assert len(masks.shape) == 3
+
+
+        assert masks.shape[1] == size[1],\
+            '%s != %s'%(masks.shape[1], size[1])
+        assert masks.shape[2] == size[0],\
+            '%s != %s'%(masks.shape[2], size[0])
+
+
+        self.masks = masks.clone()
+        self.size = tuple(size)
+
 
     def transpose(self, method):
-        if method not in (FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM):
-            raise NotImplementedError("Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented")
+        dim = 1 if method == FLIP_TOP_BOTTOM else 2
+        # print(dim)
+        # print(self.masks)
+        # print(self.masks.flip(dim))
+        flipped_masks = self.masks.flip(dim)
+        return BinaryMaskList(flipped_masks, self.size)
 
-        width, height = self.size
-        if method == FLIP_LEFT_RIGHT:
-            max_idx = width
-            dim = 1
-        elif method == FLIP_TOP_BOTTOM:
-            max_idx = height
-            dim = 0
-
-        flip_idx = torch.tensor(list(range(max_idx)[::-1]))
-        flipped_mask = self.mask.index_select(dim, flip_idx)
-        return Mask(flipped_mask, self.size, self.mode)
 
     def crop(self, box):
-        box = [round(b) for b in box]
-        w, h = box[2] - box[0] + 1, box[3] - box[1] + 1
-        w = max(w, 1)
-        h = max(h, 1)
-        cropped_mask = self.mask[box[1]: box[3], box[0]: box[2]]
-        return Mask(cropped_mask, size=(w, h), mode=self.mode)
+        assert isinstance(box, (list, tuple)), str(type(box))
 
-    def resize(self, size, *args, **kwargs):
-        width, height = size
-        scaled_mask = interpolate(self.mask[None, None, :, :], (height, width), mode='bilinear')[0, 0]
-        return Mask(scaled_mask, size=size, mode=self.mode)
+        # box is assumed to by xyxy
+        current_width, current_height = self.size
+        xmin, ymin, xmax, ymax = map(round, box)
+        assert xmin >= 0 and xmax < current_width
+        assert ymin >= 0 and ymax < current_height
+        assert xmin < xmax and ymin < ymax
 
-    def convert(self, mode):
-        mask = self.mask.to(dtype=torch.uint8)
-        return mask
+        width, height = xmax - xmin, ymax - ymin
+        #width = max(width, 1)
+        #height = max(height, 1)
+
+        if (xmin >= xmax or ymin >= ymax):
+            print(box)
+
+        cropped_masks = self.masks[:, ymin:ymax, xmin:xmax]
+        cropped_size = width, height
+        return BinaryMaskList(cropped_masks, cropped_size)
+
+
+    def resize(self, size):
+        try:
+            iter(size)
+        except TypeError:
+            assert isinstance(size, (int, float))
+            size = size, size
+        width, height = map(int, size)
+
+        assert width > 0
+        assert height > 0
+
+        # Height comes first here!
+        resized_masks = torch.nn.functional.interpolate(
+            input=self.masks[None].float(),
+            size=(height, width),
+            mode='bilinear',
+            align_corners=False
+        )[0].type_as(self.masks)
+        resized_size = width, height
+        return BinaryMaskList(resized_masks, resized_size)
+
+
+
+    def convert_to_polygon(self):
+        contours = self._findContours()
+        return PolygonList(contours, self.size)
+
+
+    def to(self, *args, **kwargs):
+        return self
+
+
+    def _findContours(self):
+        contours = []
+        masks = self.masks.detach().numpy()
+        for mask in masks:
+            mask = cv2.UMat(mask)
+            contour, hierarchy = cv2.findContours(
+                mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1
+            )
+
+            reshaped_contour = []
+            for entity in contour:
+                assert len(entity.shape) == 3
+                assert entity.shape[1] == 1, \
+                    'Hierarchical contours are not allowed'
+                reshaped_contour.append(entity.reshape(-1).tolist())
+            contours.append(reshaped_contour)
+        return contours
+
+
+    def __len__(self):
+        return len(self.masks)
+
+
+    def __getitem__(self, index):
+        # Probably it can cause some overhead
+        # but preserves consistency
+        masks = self.masks[index].clone()
+        return BinaryMaskList(masks, self.size)
+
 
     def __iter__(self):
-        return iter(self.mask)
+        return iter(self.masks)
+
 
     def __repr__(self):
         s = self.__class__.__name__ + "("
-        # s += "num_mask={}, ".format(len(self.mask))
+        s += "num_instances={}, ".format(len(self.masks))
         s += "image_width={}, ".format(self.size[0])
-        s += "image_height={}, ".format(self.size[1])
-        s += "mode={})".format(self.mode)
+        s += "image_height={})".format(self.size[1])
         return s
 
 
 
-class Polygons(object):
-    """
+class PolygonInstance(object):
+    '''
     This class holds a set of polygons that represents a single instance
     of an object mask. The object can be represented as a set of
     polygons
-    """
+    '''
 
-    def __init__(self, polygons, size, mode):
-        # assert isinstance(polygons, list), '{}'.format(polygons)
-        if isinstance(polygons, list):
-            polygons = [torch.as_tensor(p, dtype=torch.float32) for p in polygons]
-        elif isinstance(polygons, Polygons):
-            polygons = polygons.polygons
+    def __init__(self, polygons, size):
+        '''
+            Arguments:
+                a list of lists of numbers.
+                The first level refers to all the polygons that compose the
+                object, and the second level to the polygon coordinates.
+        '''
+        if isinstance(polygons, (list, tuple)):
+            valid_polygons = []
+            for p in polygons:
+                p = torch.as_tensor(p, dtype=torch.float32)
+                if len(p) >= 6: # 3 * 2 coordinates
+                    valid_polygons.append(p)
+            polygons = valid_polygons
+
+        elif isinstance(polygons, PolygonInstance):
+            polygons = polygons.polygons.copy()
+
+        else:
+            RuntimeError('Type of argument `polygons` is not allowed:%s'\
+                %(type(polygons)))
+
+        ''' This crashes the training way too many times...
+        for p in polygons:
+            assert p[::2].min() >= 0
+            assert p[::2].max() < size[0]
+            assert p[1::2].min() >= 0
+            assert p[1::2].max() , size[1]
+        '''
 
         self.polygons = polygons
-        self.size = size
-        self.mode = mode
+        self.size = tuple(size)
+
 
     def transpose(self, method):
         if method not in (FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM):
             raise NotImplementedError(
-                "Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented"
+                'Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented'
             )
 
         flipped_polygons = []
@@ -128,30 +235,56 @@ class Polygons(object):
             p[idx::2] = dim - poly[idx::2] - TO_REMOVE
             flipped_polygons.append(p)
 
-        return Polygons(flipped_polygons, size=self.size, mode=self.mode)
+        return PolygonInstance(flipped_polygons, size=self.size)
+
 
     def crop(self, box):
-        w, h = box[2] - box[0], box[3] - box[1]
+        assert isinstance(box, (list, tuple, torch.Tensor)), str(type(box))
 
-        # TODO chck if necessary
-        w = max(w, 1)
-        h = max(h, 1)
+        # box is assumed to be xyxy
+        current_width, current_height = self.size
+        xmin, ymin, xmax, ymax = map(float, box)
+        #assert xmin >= 0 and xmax < current_width, str(box)
+        #assert ymin >= 0 and ymax < current_height, str(box)
+        xmin = max(xmin, 0)
+        ymin = max(ymin, 0)
+
+        xmax = min(xmax, current_width)
+        ymax = min(ymax, current_height)
+
+        assert xmin < xmax and ymin < ymax, str(box)
+
+        if (xmin >= xmax or ymin >= ymax):
+            print(box)
+
+        w, h = ymax - ymin, xmax - xmin
+        #w = max(w, 1)
+        #h = max(w, 1)
 
         cropped_polygons = []
         for poly in self.polygons:
             p = poly.clone()
-            p[0::2] = p[0::2] - box[0]  # .clamp(min=0, max=w)
-            p[1::2] = p[1::2] - box[1]  # .clamp(min=0, max=h)
+            p[0::2] = p[0::2] - xmin  # .clamp(min=0, max=w)
+            p[1::2] = p[1::2] - ymin  # .clamp(min=0, max=h)
             cropped_polygons.append(p)
 
-        return Polygons(cropped_polygons, size=(w, h), mode=self.mode)
+        return PolygonInstance(cropped_polygons, size=(w, h))
 
-    def resize(self, size, *args, **kwargs):
-        ratios = tuple(float(s) / float(s_orig) for s, s_orig in zip(size, self.size))
+
+    def resize(self, size):
+        try:
+            iter(size)
+        except TypeError:
+            assert isinstance(size, (int, float))
+            size = size, size
+
+        ratios = tuple(float(s) / float(s_orig)
+            for s, s_orig in zip(size, self.size))
+
         if ratios[0] == ratios[1]:
             ratio = ratios[0]
             scaled_polys = [p * ratio for p in self.polygons]
-            return Polygons(scaled_polys, size, mode=self.mode)
+            return PolygonInstance(scaled_polys, size)
 
         ratio_w, ratio_h = ratios
         scaled_polygons = []
@@ -161,104 +294,274 @@ class Polygons(object):
             p[1::2] *= ratio_h
             scaled_polygons.append(p)
 
-        return Polygons(scaled_polygons, size=size, mode=self.mode)
+        return PolygonInstance(scaled_polygons, size=size)
 
-    def convert(self, mode):
+
+    def convert_to_binarymask(self):
         width, height = self.size
-        if mode == "mask":
-            rles = mask_utils.frPyObjects(
-                [p.numpy() for p in self.polygons], height, width
-            )
-            rle = mask_utils.merge(rles)
-            mask = mask_utils.decode(rle)
-            mask = torch.from_numpy(mask)
-            # TODO add squeeze?
-            return mask
+        rles = mask_utils.frPyObjects(
+            [p.numpy() for p in self.polygons], height, width
+        )
+        rle = mask_utils.merge(rles)
+        mask = mask_utils.decode(rle)
+        mask = torch.from_numpy(mask)
+        return mask
+
+
+    def __len__(self):
+        return len(self.polygons)
+
 
     def __repr__(self):
-        s = self.__class__.__name__ + "("
-        s += "num_polygons={}, ".format(len(self.polygons))
-        s += "image_width={}, ".format(self.size[0])
-        s += "image_height={}, ".format(self.size[1])
-        s += "mode={})".format(self.mode)
+        s = self.__class__.__name__ + '('
+        s += 'num_groups={}, '.format(len(self.polygons))
+        s += 'image_width={}, '.format(self.size[0])
+        s += 'image_height={}, '.format(self.size[1])
         return s
 
 
-class SegmentationMask(object):
-    """
-    This class stores the segmentations for all objects in the image
-    """
 
-    def __init__(self, segms, size, mode=None):
-        """
+class PolygonList(object):
+    '''
+    This class handles PolygonInstances for all objects in the image
+    '''
+
+    def __init__(self, polygons, size):
+        '''
         Arguments:
-            segms: three types
-                (1) polygons: a list of list of lists of numbers. The first
+            polygons:
+                a list of list of lists of numbers. The first
                 level of the list correspond to individual instances,
                 the second level to all the polygons that compose the
                 object, and the third level to the polygon coordinates.
-                (2) rles: COCO's run length encoding format, uncompressed or compressed
-                (3) binary masks
-            size: (width, height)
-            mode: 'polygon', 'mask'. if mode is 'mask', convert mask of any format to binary mask
-        """
-        assert isinstance(segms, list)
-        if not isinstance(segms[0], (list, Polygons)):
-            mode = 'mask'
-        if mode == 'mask':
-            self.masks = [Mask(m, size, mode) for m in segms]
-        else: # polygons
-            self.masks = [Polygons(p, size, mode) for p in segms]
-        self.size = size
-        self.mode = mode
+
+                OR
+
+                a list of PolygonInstances.
+
+                OR
+
+                a PolygonList
+
+            size: absolute image size
+
+        '''
+        if isinstance(polygons, (list, tuple)):
+            if len(polygons) == 0:
+                polygons = [[[]]]
+            if isinstance(polygons[0], (list, tuple)):
+                assert isinstance(polygons[0][0], (list, tuple)),\
+                    str(type(polygons[0][0]))
+            else:
+                assert isinstance(polygons[0], PolygonInstance),\
+                    str(type(polygons[0]))
+
+        elif isinstance(polygons, PolygonList):
+            size = polygons.size
+            polygons = polygons.polygons
+
+        else:
+            RuntimeError('Type of argument `polygons` is not allowed:%s'\
+                %(type(polygons)))
+
+
+
+        assert isinstance(size, (list, tuple)), str(type(size))
+
+        self.polygons = []
+        for p in polygons:
+            p = PolygonInstance(p, size)
+            if len(p) > 0:
+                self.polygons.append(p)
+
+        self.size = tuple(size)
+
 
     def transpose(self, method):
         if method not in (FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM):
             raise NotImplementedError(
-                "Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented"
+                'Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented'
             )
 
-        flipped = []
-        for mask in self.masks:
-            flipped.append(mask.transpose(method))
-        return SegmentationMask(flipped, size=self.size, mode=self.mode)
+        flipped_polygons = []
+        for polygon in self.polygons:
+            flipped_polygons.append(polygon.transpose(method))
+
+        return PolygonList(flipped_polygons, size=self.size)
+
 
     def crop(self, box):
         w, h = box[2] - box[0], box[3] - box[1]
-        cropped = []
-        for mask in self.masks:
-            cropped.append(mask.crop(box))
-        return SegmentationMask(cropped, size=(w, h), mode=self.mode)
+        cropped_polygons = []
+        for polygon in self.polygons:
+            cropped_polygons.append(polygon.crop(box))
 
-    def resize(self, size, *args, **kwargs):
-        scaled = []
-        for mask in self.masks:
-            scaled.append(mask.resize(size, *args, **kwargs))
-        return SegmentationMask(scaled, size=size, mode=self.mode)
+        cropped_size = w, h
+        return PolygonList(cropped_polygons, cropped_size)
+
+
+    def resize(self, size):
+        resized_polygons = []
+        for polygon in self.polygons:
+            resized_polygons.append(polygon.resize(size))
+
+        resized_size = size
+        return PolygonList(resized_polygons, resized_size)
+
 
     def to(self, *args, **kwargs):
         return self
 
+
+    def convert_to_binarymask(self):
+        if self.__len__() > 0:
+            masks = torch.stack([
+                p.convert_to_binarymask() for p in self.polygons])
+        else:
+            size = self.size
+            masks = torch.empty([0, size[1], size[0]], dtype=torch.uint8)
+
+        return BinaryMaskList(masks, size=self.size)
+
+
+    def __len__(self):
+        return len(self.polygons)
+
+
     def __getitem__(self, item):
         if isinstance(item, (int, slice)):
-            selected_masks = [self.masks[item]]
+            selected_polygons = [self.polygons[item]]
         else:
             # advanced indexing on a single dimension
-            selected_masks = []
+            selected_polygons = []
             if isinstance(item, torch.Tensor) and item.dtype == torch.uint8:
                 item = item.nonzero()
                 item = item.squeeze(1) if item.numel() > 0 else item
                 item = item.tolist()
             for i in item:
-                selected_masks.append(self.masks[i])
-        return SegmentationMask(selected_masks, size=self.size, mode=self.mode)
+                selected_polygons.append(self.polygons[i])
+        return PolygonList(selected_polygons, size=self.size)
+
 
     def __iter__(self):
-        return iter(self.masks)
+        return iter(self.polygons)
+
+
+    def __repr__(self):
+        s = self.__class__.__name__ + '('
+        s += 'num_instances={}, '.format(len(self.polygons))
+        s += 'image_width={}, '.format(self.size[0])
+        s += 'image_height={})'.format(self.size[1])
+        return s
+
+
+
+
+
+class SegmentationMask(object):
+
+    '''
+    This class stores the segmentations for all objects in the image.
+    It wraps BinaryMaskList and PolygonList conveniently.
+    '''
+    def __init__(self, instances, size, mode='poly'):
+        '''
+        Arguments:
+            instances: two types
+                (1) polygon
+                (2) binary mask
+            size: (width, height)
+            mode: 'poly', 'mask'. if mode is 'mask', convert mask of any format to binary mask
+        '''
+
+        assert isinstance(size, (list, tuple))
+        assert len(size) == 2
+        if isinstance(size[0], torch.Tensor):
+            assert isinstance(size[1], torch.Tensor)
+            size = size[0].item(), size[1].item()
+
+        assert isinstance(size[0], (int, float))
+        assert isinstance(size[1], (int, float))
+
+        if mode == 'poly':
+            self.instances = PolygonList(instances, size)
+        elif mode == 'mask':
+            self.instances = BinaryMaskList(instances, size)
+        else:
+            raise NotImplementedError('Unknown mode: %s'%str(mode))
+
+        self.mode = mode
+        self.size = tuple(size)
+
+    def transpose(self, method):
+        flipped_instances = self.instances.transpose(method)
+        return SegmentationMask(flipped_instances, self.size, self.mode)
+
+
+    def crop(self, box):
+        cropped_instances = self.instances.crop(box)
+        cropped_size = cropped_instances.size
+        return SegmentationMask(cropped_instances, cropped_size, self.mode)
+
+
+    def resize(self, size, *args, **kwargs):
+        resized_instances = self.instances.resize(size)
+        resized_size = size
+        return SegmentationMask(resized_instances, resized_size, self.mode)
+
+
+    def to(self, *args, **kwargs):
+        return self
+
+
+    def convert(self, mode):
+        if mode == self.mode:
+            return self
+
+        if mode == 'poly':
+            converted_instances = self.instances.convert_to_polygon()
+        elif mode == 'mask':
+            converted_instances = self.instances.convert_to_binarymask()
+        else:
+            raise NotImplementedError('Unknown mode: %s'%str(mode))
+
+        return SegmentationMask(converted_instances, self.size, mode)
+
+
+    def get_mask_tensor(self):
+        instances = self.instances
+        if self.mode == 'poly':
+            instances = instances.convert_to_binarymask()
+        # If there is only 1 instance
+        return instances.masks.squeeze(0)
+
+
+    def __len__(self):
+        return len(self.instances)
+
+
+    def __getitem__(self, item):
+        selected_instances = self.instances.__getitem__(item)
+        return SegmentationMask(selected_instances, self.size, self.mode)
+
+
+    def __iter__(self):
+        self.iter_idx = 0
+        return self
+
+
+    def __next__(self):
+        if self.iter_idx < self.__len__():
+            next_segmentation = self.__getitem__(self.iter_idx)
+            self.iter_idx += 1
+            return next_segmentation
+        raise StopIteration
+
 
     def __repr__(self):
         s = self.__class__.__name__ + "("
-        s += "num_instances={}, ".format(len(self.masks))
+        s += "num_instances={}, ".format(len(self.instances))
         s += "image_width={}, ".format(self.size[0])
-        s += "image_height={})".format(self.size[1])
+        s += "image_height={}, ".format(self.size[1])
+        s += "mode={})".format(self.mode)
         return s
