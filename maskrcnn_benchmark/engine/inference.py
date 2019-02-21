@@ -34,11 +34,11 @@ def _accumulate_predictions_from_multiple_gpus(predictions_per_gpu):
     if not is_main_process():
         return
     # merge the list of dicts
-    predictions = {}
+    pred_dict = {}
     for p in all_predictions:
-        predictions.update(p)
+        pred_dict.update(p)
     # convert a dict where the key is the index in a list
-    image_ids = list(sorted(predictions.keys()))
+    image_ids = list(sorted(pred_dict.keys()))
     if len(image_ids) != image_ids[-1] + 1:
         logger = logging.getLogger("maskrcnn_benchmark.inference")
         logger.warning(
@@ -47,8 +47,8 @@ def _accumulate_predictions_from_multiple_gpus(predictions_per_gpu):
         )
 
     # convert to a list
-    predictions = [predictions[i] for i in image_ids]
-    return predictions
+    pred_list = [pred_dict[i] for i in image_ids]
+    return pred_list, pred_dict
 
 
 def inference(
@@ -84,12 +84,12 @@ def inference(
         )
     )
 
-    predictions = _accumulate_predictions_from_multiple_gpus(predictions)
+    pred_list, pred_dict = _accumulate_predictions_from_multiple_gpus(predictions)
     if not is_main_process():
         return
 
     if output_folder:
-        torch.save(predictions, os.path.join(output_folder, "predictions.pth"))
+        torch.save(pred_dict, os.path.join(output_folder, "predictions.pth"))
 
     extra_args = dict(
         box_only=box_only,
@@ -99,6 +99,6 @@ def inference(
     )
 
     return evaluate(dataset=dataset,
-                    predictions=predictions,
+                    predictions=pred_list,
                     output_folder=output_folder,
                     **extra_args)
