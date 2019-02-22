@@ -137,7 +137,7 @@ class FastRCNNLossComputation(object):
         )
 
         classification_loss = F.cross_entropy(class_logits, labels)
-
+        
         # get indices that correspond to the regression targets for
         # the corresponding ground truth labels, to be used with
         # advanced indexing

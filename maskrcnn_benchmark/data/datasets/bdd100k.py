@@ -10,16 +10,30 @@ from maskrcnn_benchmark.structures.bounding_box import BoxList
 
 CLASS_TYPE_CONVERSION = {
   'person':     'person',
-  'rider':        'person',
-  'car':            'vehicle',
-  'bus':            'vehicle',
-  'truck':          'vehicle'
+  'rider':      'rider',
+  'car':        'car',
+  'bus':        'bus',
+  'truck':      'truck',
+  'bike':       'bike',
+  'motor':      'motor',
+  'traffic light': 'traffic light',
+  'traffic sign':  'traffic sign',
+  'train':      'train'
 }
 
 TYPE_ID_CONVERSION = {
-    'person': 1,
-    'vehicle': 2
+  'person':     1,
+  'rider':      2,
+  'car':        3,
+  'bus':        4,
+  'truck':      5,
+  'bike':       6,
+  'motor':      7,
+  'traffic light': 8,
+  'traffic sign':  9,
+  'train':      10
 }
+
 
 class Bdd100kDataset(Dataset):
     """ BDD100k Dataset: https://bair.berkeley.edu/blog/2018/05/30/bdd/
@@ -40,9 +54,8 @@ class Bdd100kDataset(Dataset):
         for i in range(len(self.labels)):
             self.labels[i]['labels'] = [l for l in self.labels[i]['labels']
                                         if l['category'] in CLASS_TYPE_CONVERSION.keys()]
+        
         self.labels = [l for l in self.labels if len(l['labels']) > 0]
-        self.image_paths = [d for d in os.listdir(self.image_dir) if d.endswith('.jpg')]
-#         assert len(self.image_paths) == len(self.labels)
         self.length = len(self.labels)
         
     def __len__(self):
@@ -65,23 +78,25 @@ class Bdd100kDataset(Dataset):
 
             label_type = CLASS_TYPE_CONVERSION[label['category']]
             classes += [TYPE_ID_CONVERSION[label_type]]
+            
             boxes += [
                 label['box2d']['x1'],
                 label['box2d']['y1'],
                 label['box2d']['x2'],
                 label['box2d']['y2']
             ]
+        fns = annotations['name']
 
         boxes = torch.as_tensor(boxes).reshape(-1, 4)
         target = BoxList(boxes, (W, H), mode="xyxy")
 
         classes = torch.tensor(classes)
         target.add_field("labels", classes)
+        target.add_field('fn', fns)
         return img, target, idx
 
     def get_img_info(self, idx):
-        img = Image.open(os.path.join(self.image_dir, self.image_paths[idx]))
-        return {'width': img.width, 'height': img.height}
+        return {'width': 1280, 'height': 720}
         
     # Get all gt labels. Used in evaluation.
     def get_gt_labels(self):
