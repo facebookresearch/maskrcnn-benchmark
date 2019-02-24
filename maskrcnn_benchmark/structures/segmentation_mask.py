@@ -54,19 +54,21 @@ class BinaryMaskList(object):
         elif isinstance(masks, (list, tuple)):
             if isinstance(masks[0], torch.Tensor):
                 masks = torch.stack(masks, dim=2).clone()
-            elif isinstance(masks[0], dict) and 'count' in masks[0]: 
+            elif isinstance(masks[0], dict) and "count" in masks[0]:
                 # RLE interpretation
 
                 masks = mask_utils
             else:
-                RuntimeError('Type of `masks[0]` could not be interpreted: %s'\
-                    %type(masks))
+                RuntimeError(
+                    "Type of `masks[0]` could not be interpreted: %s" % type(masks)
+                )
         elif isinstance(masks, BinaryMaskList):
             # just hard copy the BinaryMaskList instance's underlying data
             masks = masks.masks.clone()
         else:
-            RuntimeError('Type of `masks` argument could not be interpreted:%s'\
-                %tpye(masks))
+            RuntimeError(
+                "Type of `masks` argument could not be interpreted:%s" % tpye(masks)
+            )
 
         if len(masks.shape) == 2:
             # if only a single instance mask is passed
@@ -140,8 +142,7 @@ class BinaryMaskList(object):
             reshaped_contour = []
             for entity in contour:
                 assert len(entity.shape) == 3
-                assert entity.shape[1] == 1,\
-                    "Hierarchical contours are not allowed"
+                assert entity.shape[1] == 1, "Hierarchical contours are not allowed"
                 reshaped_contour.append(entity.reshape(-1).tolist())
             contours.append(reshaped_contour)
         return contours
@@ -193,7 +194,7 @@ class PolygonInstance(object):
 
         else:
             RuntimeError(
-                "Type of argument `polygons` is not allowed:%s"%(type(polygons))
+                "Type of argument `polygons` is not allowed:%s" % (type(polygons))
             )
 
         """ This crashes the training way too many times...
@@ -262,8 +263,7 @@ class PolygonInstance(object):
             assert isinstance(size, (int, float))
             size = size, size
 
-        ratios = tuple(float(s) / float(s_orig) 
-            for s, s_orig in zip(size, self.size))
+        ratios = tuple(float(s) / float(s_orig) for s, s_orig in zip(size, self.size))
 
         if ratios[0] == ratios[1]:
             ratio = ratios[0]
