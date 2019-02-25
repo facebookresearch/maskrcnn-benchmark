@@ -87,17 +87,22 @@ class BinaryMaskList(object):
         return BinaryMaskList(flipped_masks, self.size)
 
     def crop(self, box):
-        assert isinstance(box, (list, tuple)), str(type(box))
-
-        # box is assumed to by xyxy
+        assert isinstance(box, (list, tuple, torch.Tensor)), str(type(box))
+        # box is assumed to be xyxy
         current_width, current_height = self.size
-        xmin, ymin, xmax, ymax = map(round, box)
-        assert xmin >= 0 and xmax < current_width
-        assert ymin >= 0 and ymax < current_height
-        assert xmin < xmax and ymin < ymax
+        xmin, ymin, xmax, ymax = [round(float(b)) for b in box]
+
+        assert xmin <= xmax and ymin <= ymax, str(box)
+        xmin = min(max(xmin, 0), current_width - 1)
+        ymin = min(max(ymin, 0), current_height - 1)
+
+        xmax = min(max(xmax, 0), current_width)
+        ymax = min(max(ymax, 0), current_height)
+
+        xmax = max(xmax, xmin + 1)
+        ymax = max(ymax, ymin + 1)
 
         width, height = xmax - xmin, ymax - ymin
-
         cropped_masks = self.masks[:, ymin:ymax, xmin:xmax]
         cropped_size = width, height
         return BinaryMaskList(cropped_masks, cropped_size)
@@ -238,14 +243,17 @@ class PolygonInstance(object):
         current_width, current_height = self.size
         xmin, ymin, xmax, ymax = map(float, box)
 
-        xmin = max(xmin, 0)
-        ymin = max(ymin, 0)
+        assert xmin <= xmax and ymin <= ymax, str(box)
+        xmin = min(max(xmin, 0), current_width - 1)
+        ymin = min(max(ymin, 0), current_height - 1)
 
-        xmax = min(xmax, current_width)
-        ymax = min(ymax, current_height)
+        xmax = min(max(xmax, 0), current_width)
+        ymax = min(max(ymax, 0), current_height)
 
-        assert xmin < xmax and ymin < ymax, str(box)
-        w, h = ymax - ymin, xmax - xmin
+        xmax = max(xmax, xmin + 1)
+        ymax = max(ymax, ymin + 1)
+
+        w, h = xmax - xmin, ymax - ymin
 
         cropped_polygons = []
         for poly in self.polygons:
