@@ -92,7 +92,6 @@ _C.MODEL.BACKBONE.CONV_BODY = "R-50-C4"
 
 # Add StopGrad at a specified stage so the bottom layers are frozen
 _C.MODEL.BACKBONE.FREEZE_CONV_BODY_AT = 2
-_C.MODEL.BACKBONE.OUT_CHANNELS = 256 * 4
 # GN for backbone
 _C.MODEL.BACKBONE.USE_GN = False
 
@@ -271,6 +270,7 @@ _C.MODEL.RESNETS.STEM_FUNC = "StemWithFixedBatchNorm"
 # Apply dilation in stage "res5"
 _C.MODEL.RESNETS.RES5_DILATION = 1
 
+_C.MODEL.RESNETS.BACKBONE_OUT_CHANNELS = 256 * 4
 _C.MODEL.RESNETS.RES2_OUT_CHANNELS = 256
 _C.MODEL.RESNETS.STEM_OUT_CHANNELS = 64
 
@@ -334,6 +334,44 @@ _C.MODEL.RETINANET.INFERENCE_TH = 0.05
 
 # NMS threshold used in RetinaNet
 _C.MODEL.RETINANET.NMS_TH = 0.4
+
+
+# ---------------------------------------------------------------------------- #
+# FBNet options
+# ---------------------------------------------------------------------------- #
+_C.MODEL.FBNET = CN()
+_C.MODEL.FBNET.ARCH = "default"
+# custom arch
+_C.MODEL.FBNET.ARCH_DEF = ""
+_C.MODEL.FBNET.BN_TYPE = "bn"
+_C.MODEL.FBNET.SCALE_FACTOR = 1.0
+# the output channels will be divisible by WIDTH_DIVISOR
+_C.MODEL.FBNET.WIDTH_DIVISOR = 1
+_C.MODEL.FBNET.DW_CONV_SKIP_BN = True
+_C.MODEL.FBNET.DW_CONV_SKIP_RELU = True
+
+# > 0 scale, == 0 skip, < 0 same dimension
+_C.MODEL.FBNET.DET_HEAD_LAST_SCALE = 1.0
+_C.MODEL.FBNET.DET_HEAD_BLOCKS = []
+# overwrite the stride for the head, 0 to use original value
+_C.MODEL.FBNET.DET_HEAD_STRIDE = 0
+
+# > 0 scale, == 0 skip, < 0 same dimension
+_C.MODEL.FBNET.KPTS_HEAD_LAST_SCALE = 0.0
+_C.MODEL.FBNET.KPTS_HEAD_BLOCKS = []
+# overwrite the stride for the head, 0 to use original value
+_C.MODEL.FBNET.KPTS_HEAD_STRIDE = 0
+
+# > 0 scale, == 0 skip, < 0 same dimension
+_C.MODEL.FBNET.MASK_HEAD_LAST_SCALE = 0.0
+_C.MODEL.FBNET.MASK_HEAD_BLOCKS = []
+# overwrite the stride for the head, 0 to use original value
+_C.MODEL.FBNET.MASK_HEAD_STRIDE = 0
+
+# 0 to use all blocks defined in arch_def
+_C.MODEL.FBNET.RPN_HEAD_BLOCKS = 0
+_C.MODEL.FBNET.RPN_BN_TYPE = ""
+
 
 # ---------------------------------------------------------------------------- #
 # Solver

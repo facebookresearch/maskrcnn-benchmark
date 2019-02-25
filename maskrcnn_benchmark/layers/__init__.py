@@ -4,6 +4,7 @@ import torch
 from .batch_norm import FrozenBatchNorm2d
 from .misc import Conv2d
 from .misc import ConvTranspose2d
+from .misc import BatchNorm2d
 from .misc import interpolate
 from .nms import nms
 from .roi_align import ROIAlign
@@ -15,6 +16,6 @@ from .sigmoid_focal_loss import SigmoidFocalLoss
 
 __all__ = ["nms", "roi_align", "ROIAlign", "roi_pool", "ROIPool",
            "smooth_l1_loss", "Conv2d", "ConvTranspose2d", "interpolate",
-           "FrozenBatchNorm2d", "SigmoidFocalLoss"
+           "BatchNorm2d", "FrozenBatchNorm2d", "SigmoidFocalLoss"
           ]
 
