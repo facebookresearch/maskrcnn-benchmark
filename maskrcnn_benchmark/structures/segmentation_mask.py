@@ -8,12 +8,14 @@ import pycocotools.mask as mask_utils
 FLIP_LEFT_RIGHT = 0
 FLIP_TOP_BOTTOM = 1
 
+
 class Mask(object):
     """
     This class is unfinished and not meant for use yet
     It is supposed to contain the mask for an object as
     a 2d tensor
     """
+
     def __init__(self, segm, size, mode):
         width, height = size
         if isinstance(segm, Mask):
@@ -21,11 +23,15 @@ class Mask(object):
         else:
             if type(segm) == list:
                 # polygons
-                mask = Polygons(segm, size, 'polygon').convert('mask').to(dtype=torch.float32)
-            elif type(segm) == dict and 'counts' in segm:
-                if type(segm['counts']) == list:
+                mask = (
+                    Polygons(segm, size, "polygon")
+                    .convert("mask")
+                    .to(dtype=torch.float32)
+                )
+            elif type(segm) == dict and "counts" in segm:
+                if type(segm["counts"]) == list:
                     # uncompressed RLE
-                    h, w = segm['size']
+                    h, w = segm["size"]
                     rle = mask_utils.frPyObjects(segm, h, w)
                     mask = mask_utils.decode(rle)
                     mask = torch.from_numpy(mask).to(dtype=torch.float32)
@@ -37,7 +43,7 @@ class Mask(object):
                 # binary mask
                 if type(segm) == np.ndarray:
                     mask = torch.from_numpy(segm).to(dtype=torch.float32)
-                else: # torch.Tensor
+                else:  # torch.Tensor
                     mask = segm.to(dtype=torch.float32)
         self.mask = mask
         self.size = size
@@ -45,7 +51,9 @@ class Mask(object):
 
     def transpose(self, method):
         if method not in (FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM):
-            raise NotImplementedError("Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented")
+            raise NotImplementedError(
+                "Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented"
+            )
 
         width, height = self.size
         if method == FLIP_LEFT_RIGHT:
@@ -60,16 +68,18 @@ class Mask(object):
         return Mask(flipped_mask, self.size, self.mode)
 
     def crop(self, box):
-        box = [round(b) for b in box]
+        box = [round(float(b)) for b in box]
         w, h = box[2] - box[0] + 1, box[3] - box[1] + 1
         w = max(w, 1)
         h = max(h, 1)
-        cropped_mask = self.mask[box[1]: box[3], box[0]: box[2]]
+        cropped_mask = self.mask[box[1] : box[3], box[0] : box[2]]
         return Mask(cropped_mask, size=(w, h), mode=self.mode)
 
     def resize(self, size, *args, **kwargs):
         width, height = size
-        scaled_mask = interpolate(self.mask[None, None, :, :], (height, width), mode='bilinear')[0, 0]
+        scaled_mask = interpolate(
+            self.mask[None, None, :, :], (height, width), mode="bilinear"
+        )[0, 0]
         return Mask(scaled_mask, size=size, mode=self.mode)
 
     def convert(self, mode):
@@ -86,7 +96,6 @@ class Mask(object):
         s += "image_height={}, ".format(self.size[1])
         s += "mode={})".format(self.mode)
         return s
-
 
 
 class Polygons(object):
@@ -204,10 +213,10 @@ class SegmentationMask(object):
         """
         assert isinstance(segms, list)
         if not isinstance(segms[0], (list, Polygons)):
-            mode = 'mask'
-        if mode == 'mask':
+            mode = "mask"
+        if mode == "mask":
             self.masks = [Mask(m, size, mode) for m in segms]
-        else: # polygons
+        else:  # polygons
             self.masks = [Polygons(p, size, mode) for p in segms]
         self.size = size
         self.mode = mode
