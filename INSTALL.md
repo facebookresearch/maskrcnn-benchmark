@@ -24,7 +24,7 @@ conda activate maskrcnn_benchmark
 conda install ipython
 
 # maskrcnn_benchmark and coco api dependencies
-pip install ninja yacs cython matplotlib
+pip install -r requirements.txt
 
 # follow PyTorch installation in https://pytorch.org/get-started/locally/
 # we give the instructions for CUDA 9.0
