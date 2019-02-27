@@ -119,3 +119,15 @@ class Pooler(nn.Module):
             result[idx_in_level] = pooler(per_level_feature, rois_per_level)
 
         return result
+
+
+def make_pooler(cfg, head_name):
+    resolution = cfg.MODEL[head_name].POOLER_RESOLUTION
+    scales = cfg.MODEL[head_name].POOLER_SCALES
+    sampling_ratio = cfg.MODEL[head_name].POOLER_SAMPLING_RATIO
+    pooler = Pooler(
+        output_size=(resolution, resolution),
+        scales=scales,
+        sampling_ratio=sampling_ratio,
+    )
+    return pooler

@@ -34,11 +34,12 @@ def keep_only_positive_boxes(boxes):
 
 
 class ROIMaskHead(torch.nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, cfg, in_channels):
         super(ROIMaskHead, self).__init__()
         self.cfg = cfg.clone()
-        self.feature_extractor = make_roi_mask_feature_extractor(cfg)
-        self.predictor = make_roi_mask_predictor(cfg)
+        self.feature_extractor = make_roi_mask_feature_extractor(cfg, in_channels)
+        self.predictor = make_roi_mask_predictor(
+            cfg, self.feature_extractor.out_channels)
         self.post_processor = make_roi_mask_post_processor(cfg)
         self.loss_evaluator = make_roi_mask_loss_evaluator(cfg)
 
@@ -78,5 +79,5 @@ class ROIMaskHead(torch.nn.Module):
         return x, all_proposals, dict(loss_mask=loss_mask)
 
 
-def build_roi_mask_head(cfg):
-    return ROIMaskHead(cfg)
+def build_roi_mask_head(cfg, in_channels):
+    return ROIMaskHead(cfg, in_channels)

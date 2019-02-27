@@ -76,13 +76,15 @@ def train(cfg, local_rank, distributed):
     return model
 
 
-def test(cfg, model, distributed):
+def run_test(cfg, model, distributed):
     if distributed:
         model = model.module
     torch.cuda.empty_cache()  # TODO check if it helps
     iou_types = ("bbox",)
     if cfg.MODEL.MASK_ON:
         iou_types = iou_types + ("segm",)
+    if cfg.MODEL.KEYPOINT_ON:
+        iou_types = iou_types + ("keypoints",)
     output_folders = [None] * len(cfg.DATASETS.TEST)
     dataset_names = cfg.DATASETS.TEST
     if cfg.OUTPUT_DIR:
@@ -97,7 +99,7 @@ def test(cfg, model, distributed):
             data_loader_val,
             dataset_name=dataset_name,
             iou_types=iou_types,
-            box_only=cfg.MODEL.RPN_ONLY,
+            box_only=False if cfg.MODEL.RETINANET_ON else cfg.MODEL.RPN_ONLY,
             device=cfg.MODEL.DEVICE,
             expected_results=cfg.TEST.EXPECTED_RESULTS,
             expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
@@ -139,6 +141,7 @@ def main():
         torch.distributed.init_process_group(
             backend="nccl", init_method="env://"
         )
+        synchronize()
 
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
@@ -164,7 +167,7 @@ def main():
     model = train(cfg, args.local_rank, args.distributed)
 
     if not args.skip_test:
-        test(cfg, model, args.distributed)
+        run_test(cfg, model, args.distributed)
 
 
 if __name__ == "__main__":
