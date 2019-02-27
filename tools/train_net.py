@@ -24,6 +24,8 @@ from maskrcnn_benchmark.utils.collect_env import collect_env_info
 from maskrcnn_benchmark.utils.comm import synchronize, get_rank
 from maskrcnn_benchmark.utils.imports import import_file
 from maskrcnn_benchmark.utils.logger import setup_logger
+from maskrcnn_benchmark.utils.metric_logger import (
+    MetricLogger, TensorboardLogger)
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
 
 
@@ -42,7 +44,9 @@ def train(cfg, local_rank, distributed, use_tensorboard=False):
             broadcast_buffers=False,
         )
 
-    arguments = {"iteration": 0}
+    arguments = {}
+    arguments["iteration"] = 0
+
     output_dir = cfg.OUTPUT_DIR
 
     save_to_disk = get_rank() == 0
@@ -60,8 +64,14 @@ def train(cfg, local_rank, distributed, use_tensorboard=False):
     )
 
     checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
-    tensorboard_logdir = cfg.TENSORBOARD_LOGDIR
-    tensorboard_exp_name = cfg.TENSORBOARD_EXP_NAME
+    if use_tensorboard:
+        meters = TensorboardLogger(
+            log_dir=output_dir,
+            exp_name=cfg.TENSORBOARD_EXP_NAME,
+            start_iter=arguments['iteration'],
+            delimiter="  ")
+    else:
+        meters = MetricLogger(delimiter="  ")
 
     do_train(
         model,
@@ -72,9 +82,7 @@ def train(cfg, local_rank, distributed, use_tensorboard=False):
         device,
         checkpoint_period,
         arguments,
-        tensorboard_logdir,
-        tensorboard_exp_name,
-        use_tensorboard=use_tensorboard
+        meters
     )
 
     return model

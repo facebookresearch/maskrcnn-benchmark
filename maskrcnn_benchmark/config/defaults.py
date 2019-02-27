@@ -273,5 +273,4 @@ _C.OUTPUT_DIR = "."
 
 _C.PATHS_CATALOG = os.path.join(os.path.dirname(__file__), "paths_catalog.py")
 
-_C.TENSORBOARD_LOGDIR = "logs"
 _C.TENSORBOARD_EXP_NAME = "maskrcnn-benchmark"  # tensorboard experiment name
