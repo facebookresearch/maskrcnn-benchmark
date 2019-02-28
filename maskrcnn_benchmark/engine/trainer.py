@@ -102,8 +102,10 @@ def do_train(
                     memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
                 )
             )
-            # writer.add_scalar('learning_rate', optimizer.param_groups[0]["lr"], iteration)
+            writer.add_scalar('learning_rate', optimizer.param_groups[0]["lr"], iteration)
             writer.add_scalar('train_loss', losses_reduced, iteration)
+            for k,v in loss_dict_reduced:
+                writer.add_scalar(k, v, iteration)
 
         if iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
