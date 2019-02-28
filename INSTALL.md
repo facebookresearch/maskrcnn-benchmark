@@ -20,7 +20,10 @@
 conda create --name maskrcnn_benchmark
 conda activate maskrcnn_benchmark
 
-conda install -c pytorch pytorch torchvision opencv
+# this installs the right pip and dependencies for the fresh python
+conda install ipython
+
+conda install -c pytorch pytorch torchvision cudatoolkit=9.0
 
 export INSTALL_DIR=$PWD
 
