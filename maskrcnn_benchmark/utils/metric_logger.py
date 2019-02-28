@@ -69,7 +69,7 @@ class MetricLogger(object):
 
 class TensorboardLogger(MetricLogger):
     def __init__(self,
-                 log_dir='logs/maskrcnn-benchmark',
+                 log_dir,
                  start_iter=0,
                  delimiter='\t'):
 
