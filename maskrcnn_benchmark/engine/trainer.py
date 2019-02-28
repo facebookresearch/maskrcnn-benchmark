@@ -8,7 +8,7 @@ import torch.distributed as dist
 
 from maskrcnn_benchmark.utils.comm import get_world_size
 from maskrcnn_benchmark.utils.metric_logger import MetricLogger
-
+from tensorboardX import SummaryWriter
 
 def reduce_loss_dict(loss_dict):
     """
@@ -45,6 +45,7 @@ def do_train(
     checkpoint_period,
     arguments,
 ):
+    writer = SummaryWriter()
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
     logger.info("Start training")
     meters = MetricLogger(delimiter="  ")
@@ -71,6 +72,8 @@ def do_train(
         loss_dict_reduced = reduce_loss_dict(loss_dict)
         losses_reduced = sum(loss for loss in loss_dict_reduced.values())
         meters.update(loss=losses_reduced, **loss_dict_reduced)
+        writer.add_scalar('learning_rate', optimizer.param_groups[0]["lr"], iteration)
+        writer.add_scalar('train_loss', losses_reduced, iteration)
 
         optimizer.zero_grad()
         losses.backward()
