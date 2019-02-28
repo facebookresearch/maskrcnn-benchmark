@@ -104,6 +104,7 @@ def do_train(
             )
             # writer.add_scalar('learning_rate', optimizer.param_groups[0]["lr"], iteration)
             writer.add_scalar('train_loss', losses_reduced, iteration)
+
         if iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
         if iteration == max_iter:
