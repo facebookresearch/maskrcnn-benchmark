@@ -28,6 +28,8 @@ python webcam.py --min-image-size 300 MODEL.DEVICE cpu
 python webcam.py --config-file ../configs/caffe2/e2e_mask_rcnn_R_101_FPN_1x_caffe2.yaml --min-image-size 300 MODEL.DEVICE cpu
 # in order to see the probability heatmaps, pass --show-mask-heatmaps
 python webcam.py --min-image-size 300 --show-mask-heatmaps MODEL.DEVICE cpu
+# for the keypoint demo
+python webcam.py --config-file ../configs/caffe2/e2e_keypoint_rcnn_R_50_FPN_1x_caffe2.yaml --min-image-size 300 MODEL.DEVICE cpu
 ```
 
 A notebook with the demo can be found in [demo/Mask_R-CNN_demo.ipynb](demo/Mask_R-CNN_demo.ipynb).
@@ -83,9 +85,18 @@ ln -s /path_to_coco_dataset/annotations datasets/coco/annotations
 ln -s /path_to_coco_dataset/train2014 datasets/coco/train2014
 ln -s /path_to_coco_dataset/test2014 datasets/coco/test2014
 ln -s /path_to_coco_dataset/val2014 datasets/coco/val2014
+# or use COCO 2017 version
+ln -s /path_to_coco_dataset/annotations datasets/coco/annotations
+ln -s /path_to_coco_dataset/train2017 datasets/coco/train2017
+ln -s /path_to_coco_dataset/test2017 datasets/coco/test2017
+ln -s /path_to_coco_dataset/val2017 datasets/coco/val2017
+
 # for pascal voc dataset:
 ln -s /path_to_VOCdevkit_dir datasets/voc
 ```
+
+P.S. `COCO_2017_train` = `COCO_2014_train` + `valminusminival` , `COCO_2017_val` = `minival`
+      
 
 You can also configure your own paths to the datasets.
 For that, all you need to do is to modify `maskrcnn_benchmark/config/paths_catalog.py` to
@@ -152,7 +163,7 @@ from maskrcnn_benchmark.structures.bounding_box import BoxList
 class MyDataset(object):
     def __init__(self, ...):
         # as you would do normally
-    
+
     def __getitem__(self, idx):
         # load the image as a PIL Image
         image = ...
@@ -192,6 +203,14 @@ While the aforementioned example should work for training, we leverage the
 cocoApi for computing the accuracies during testing. Thus, test datasets
 should currently follow the cocoApi for now.
 
+## Finetuning from Detectron weights on custom datasets
+Create a script `tools/trim_detectron_model.py` like [here](https://gist.github.com/wangg12/aea194aa6ab6a4de088f14ee193fd968).
+You can decide which keys to be removed and which keys to be kept by modifying the script.
+
+Then you can simply point the converted model path in the config file by changing `MODEL.WEIGHT`.
+
+For further information, please refer to [#15](https://github.com/facebookresearch/maskrcnn-benchmark/issues/15).
+
 ## Troubleshooting
 If you have issues running or compiling this code, we have compiled a list of common issues in
 [TROUBLESHOOTING.md](TROUBLESHOOTING.md). If your issue is not present there, please feel
@@ -208,6 +227,14 @@ howpublished = {\url{https://github.com/facebookresearch/maskrcnn-benchmark}},
 note = {Accessed: [Insert date here]}
 }
 ```
+
+## Projects using maskrcnn-benchmark
+
+- [RetinaMask: Learning to predict masks improves state-of-the-art single-shot detection for free](https://arxiv.org/abs/1901.03353). 
+  Cheng-Yang Fu, Mykhailo Shvets, and Alexander C. Berg.
+  Tech report, arXiv,1901.03353.
+
+
 
 ## License
 

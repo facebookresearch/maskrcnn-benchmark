@@ -23,8 +23,11 @@ _C = CN()
 _C.MODEL = CN()
 _C.MODEL.RPN_ONLY = False
 _C.MODEL.MASK_ON = False
+_C.MODEL.RETINANET_ON = False
+_C.MODEL.KEYPOINT_ON = False
 _C.MODEL.DEVICE = "cuda"
 _C.MODEL.META_ARCHITECTURE = "GeneralizedRCNN"
+_C.MODEL.CLS_AGNOSTIC_BBOX_REG = False
 
 # If the WEIGHT starts with a catalog://, like :R-50, the code will look for
 # the path in paths_catalog. Else, it will use it as the specified absolute
@@ -37,7 +40,7 @@ _C.MODEL.WEIGHT = ""
 # -----------------------------------------------------------------------------
 _C.INPUT = CN()
 # Size of the smallest side of the image during training
-_C.INPUT.MIN_SIZE_TRAIN = 800  # (800,)
+_C.INPUT.MIN_SIZE_TRAIN = (800,)  # (800,)
 # Maximum size of the side of the image during training
 _C.INPUT.MAX_SIZE_TRAIN = 1333
 # Size of the smallest side of the image during testing
@@ -75,6 +78,7 @@ _C.DATALOADER.SIZE_DIVISIBILITY = 0
 # are not batched with portrait images.
 _C.DATALOADER.ASPECT_RATIO_GROUPING = True
 
+
 # ---------------------------------------------------------------------------- #
 # Backbone options
 # ---------------------------------------------------------------------------- #
@@ -88,7 +92,28 @@ _C.MODEL.BACKBONE.CONV_BODY = "R-50-C4"
 
 # Add StopGrad at a specified stage so the bottom layers are frozen
 _C.MODEL.BACKBONE.FREEZE_CONV_BODY_AT = 2
-_C.MODEL.BACKBONE.OUT_CHANNELS = 256 * 4
+# GN for backbone
+_C.MODEL.BACKBONE.USE_GN = False
+
+
+# ---------------------------------------------------------------------------- #
+# FPN options
+# ---------------------------------------------------------------------------- #
+_C.MODEL.FPN = CN()
+_C.MODEL.FPN.USE_GN = False
+_C.MODEL.FPN.USE_RELU = False
+
+
+# ---------------------------------------------------------------------------- #
+# Group Norm options
+# ---------------------------------------------------------------------------- #
+_C.MODEL.GROUP_NORM = CN()
+# Number of dimensions per group in GroupNorm (-1 if using NUM_GROUPS)
+_C.MODEL.GROUP_NORM.DIM_PER_GP = -1
+# Number of groups in GroupNorm (-1 if using DIM_PER_GP)
+_C.MODEL.GROUP_NORM.NUM_GROUPS = 32
+# GroupNorm's small constant in the denominator
+_C.MODEL.GROUP_NORM.EPSILON = 1e-5
 
 
 # ---------------------------------------------------------------------------- #
@@ -153,7 +178,7 @@ _C.MODEL.ROI_HEADS.BG_IOU_THRESHOLD = 0.5
 _C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 5., 5.)
 # RoI minibatch size *per image* (number of regions of interest [ROIs])
 # Total number of RoIs per training minibatch =
-#   TRAIN.BATCH_SIZE_PER_IM * TRAIN.IMS_PER_BATCH * NUM_GPUS
+#   TRAIN.BATCH_SIZE_PER_IM * TRAIN.IMS_PER_BATCH
 # E.g., a common configuration is: 512 * 2 * 8 = 8192
 _C.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512
 # Target fraction of RoI minibatch that is labeled foreground (i.e. class > 0)
@@ -182,6 +207,12 @@ _C.MODEL.ROI_BOX_HEAD.POOLER_SCALES = (1.0 / 16,)
 _C.MODEL.ROI_BOX_HEAD.NUM_CLASSES = 81
 # Hidden layer dimension when using an MLP for the RoI box head
 _C.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM = 1024
+# GN
+_C.MODEL.ROI_BOX_HEAD.USE_GN = False
+# Dilation
+_C.MODEL.ROI_BOX_HEAD.DILATION = 1
+_C.MODEL.ROI_BOX_HEAD.CONV_HEAD_DIM = 256
+_C.MODEL.ROI_BOX_HEAD.NUM_STACKED_CONVS = 4
 
 
 _C.MODEL.ROI_MASK_HEAD = CN()
@@ -197,6 +228,22 @@ _C.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR = True
 # Whether or not resize and translate masks to the input image.
 _C.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS = False
 _C.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS_THRESHOLD = 0.5
+# Dilation
+_C.MODEL.ROI_MASK_HEAD.DILATION = 1
+# GN
+_C.MODEL.ROI_MASK_HEAD.USE_GN = False
+
+_C.MODEL.ROI_KEYPOINT_HEAD = CN()
+_C.MODEL.ROI_KEYPOINT_HEAD.FEATURE_EXTRACTOR = "KeypointRCNNFeatureExtractor"
+_C.MODEL.ROI_KEYPOINT_HEAD.PREDICTOR = "KeypointRCNNPredictor"
+_C.MODEL.ROI_KEYPOINT_HEAD.POOLER_RESOLUTION = 14
+_C.MODEL.ROI_KEYPOINT_HEAD.POOLER_SAMPLING_RATIO = 0
+_C.MODEL.ROI_KEYPOINT_HEAD.POOLER_SCALES = (1.0 / 16,)
+_C.MODEL.ROI_KEYPOINT_HEAD.MLP_HEAD_DIM = 1024
+_C.MODEL.ROI_KEYPOINT_HEAD.CONV_LAYERS = tuple(512 for _ in range(8))
+_C.MODEL.ROI_KEYPOINT_HEAD.RESOLUTION = 14
+_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
+_C.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR = True
 
 # ---------------------------------------------------------------------------- #
 # ResNe[X]t options (ResNets = {ResNet, ResNeXt}
@@ -223,8 +270,108 @@ _C.MODEL.RESNETS.STEM_FUNC = "StemWithFixedBatchNorm"
 # Apply dilation in stage "res5"
 _C.MODEL.RESNETS.RES5_DILATION = 1
 
+_C.MODEL.RESNETS.BACKBONE_OUT_CHANNELS = 256 * 4
 _C.MODEL.RESNETS.RES2_OUT_CHANNELS = 256
 _C.MODEL.RESNETS.STEM_OUT_CHANNELS = 64
+
+
+# ---------------------------------------------------------------------------- #
+# RetinaNet Options (Follow the Detectron version)
+# ---------------------------------------------------------------------------- #
+_C.MODEL.RETINANET = CN()
+
+# This is the number of foreground classes and background.
+_C.MODEL.RETINANET.NUM_CLASSES = 81
+
+# Anchor aspect ratios to use
+_C.MODEL.RETINANET.ANCHOR_SIZES = (32, 64, 128, 256, 512)
+_C.MODEL.RETINANET.ASPECT_RATIOS = (0.5, 1.0, 2.0)
+_C.MODEL.RETINANET.ANCHOR_STRIDES = (8, 16, 32, 64, 128)
+_C.MODEL.RETINANET.STRADDLE_THRESH = 0
+
+# Anchor scales per octave
+_C.MODEL.RETINANET.OCTAVE = 2.0
+_C.MODEL.RETINANET.SCALES_PER_OCTAVE = 3
+
+# Use C5 or P5 to generate P6
+_C.MODEL.RETINANET.USE_C5 = True
+
+# Convolutions to use in the cls and bbox tower
+# NOTE: this doesn't include the last conv for logits
+_C.MODEL.RETINANET.NUM_CONVS = 4
+
+# Weight for bbox_regression loss
+_C.MODEL.RETINANET.BBOX_REG_WEIGHT = 4.0
+
+# Smooth L1 loss beta for bbox regression
+_C.MODEL.RETINANET.BBOX_REG_BETA = 0.11
+
+# During inference, #locs to select based on cls score before NMS is performed
+# per FPN level
+_C.MODEL.RETINANET.PRE_NMS_TOP_N = 1000
+
+# IoU overlap ratio for labeling an anchor as positive
+# Anchors with >= iou overlap are labeled positive
+_C.MODEL.RETINANET.FG_IOU_THRESHOLD = 0.5
+
+# IoU overlap ratio for labeling an anchor as negative
+# Anchors with < iou overlap are labeled negative
+_C.MODEL.RETINANET.BG_IOU_THRESHOLD = 0.4
+
+# Focal loss parameter: alpha
+_C.MODEL.RETINANET.LOSS_ALPHA = 0.25
+
+# Focal loss parameter: gamma
+_C.MODEL.RETINANET.LOSS_GAMMA = 2.0
+
+# Prior prob for the positives at the beginning of training. This is used to set
+# the bias init for the logits layer
+_C.MODEL.RETINANET.PRIOR_PROB = 0.01
+
+# Inference cls score threshold, anchors with score > INFERENCE_TH are
+# considered for inference
+_C.MODEL.RETINANET.INFERENCE_TH = 0.05
+
+# NMS threshold used in RetinaNet
+_C.MODEL.RETINANET.NMS_TH = 0.4
+
+
+# ---------------------------------------------------------------------------- #
+# FBNet options
+# ---------------------------------------------------------------------------- #
+_C.MODEL.FBNET = CN()
+_C.MODEL.FBNET.ARCH = "default"
+# custom arch
+_C.MODEL.FBNET.ARCH_DEF = ""
+_C.MODEL.FBNET.BN_TYPE = "bn"
+_C.MODEL.FBNET.SCALE_FACTOR = 1.0
+# the output channels will be divisible by WIDTH_DIVISOR
+_C.MODEL.FBNET.WIDTH_DIVISOR = 1
+_C.MODEL.FBNET.DW_CONV_SKIP_BN = True
+_C.MODEL.FBNET.DW_CONV_SKIP_RELU = True
+
+# > 0 scale, == 0 skip, < 0 same dimension
+_C.MODEL.FBNET.DET_HEAD_LAST_SCALE = 1.0
+_C.MODEL.FBNET.DET_HEAD_BLOCKS = []
+# overwrite the stride for the head, 0 to use original value
+_C.MODEL.FBNET.DET_HEAD_STRIDE = 0
+
+# > 0 scale, == 0 skip, < 0 same dimension
+_C.MODEL.FBNET.KPTS_HEAD_LAST_SCALE = 0.0
+_C.MODEL.FBNET.KPTS_HEAD_BLOCKS = []
+# overwrite the stride for the head, 0 to use original value
+_C.MODEL.FBNET.KPTS_HEAD_STRIDE = 0
+
+# > 0 scale, == 0 skip, < 0 same dimension
+_C.MODEL.FBNET.MASK_HEAD_LAST_SCALE = 0.0
+_C.MODEL.FBNET.MASK_HEAD_BLOCKS = []
+# overwrite the stride for the head, 0 to use original value
+_C.MODEL.FBNET.MASK_HEAD_STRIDE = 0
+
+# 0 to use all blocks defined in arch_def
+_C.MODEL.FBNET.RPN_HEAD_BLOCKS = 0
+_C.MODEL.FBNET.RPN_BN_TYPE = ""
+
 
 # ---------------------------------------------------------------------------- #
 # Solver
@@ -264,6 +411,8 @@ _C.TEST.EXPECTED_RESULTS_SIGMA_TOL = 4
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
 _C.TEST.IMS_PER_BATCH = 8
+# Number of detections per image
+_C.TEST.DETECTIONS_PER_IMG = 100
 
 
 # ---------------------------------------------------------------------------- #

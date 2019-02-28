@@ -4,7 +4,7 @@ import logging
 import time
 
 import torch
-from torch.distributed import deprecated as dist
+import torch.distributed as dist
 
 from maskrcnn_benchmark.utils.comm import get_world_size
 
@@ -21,9 +21,9 @@ def reduce_loss_dict(loss_dict):
     with torch.no_grad():
         loss_names = []
         all_losses = []
-        for k, v in loss_dict.items():
+        for k in sorted(loss_dict.keys()):
             loss_names.append(k)
-            all_losses.append(v)
+            all_losses.append(loss_dict[k])
         all_losses = torch.stack(all_losses, dim=0)
         dist.reduce(all_losses, dst=0)
         if dist.get_rank() == 0:
@@ -104,8 +104,10 @@ def do_train(
                     memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
                 )
             )
-        if iteration % checkpoint_period == 0 or iteration == max_iter:
+        if iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
+        if iteration == max_iter:
+            checkpointer.save("model_final", **arguments)
 
     total_training_time = time.time() - start_training_time
     total_time_str = str(datetime.timedelta(seconds=total_training_time))
