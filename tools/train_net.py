@@ -65,9 +65,8 @@ def train(cfg, local_rank, distributed, use_tensorboard=False):
 
     checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
     if use_tensorboard:
-        log_dir = os.path.join(output_dir, cfg.TENSORBOARD_EXP_NAME)
         meters = TensorboardLogger(
-            log_dir=log_dir,
+            log_dir=cfg.TENSORBOARD_EXPERIMENT,
             start_iter=arguments['iteration'],
             delimiter="  ")
     else:
