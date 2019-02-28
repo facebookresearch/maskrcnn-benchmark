@@ -69,17 +69,16 @@ class MetricLogger(object):
 
 class TensorboardLogger(MetricLogger):
     def __init__(self,
-                 log_dir='logs',
-                 exp_name='maskrcnn-benchmark',
+                 log_dir='logs/maskrcnn-benchmark',
                  start_iter=0,
                  delimiter='\t'):
 
         super(TensorboardLogger, self).__init__(delimiter)
         self.iteration = start_iter
-        self.writer = self._get_tensorboard_writer(log_dir, exp_name)
+        self.writer = self._get_tensorboard_writer(log_dir)
 
     @staticmethod
-    def _get_tensorboard_writer(log_dir, exp_name):
+    def _get_tensorboard_writer(log_dir):
         try:
             from tensorboardX import SummaryWriter
         except ImportError:
@@ -90,7 +89,7 @@ class TensorboardLogger(MetricLogger):
 
         if is_main_process():
             timestamp = datetime.fromtimestamp(time.time()).strftime('%Y%m%d-%H:%M')
-            tb_logger = SummaryWriter('{}/{}-{}'.format(log_dir, exp_name, timestamp))
+            tb_logger = SummaryWriter('{}-{}'.format(log_dir, timestamp))
             return tb_logger
         else:
             return None
