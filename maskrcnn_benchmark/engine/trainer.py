@@ -72,8 +72,6 @@ def do_train(
         loss_dict_reduced = reduce_loss_dict(loss_dict)
         losses_reduced = sum(loss for loss in loss_dict_reduced.values())
         meters.update(loss=losses_reduced, **loss_dict_reduced)
-        writer.add_scalar('learning_rate', optimizer.param_groups[0]["lr"], iteration)
-        writer.add_scalar('train_loss', losses_reduced, iteration)
 
         optimizer.zero_grad()
         losses.backward()
@@ -104,6 +102,8 @@ def do_train(
                     memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
                 )
             )
+            writer.add_scalar('learning_rate', optimizer.param_groups[0]["lr"], iteration)
+            writer.add_scalar('train_loss', losses_reduced, iteration)
         if iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
         if iteration == max_iter:
