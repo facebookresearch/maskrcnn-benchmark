@@ -1,7 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+import os
 import numpy
+from io import BytesIO
 from matplotlib import pyplot
 
+import requests
 import torch
 
 from PIL import Image
@@ -11,7 +14,11 @@ from maskrcnn_benchmark.structures.image_list import ImageList
 
 if __name__ == "__main__":
     # load config from file and command-line arguments
-    cfg.merge_from_file("../configs/caffe2/e2e_mask_rcnn_R_50_FPN_1x_caffe2.yaml")
+
+    project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    cfg.merge_from_file(
+        os.path.join(project_dir,
+                     "configs/caffe2/e2e_mask_rcnn_R_50_FPN_1x_caffe2.yaml"))
     cfg.merge_from_list(["MODEL.DEVICE", "cpu"])
     cfg.freeze()
 
@@ -131,9 +138,14 @@ def process_image_with_traced_model(image):
     result_image = combine_masks(original_image, labels, masks, scores, boxes, 0.5, 1, rectangle=True)
     return result_image
 
+def fetch_image(url):
+    response = requests.get(url)
+    return Image.open(BytesIO(response.content)).convert("RGB")
 
 if __name__ == "__main__":
-    pil_image = Image.open("3915380994_2e611b1779_z.jpg").convert("RGB")
+    pil_image = fetch_image(
+        url="http://farm3.staticflickr.com/2469/3915380994_2e611b1779_z.jpg")
+
     # convert to BGR format
     image = torch.from_numpy(numpy.array(pil_image)[:, :, [2, 1, 0]])
     original_image = image
@@ -159,7 +171,8 @@ if __name__ == "__main__":
     pyplot.show()
 
     # second image
-    image2 = Image.open('17790319373_bd19b24cfc_k.jpg').convert("RGB")
+    image2 = fetch_image(
+        url='http://farm4.staticflickr.com/3153/2970773875_164f0c0b83_z.jpg')
     image2 = image2.resize((640, 480), Image.BILINEAR)
     image2 = torch.from_numpy(numpy.array(image2)[:, :, [2, 1, 0]])
     result_image2 = process_image_with_traced_model(image2)
