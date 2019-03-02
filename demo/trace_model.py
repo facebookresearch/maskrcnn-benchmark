@@ -1,4 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+import os
 import numpy
 from io import BytesIO
 from matplotlib import pyplot
@@ -13,7 +14,11 @@ from maskrcnn_benchmark.structures.image_list import ImageList
 
 if __name__ == "__main__":
     # load config from file and command-line arguments
-    cfg.merge_from_file("../configs/caffe2/e2e_mask_rcnn_R_50_FPN_1x_caffe2.yaml")
+
+    project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    cfg.merge_from_file(
+        os.path.join(project_dir,
+                     "configs/caffe2/e2e_mask_rcnn_R_50_FPN_1x_caffe2.yaml"))
     cfg.merge_from_list(["MODEL.DEVICE", "cpu"])
     cfg.freeze()
 
