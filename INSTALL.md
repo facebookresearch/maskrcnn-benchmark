@@ -23,8 +23,6 @@ conda activate maskrcnn_benchmark
 # this installs the right pip and dependencies for the fresh python
 conda install ipython
 
-conda install -c pytorch pytorch torchvision cudatoolkit=9.0
-
 export INSTALL_DIR=$PWD
 
 
@@ -41,6 +39,10 @@ cd maskrcnn-benchmark
 
 # maskrcnn_benchmark and coco api dependencies
 pip install -r requirements.txt
+
+# follow PyTorch installation in https://pytorch.org/get-started/locally/
+# we give the instructions for CUDA 9.0
+conda install -c pytorch pytorch torchvision cudatoolkit=9.0
 
 # the following will install the lib with
 # symbolic links, so that you can modify
