@@ -25,8 +25,8 @@ std::pair<at::Tensor, at::Tensor> soft_nms_cpu_kernel(const at::Tensor& dets,
 
   at::Tensor areas_t = (x2_t - x1_t + 1) * (y2_t - y1_t + 1);
   auto ndets = dets.size(0);
-  auto inds_t = at::arange(ndets, torch::CPU(torch::kInt64));
-
+  auto inds_t = at::arange(ndets, dets.options().dtype(at::kLong).device(at::kCPU));
+  
   auto x1 = x1_t.data<scalar_t>();
   auto y1 = y1_t.data<scalar_t>();
   auto x2 = x2_t.data<scalar_t>();
