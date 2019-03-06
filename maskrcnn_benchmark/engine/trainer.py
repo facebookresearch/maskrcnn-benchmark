@@ -101,9 +101,9 @@ def do_train(
                     memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
                 )
             )
-        if iteration % checkpoint_period == 0:
+        if dist.get_rank() == 0 and iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
-        if iteration == max_iter:
+        if dist.get_rank() == 0 and iteration == max_iter:
             checkpointer.save("model_final", **arguments)
 
     total_training_time = time.time() - start_training_time
