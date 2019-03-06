@@ -70,6 +70,9 @@ __global__ void nms_kernel(const int n_boxes, const float nms_overlap_thresh,
 at::Tensor nms_cuda(const at::Tensor boxes, float nms_overlap_thresh) {
   using scalar_t = float;
   AT_ASSERTM(boxes.type().is_cuda(), "boxes must be a CUDA tensor");
+  int current_device;
+  THCudaCheck(cudaGetDevice(&current_device));
+  THCudaCheck(cudaSetDevice(boxes.get_device()));
   auto scores = boxes.select(1, 4);
   auto order_t = std::get<1>(scores.sort(0, /* descending=*/true));
   auto boxes_sorted = boxes.index_select(0, order_t);
@@ -123,6 +126,7 @@ at::Tensor nms_cuda(const at::Tensor boxes, float nms_overlap_thresh) {
   }
 
   THCudaFree(state, mask_dev);
+  THCudaCheck(cudaSetDevice(current_device));
   // TODO improve this part
   return std::get<0>(order_t.index({
                        keep.narrow(/*dim=*/0, /*start=*/0, /*length=*/num_to_keep).to(
