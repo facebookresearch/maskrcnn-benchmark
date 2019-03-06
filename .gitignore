@@ -33,3 +33,4 @@ checkpoints
 *checkpoint
 log.txt
 inference/*
+runs/*
