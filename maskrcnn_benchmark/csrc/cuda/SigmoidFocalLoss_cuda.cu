@@ -111,6 +111,10 @@ at::Tensor SigmoidFocalLoss_forward_cuda(
   AT_ASSERTM(targets.type().is_cuda(), "targets must be a CUDA tensor");
   AT_ASSERTM(logits.dim() == 2, "logits should be NxClass");
 
+  int current_device;
+  THCudaCheck(cudaGetDevice(&current_device));
+  THCudaCheck(cudaSetDevice(logits.get_device()));
+
   const int num_samples = logits.size(0);
 	
   auto losses = at::empty({num_samples, logits.size(1)}, logits.options());
@@ -137,6 +141,7 @@ at::Tensor SigmoidFocalLoss_forward_cuda(
          losses.data<scalar_t>());
   });
   THCudaCheck(cudaGetLastError());
+  THCudaCheck(cudaSetDevice(current_device));
   return losses;   
 }	
 
@@ -156,7 +161,11 @@ at::Tensor SigmoidFocalLoss_backward_cuda(
 
   const int num_samples = logits.size(0);
   AT_ASSERTM(logits.size(1) == num_classes, "logits.size(1) should be num_classes");
-	
+
+  int current_device;
+  THCudaCheck(cudaGetDevice(&current_device));
+  THCudaCheck(cudaSetDevice(logits.get_device()));
+
   auto d_logits = at::zeros({num_samples, num_classes}, logits.options());
   auto d_logits_size = num_samples * logits.size(1);
   cudaStream_t stream = at::cuda::getCurrentCUDAStream();
@@ -183,6 +192,7 @@ at::Tensor SigmoidFocalLoss_backward_cuda(
   });
 
   THCudaCheck(cudaGetLastError());
+  THCudaCheck(cudaSetDevice(current_device));
   return d_logits;   
 }	
 
