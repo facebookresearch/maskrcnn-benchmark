@@ -221,7 +221,7 @@ Please consider citing this project in your publications if it helps your resear
 ```
 @misc{massa2018mrcnn,
 author = {Massa, Francisco and Girshick, Ross},
-title = {{maskrnn-benchmark: Fast, modular reference implementation of Instance Segmentation and Object Detection algorithms in PyTorch}},
+title = {{maskrcnn-benchmark: Fast, modular reference implementation of Instance Segmentation and Object Detection algorithms in PyTorch}},
 year = {2018},
 howpublished = {\url{https://github.com/facebookresearch/maskrcnn-benchmark}},
 note = {Accessed: [Insert date here]}
