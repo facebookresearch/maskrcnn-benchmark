@@ -24,8 +24,8 @@ def normalize(x, xmin=None, xmax=None):
 def visualize_vertex_centers(vertex_centers):
     # min_depth = np.log(0.3)  # 0.3 m
     # max_depth = np.log(8)  # 8 m
-    min_depth = 0
-    max_depth = 5
+    # min_depth = 0
+    # max_depth = 5
     cx = normalize(vertex_centers[:,:,0],-1,1)
     cy = normalize(vertex_centers[:,:,1],-1,1)
     # cz = np.exp(vertex_centers[:,:,2])
@@ -182,6 +182,12 @@ if __name__ == '__main__':
         for id in range(len(targets)):
             t1 = targets[id]
             im_scale = t1.get_field("scale")
+
+            if cfg.MODEL.POSE_ON or cfg.MODEL.DEPTH_ON:
+                try:
+                    intrinsics = t1.get_field("intrinsic_matrix")
+                except KeyError:
+                    print("[WARN]: Could not get 'intrinsic_matrix' field, using default...")
 
             im1 = images.tensors[id]
             im_np = im1.numpy()

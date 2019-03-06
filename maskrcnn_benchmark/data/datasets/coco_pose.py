@@ -15,12 +15,12 @@ from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask, Po
 from maskrcnn_benchmark.structures.object_mask import ObjectMask
 
 
-def _generate_vertex_center_mask(label_mask, center, depth=None):
+def _generate_vertex_center_mask(label_mask, center):
     # c = np.zeros((2, 1), dtype=np.float32)
     # for ind, cls in enumerate(cls_i):
     c = np.expand_dims(center, axis=1) 
     h,w = label_mask.shape
-    vertex_centers = np.zeros((3, h, w), dtype=np.float32)  # channels first, as in pytorch convention
+    vertex_centers = np.zeros((2, h, w), dtype=np.float32)  # channels first, as in pytorch convention
     # z = pose[2, 3]
     y, x = np.where(label_mask == 1)
 
@@ -32,9 +32,9 @@ def _generate_vertex_center_mask(label_mask, center, depth=None):
     # assignment
     vertex_centers[0, y, x] = R[0, :]
     vertex_centers[1, y, x] = R[1, :]
-    if depth is not None:
-        assert depth.shape == (h, w)
-        vertex_centers[2, y, x] = depth[y, x]
+    # if depth is not None:
+    #     assert depth.shape == (h, w)
+    #     vertex_centers[2, y, x] = depth[y, x]
     return vertex_centers
 
 def _generate_depth_mask(label_mask, depth):
@@ -179,20 +179,26 @@ class COCOPoseDataset(COCODataset):
         if self.target_transform is not None:
             target = self.target_transform(target)
 
-        depth = None
-        if self.cfg["Depth"]:
-            if 'depth_file_name' in data:
-                depth_path = os.path.join(self.root, data['depth_file_name'])
-                depth = np.array(Image.open(depth_path)).astype(np.float32)
-                if 'factor_depth' in data:
-                    depth = depth / float(data['factor_depth'])
+        meta = {}
+        if self.cfg["Depth"] or self.cfg["Pose"]:
+            if 'intrinsic_matrix' in data:
+                meta['intrinsic_matrix'] = np.array(data['intrinsic_matrix']).reshape((3,3))
             else:
-                print("[WARN]: Depth mode is ON, but no 'depth_file_name' field in annotation: %s"%(f_name))
+                print("[WARN]: Depth/Pose mode is ON, but no 'intrinsic_matrix' field in annotation: %s" % (f_name))
 
-        return img, target, depth
+            if self.cfg["Depth"]:
+                if 'depth_file_name' in data:
+                    depth_path = os.path.join(self.root, data['depth_file_name'])
+                    depth = np.array(Image.open(depth_path)).astype(np.float32)
+                    if 'factor_depth' in data:
+                        meta['depth'] = depth / float(data['factor_depth'])
+                else:
+                    print("[WARN]: Depth mode is ON, but no 'depth_file_name' field in annotation: %s"%(f_name))
+
+        return img, target, meta
 
     def __getitem__(self, idx):
-        img, anno, depth = self.__get_item__(idx)
+        img, anno, meta = self.__get_item__(idx)
 
         # filter crowd annotations
 
@@ -224,13 +230,13 @@ class COCOPoseDataset(COCODataset):
                 target.add_field("poses", torch.tensor(poses))
 
             if self.cfg["Vertex"]:
-                vertex_centers = np.zeros((N, 3, H, W))
+                vertex_centers = np.zeros((N, 2, H, W))
                 for ix, m in enumerate(masks):
                     center = centers[ix]
                     # pose = poses[ix]
                     # z = np.log(pose[-1]) # z distance is the last value in pose [qw,qx,qy,qz,x,y,z]
                     # m = _get_mask_from_polygon(poly, img.size)
-                    vertex_centers[ix, :] = _generate_vertex_center_mask(m, center, depth)
+                    vertex_centers[ix, :] = _generate_vertex_center_mask(m, center)
 
                 vertex_centers = torch.tensor(vertex_centers)
                 vertexes = ObjectMask(vertex_centers, img.size)
@@ -241,7 +247,8 @@ class COCOPoseDataset(COCODataset):
 
         if self.cfg["Depth"]:
             depth_data = np.zeros((N, 1, H, W))
-            if depth is not None:
+            if 'depth' in meta:
+                depth = meta['depth']
                 for ix, m in enumerate(masks):
                     depth_data[ix, :] = _generate_depth_mask(m, depth)
             depth_data = torch.tensor(depth_data)
@@ -252,6 +259,8 @@ class COCOPoseDataset(COCODataset):
         if self.transforms is not None:
             img, target = self.transforms(img, target)
 
+        if "intrinsic_matrix" in meta:
+            target.add_field("intrinsic_matrix", meta["intrinsic_matrix"])
         if self.cfg["Pose"]:
             target.add_field("symmetry", self.symmetry)
             target.add_field("extents", self.extents)
