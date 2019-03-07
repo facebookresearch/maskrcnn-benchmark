@@ -2,9 +2,29 @@
 
 This project is based on facebookresearch's [maskrcnn-benchmark](https://github.com/facebookresearch/maskrcnn-benchmark).
 
-## Requirements
-* PyTorch 1.0
-* TensorboardX
+## Installation
+```
+conda create --name py36 python=3.6
+conda activate py36
+conda install -c anaconda numpy
+conda install -c anaconda cython
+conda install ipython
+pip install tqdm yacs
+mkdir ~/github
+cd ~/github
+export INSTALL_DIR=$PWD
+git clone https://github.com/cocodataset/cocoapi.git
+cd cocoapi/PythonAPI
+python setup.py build_ext install
+cd ~/github
+git clone https://github.com/xanderchf/faster-rcnn-KITTI-BDD100k.git
+cd faster-rcnn-KITTI-BDD100k
+conda install -c pytorch pytorch torchvision cudatoolkit=9.2
+python setup.py build develop
+unset INSTALL_DIR
+pip install --ignore-installed --upgrade https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow_gpu-1.12.0-cp36-cp36m-linux_x86_64.whl
+pip install tensorboardX
+```
 
 ## Data Preparation
 ### KITTI
