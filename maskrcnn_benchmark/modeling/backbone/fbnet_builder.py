@@ -771,6 +771,9 @@ class FBNetBuilder(object):
             last_channel = int(self.last_depth * (-channel_scale))
         last_channel = self._get_divisible_width(last_channel)
 
+        if last_channel == 0:
+            return nn.Sequential()
+
         dim_in = self.last_depth
         ret = ConvBNRelu(
             dim_in,

@@ -47,7 +47,7 @@ MODEL_ARCH = {
                 [[4, 160, 1, 1], [6, 160, 3, 1], [3, 80, 1, -2]],
             ],
             # [c, channel_scale]
-            "last": [1280, 0.0],
+            "last": [0, 0.0],
             "backbone": [0, 1, 2, 3],
             "rpn": [5],
             "bbox": [4],
@@ -91,7 +91,7 @@ MODEL_ARCH = {
                 [[6, 128, 3, 1]],
             ],
             # [c, channel_scale]
-            "last": [1280, 0.0],
+            "last": [0, 0.0],
             "backbone": [0, 1, 2, 3],
             "rpn": [6],
             "bbox": [4],
@@ -127,9 +127,92 @@ MODEL_ARCH = {
                 [[6, 160, 3, 1], [6, 320, 1, 1]],
             ],
             # [c, channel_scale]
-            "last": [1280, 0.0],
+            "last": [0, 0.0],
             "backbone": [0, 1, 2, 3],
             "bbox": [4],
         },
     },
 }
+
+
+MODEL_ARCH_CHAM = {
+    "cham_v1a": {
+        "block_op_type": [
+            # stage 0
+            ["ir_k3"],
+            # stage 1
+            ["ir_k7"] * 2,
+            # stage 2
+            ["ir_k3"] * 5,
+            # stage 3
+            ["ir_k5"] * 7 + ["ir_k3"] * 5,
+            # stage 4, bbox head
+            ["ir_k3"] * 5,
+            # stage 5, rpn
+            ["ir_k3"] * 3,
+        ],
+        "block_cfg": {
+            "first": [32, 2],
+            "stages": [
+                # [t, c, n, s]
+                # stage 0
+                [[1, 24, 1, 1]],
+                # stage 1
+                [[4, 48, 2, 2]],
+                # stage 2
+                [[7, 64, 5, 2]],
+                # stage 3
+                [[12, 56, 7, 2], [8, 88, 5, 1]],
+                # stage 4, bbox head
+                [[7, 152, 4, 2], [10, 104, 1, 1]],
+                # stage 5, rpn head
+                [[8, 88, 3, 1]],
+            ],
+            # [c, channel_scale]
+            "last": [0, 0.0],
+            "backbone": [0, 1, 2, 3],
+            "rpn": [5],
+            "bbox": [4],
+        },
+    },
+    "cham_v2": {
+        "block_op_type": [
+            # stage 0
+            ["ir_k3"],
+            # stage 1
+            ["ir_k5"] * 4,
+            # stage 2
+            ["ir_k7"] * 6,
+            # stage 3
+            ["ir_k5"] * 3 + ["ir_k3"] * 6,
+            # stage 4, bbox head
+            ["ir_k3"] * 7,
+            # stage 5, rpn
+            ["ir_k3"] * 1,
+        ],
+        "block_cfg": {
+            "first": [32, 2],
+            "stages": [
+                # [t, c, n, s]
+                # stage 0
+                [[1, 24, 1, 1]],
+                # stage 1
+                [[8, 32, 4, 2]],
+                # stage 2
+                [[5, 48, 6, 2]],
+                # stage 3
+                [[9, 56, 3, 2], [6, 56, 6, 1]],
+                # stage 4, bbox head
+                [[2, 160, 6, 2], [6, 112, 1, 1]],
+                # stage 5, rpn head
+                [[6, 56, 1, 1]],
+            ],
+            # [c, channel_scale]
+            "last": [0, 0.0],
+            "backbone": [0, 1, 2, 3],
+            "rpn": [5],
+            "bbox": [4],
+        },
+    },
+}
+add_archs(MODEL_ARCH_CHAM)
