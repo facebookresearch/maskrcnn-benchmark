@@ -263,9 +263,7 @@ at::Tensor ROIAlign_forward_cuda(const at::Tensor& input,
   AT_ASSERTM(input.type().is_cuda(), "input must be a CUDA tensor");
   AT_ASSERTM(rois.type().is_cuda(), "rois must be a CUDA tensor");
 
-  int current_device;
-  THCudaCheck(cudaGetDevice(&current_device));
-  THCudaCheck(cudaSetDevice(input.get_device()));
+  CUDAGuard device_guard(input.device());
 
   auto num_rois = rois.size(0);
   auto channels = input.size(1);
@@ -299,7 +297,6 @@ at::Tensor ROIAlign_forward_cuda(const at::Tensor& input,
          output.data<scalar_t>());
   });
   THCudaCheck(cudaGetLastError());
-  THCudaCheck(cudaSetDevice(current_device));
   return output;
 }
 
@@ -316,10 +313,7 @@ at::Tensor ROIAlign_backward_cuda(const at::Tensor& grad,
                                   const int sampling_ratio) {
   AT_ASSERTM(grad.type().is_cuda(), "grad must be a CUDA tensor");
   AT_ASSERTM(rois.type().is_cuda(), "rois must be a CUDA tensor");
-
-  int current_device;
-  THCudaCheck(cudaGetDevice(&current_device));
-  THCudaCheck(cudaSetDevice(grad.get_device()));
+  CUDAGuard device_guard(grad.device());
 
   auto num_rois = rois.size(0);
   auto grad_input = at::zeros({batch_size, channels, height, width}, grad.options());
@@ -351,6 +345,5 @@ at::Tensor ROIAlign_backward_cuda(const at::Tensor& grad,
          rois.contiguous().data<scalar_t>());
   });
   THCudaCheck(cudaGetLastError());
-  THCudaCheck(cudaSetDevice(current_device));
   return grad_input;
 }
