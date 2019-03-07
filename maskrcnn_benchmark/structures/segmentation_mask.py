@@ -408,8 +408,10 @@ class PolygonList(object):
         return len(self.polygons)
 
     def __getitem__(self, item):
-        if isinstance(item, (int, slice)):
+        if isinstance(item, int):
             selected_polygons = [self.polygons[item]]
+        elif isinstance(item, slice):
+            selected_polygons = self.polygons[item]
         else:
             # advanced indexing on a single dimension
             selected_polygons = []
