@@ -64,7 +64,7 @@ def do_coco_evaluation(
     check_expected_results(results, expected_results, expected_results_sigma_tol)
     if output_folder:
         torch.save(results, os.path.join(output_folder, "coco_results.pth"))
-    return results, coco_results
+    return results
 
 
 def prepare_for_coco_detection(predictions, dataset):
@@ -84,7 +84,6 @@ def prepare_for_coco_detection(predictions, dataset):
         boxes = prediction.bbox.tolist()
         scores = prediction.get_field("scores").tolist()
         labels = prediction.get_field("labels").tolist()
-
         mapped_labels = [dataset.contiguous_category_id_to_json_id[i] for i in labels]
 
         coco_results.extend(
