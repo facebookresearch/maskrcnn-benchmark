@@ -123,6 +123,7 @@ def do_train(
                 writer.add_scalar('train_loss', losses_reduced, iteration)
                 for k,v in loss_dict_reduced.items():
                     writer.add_scalar(k, v.item(), iteration)
+
             # logger.info("Best Val mAP: {:.4f}".format(best_val_map))
 
         if iteration % checkpoint_period == 0:
@@ -132,8 +133,6 @@ def do_train(
             if is_best_val_map:
                 logger.info("Best Val mAP: {:.4f}, Saving Best Model..".format(best_val_map))
                 checkpointer.save("model_best", ** arguments)
-            if is_main_process():
-                writer.add_scalar('cur_map', cur_val_map, iteration)
             model.train()
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)
