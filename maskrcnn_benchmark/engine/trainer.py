@@ -132,8 +132,6 @@ def do_train(
             if is_best_val_map:
                 logger.info("Best Val mAP: {:.4f}, Saving Best Model..".format(best_val_map))
                 checkpointer.save("model_best", ** arguments)
-            if is_main_process():
-                writer.add_scalar('cur_map', cur_val_map, iteration)
             model.train()
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)

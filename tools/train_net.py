@@ -27,6 +27,7 @@ from maskrcnn_benchmark.utils.miscellaneous import mkdir
 
 def train(cfg, local_rank, distributed):
     model = build_detection_model(cfg)
+    # return
     device = torch.device(cfg.MODEL.DEVICE)
     model.to(device)
 
