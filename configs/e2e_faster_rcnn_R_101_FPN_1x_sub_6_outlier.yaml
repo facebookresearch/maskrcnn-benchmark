@@ -15,15 +15,15 @@ MODEL:
   ROI_HEADS:
     USE_FPN: True
   ROI_BOX_HEAD:
-    NUM_CLASSES: 7
+    NUM_CLASSES: 8
     POOLER_RESOLUTION: 7
     POOLER_SCALES: (0.25, 0.125, 0.0625, 0.03125)
     POOLER_SAMPLING_RATIO: 2
     FEATURE_EXTRACTOR: "FPN2MLPFeatureExtractor"
     PREDICTOR: "FPNPredictor"
 DATASETS:
-  TRAIN: ("coco_2017_train_sub_6",)
-  TEST: ("coco_2017_val_sub_6",)
+  TRAIN: ("coco_2017_train_sub_6_outlier",)
+  TEST: ("coco_2017_val_sub_6_outlier","coco_2017_val_sub_6_zebra")
 DATALOADER:
   SIZE_DIVISIBILITY: 32
 SOLVER:
