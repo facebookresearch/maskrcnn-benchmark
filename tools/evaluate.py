@@ -21,7 +21,6 @@ def parse_args():
     """Use argparse to get command line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument('--result', type=str, help='path to results to be evaluated')
-    parser.add_argument('--fig_dir', type=str, help='path to save output figures', default='')
     parser.add_argument(
         "opts",
         help="Modify config options using the command-line",
@@ -146,25 +145,29 @@ def cat_pc(gt, predictions, thresholds):
     return recalls, precisions, ap
 
 
-def evaluate_detection(gt, pred, class_id_dict, fig_dir, model_name):
+def evaluate_detection(gt, pred, class_id_dict, fig_dir, model_name, image_dir):
 
     thresholds = [0.5, 0.75]
     aps = np.zeros((len(thresholds), len(class_id_dict.keys())))
     cat_list = [class_id_dict[k] for k in class_id_dict]
+    print(cat_list)
     counters = np.zeros(len(cat_list))
     for idx in range(len(gt)):
         cat_gt = group_by_key(gt[idx]['labels'], 'category')
         cat_pred = group_by_key(pred[idx]['labels'], 'category')
-        image = Image.open(gt[idx]['name'])
+        
         for i, cat in enumerate(cat_list):
             
             if cat in cat_pred and cat in cat_gt:
+                
                 r, p, ap = cat_pc(cat_gt[cat], cat_pred[cat], thresholds)
                 
                 aps[:, i] += ap
                 counters[i] += 1
-                if len(fig_dir) > 0 and idx % 100 == 0 and False:
+                
+                if len(fig_dir) > 0 and idx % 1000 == 0 and False:
                     fig, ax = plt.figure(), plt.gca()
+                    image = Image.open(os.path.join(image_dir, gt[idx]['name']))
                     ax.imshow(image)
 
                     for l in cat_pred[cat]:
@@ -225,7 +228,8 @@ def main():
         with open(os.path.join(args.result, r)) as f:
             result = json.load(f)
         
-        mean, breakdown = evaluate_detection(gt, result, class_id_dict, args.fig_dir, r[:-5])
+        fig_dir = os.path.join(args.result, 'figures')
+        mean, breakdown = evaluate_detection(gt, result, class_id_dict, fig_dir, r[:-5], data_loader.dataset.image_dir)
 
         print('{:.2f}'.format(mean),
               ', '.join(['{:.2f}'.format(n) for n in breakdown]))

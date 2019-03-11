@@ -56,6 +56,12 @@ class Bdd100kDataset(Dataset):
                                         if l['category'] in CLASS_TYPE_CONVERSION.keys()]
         
         self.labels = [l for l in self.labels if len(l['labels']) > 0]
+        for i in range(len(self.labels)):
+            for j in range(len(self.labels[i]['labels'])):
+                label_type = CLASS_TYPE_CONVERSION[self.labels[i]['labels'][j]['category']]
+                self.labels[i]['labels'][j]['category'] = TYPE_ID_CONVERSION[label_type]
+                
+        self.image_paths = [os.path.join(self.image_dir, l['name']) for l in self.labels]
         self.length = len(self.labels)
         
     def __len__(self):
@@ -76,16 +82,13 @@ class Bdd100kDataset(Dataset):
         for label in annotations['labels']:
             # TODO: further filter annotations if needed
 
-            label_type = CLASS_TYPE_CONVERSION[label['category']]
-            classes += [TYPE_ID_CONVERSION[label_type]]
-            
             boxes += [
                 label['box2d']['x1'],
                 label['box2d']['y1'],
                 label['box2d']['x2'],
                 label['box2d']['y2']
             ]
-        fns = annotations['name']
+        fns = os.path.join(self.image_dir, annotations['name'])
 
         boxes = torch.as_tensor(boxes).reshape(-1, 4)
         target = BoxList(boxes, (W, H), mode="xyxy")
