@@ -125,7 +125,7 @@ at::Tensor SigmoidFocalLoss_forward_cuda(
     return losses;
   }
 
-  AT_DISPATCH_FLOATING_TYPES(logits.type(), "SigmoidFocalLoss_forward", [&] {
+  AT_DISPATCH_FLOATING_TYPES(logits.scalar_type(), "SigmoidFocalLoss_forward", [&] {
     SigmoidFocalLossForward<scalar_t><<<grid, block, 0, stream>>>(
          losses_size,
          logits.contiguous().data<scalar_t>(),
@@ -169,7 +169,7 @@ at::Tensor SigmoidFocalLoss_backward_cuda(
     return d_logits;
   }
 
-  AT_DISPATCH_FLOATING_TYPES(logits.type(), "SigmoidFocalLoss_backward", [&] {
+  AT_DISPATCH_FLOATING_TYPES(logits.scalar_type(), "SigmoidFocalLoss_backward", [&] {
     SigmoidFocalLossBackward<scalar_t><<<grid, block, 0, stream>>>(
          d_logits_size,
          logits.contiguous().data<scalar_t>(),
