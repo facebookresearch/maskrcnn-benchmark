@@ -81,6 +81,6 @@ python tools/test_net.py --weights out_bdd/*.pth --config-file "configs/e2e_fast
 ## Evaluate
 To [evaluate](https://github.com/ucbdrive/bdd-data/blob/master/bdd_data/evaluate.py) the saved detection, run the below command:
 ```
-python tools/evaluate_bdd.py --result out_bdd/detections DATASETS.TEST '("bdd100k_val",)'
+python tools/evaluate.py --result out_bdd/detections DATASETS.TEST '("bdd100k_val",)'
 ```
 
