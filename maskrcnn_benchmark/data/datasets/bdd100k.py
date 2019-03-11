@@ -81,7 +81,7 @@ class Bdd100kDataset(Dataset):
         classes = []
         for label in annotations['labels']:
             # TODO: further filter annotations if needed
-
+            classes += [label['category']]
             boxes += [
                 label['box2d']['x1'],
                 label['box2d']['y1'],
