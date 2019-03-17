@@ -74,6 +74,13 @@ def do_train(
 
         optimizer.zero_grad()
         losses.backward()
+        
+        accum_grad = 0
+        for p in list(filter(lambda p: p.grad is not None, model.parameters())):
+            accum_grad += p.grad.data.norm(2).item()
+            
+        if iteration > 500 and accum_grad > 200:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 200)
         optimizer.step()
 
         batch_time = time.time() - end

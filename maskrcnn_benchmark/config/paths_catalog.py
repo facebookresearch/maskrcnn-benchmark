@@ -33,6 +33,12 @@ class DatasetCatalog(object):
         "bdd100k_val": (
             "bdd100k/images/100k/val", "bdd100k/labels/bdd100k_labels_images_val.json"
         ),
+        "bdd100k_det_train": (
+            "bdd100k/images/100k/train", "bdd100k/labels/bdd100k_labels_images_det_coco_train.json"
+        ),
+        "bdd100k_det_val": (
+            "bdd100k/images/100k/val", "bdd100k/labels/bdd100k_labels_images_det_coco_val.json"
+        ),
         "kitti_tracking_train": (
             "kitti_tracking/train", ""
         ),
@@ -46,7 +52,7 @@ class DatasetCatalog(object):
         factory_names = {
             "coco": "COCODataset",
             "kitti": "KittiDataset",
-            "bdd100k": "Bdd100kDataset"
+            "bdd100k": "COCODataset"
         }
         for k in factory_names.keys():
             if (k in name):
