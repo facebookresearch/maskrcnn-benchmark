@@ -26,7 +26,6 @@ class _NewEmptyTensorOp(torch.autograd.Function):
         return _NewEmptyTensorOp.apply(grad, shape), None
 
 
-
 class Conv2d(torch.nn.Conv2d):
     def forward(self, x):
         if x.numel() > 0:
@@ -61,6 +60,15 @@ class ConvTranspose2d(torch.nn.ConvTranspose2d):
             )
         ]
         output_shape = [x.shape[0], self.bias.shape[0]] + output_shape
+        return _NewEmptyTensorOp.apply(x, output_shape)
+
+
+class BatchNorm2d(torch.nn.BatchNorm2d):
+    def forward(self, x):
+        if x.numel() > 0:
+            return super(BatchNorm2d, self).forward(x)
+        # get output shape
+        output_shape = x.shape
         return _NewEmptyTensorOp.apply(x, output_shape)
 
 

@@ -35,7 +35,7 @@ def train(cfg, local_rank, distributed):
     scheduler = make_lr_scheduler(cfg, optimizer)
 
     if distributed:
-        model = torch.nn.parallel.deprecated.DistributedDataParallel(
+        model = torch.nn.parallel.DistributedDataParallel(
             model, device_ids=[local_rank], output_device=local_rank,
             # this should be removed if we update BatchNorm stats
             broadcast_buffers=False,
@@ -76,27 +76,30 @@ def train(cfg, local_rank, distributed):
     return model
 
 
-def test(cfg, model, distributed):
+def run_test(cfg, model, distributed):
     if distributed:
         model = model.module
     torch.cuda.empty_cache()  # TODO check if it helps
     iou_types = ("bbox",)
     if cfg.MODEL.MASK_ON:
         iou_types = iou_types + ("segm",)
+    if cfg.MODEL.KEYPOINT_ON:
+        iou_types = iou_types + ("keypoints",)
     output_folders = [None] * len(cfg.DATASETS.TEST)
+    dataset_names = cfg.DATASETS.TEST
     if cfg.OUTPUT_DIR:
-        dataset_names = cfg.DATASETS.TEST
         for idx, dataset_name in enumerate(dataset_names):
             output_folder = os.path.join(cfg.OUTPUT_DIR, "inference", dataset_name)
             mkdir(output_folder)
             output_folders[idx] = output_folder
     data_loaders_val = make_data_loader(cfg, is_train=False, is_distributed=distributed)
-    for output_folder, data_loader_val in zip(output_folders, data_loaders_val):
+    for output_folder, dataset_name, data_loader_val in zip(output_folders, dataset_names, data_loaders_val):
         inference(
             model,
             data_loader_val,
+            dataset_name=dataset_name,
             iou_types=iou_types,
-            box_only=cfg.MODEL.RPN_ONLY,
+            box_only=False if cfg.MODEL.RETINANET_ON else cfg.MODEL.RPN_ONLY,
             device=cfg.MODEL.DEVICE,
             expected_results=cfg.TEST.EXPECTED_RESULTS,
             expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
@@ -135,9 +138,10 @@ def main():
 
     if args.distributed:
         torch.cuda.set_device(args.local_rank)
-        torch.distributed.deprecated.init_process_group(
+        torch.distributed.init_process_group(
             backend="nccl", init_method="env://"
         )
+        synchronize()
 
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
@@ -163,7 +167,7 @@ def main():
     model = train(cfg, args.local_rank, args.distributed)
 
     if not args.skip_test:
-        test(cfg, model, args.distributed)
+        run_test(cfg, model, args.distributed)
 
 
 if __name__ == "__main__":

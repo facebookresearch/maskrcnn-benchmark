@@ -126,7 +126,7 @@ std::tuple<at::Tensor, at::Tensor> ROIPool_forward_cuda(const at::Tensor& input,
 
   cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
-  dim3 grid(std::min(THCCeilDiv(output_size, 512L), 4096L));
+  dim3 grid(std::min(THCCeilDiv((long)output_size, 512L), 4096L));
   dim3 block(512);
 
   if (output.numel() == 0) {
@@ -134,7 +134,7 @@ std::tuple<at::Tensor, at::Tensor> ROIPool_forward_cuda(const at::Tensor& input,
     return std::make_tuple(output, argmax);
   }
 
-  AT_DISPATCH_FLOATING_TYPES(input.type(), "ROIPool_forward", [&] {
+  AT_DISPATCH_FLOATING_TYPES(input.scalar_type(), "ROIPool_forward", [&] {
     RoIPoolFForward<scalar_t><<<grid, block, 0, stream>>>(
          output_size,
          input.contiguous().data<scalar_t>(),
@@ -173,7 +173,7 @@ at::Tensor ROIPool_backward_cuda(const at::Tensor& grad,
 
   cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
-  dim3 grid(std::min(THCCeilDiv(grad.numel(), 512L), 4096L));
+  dim3 grid(std::min(THCCeilDiv((long)grad.numel(), 512L), 4096L));
   dim3 block(512);
 
   // handle possibly empty gradients
@@ -182,7 +182,7 @@ at::Tensor ROIPool_backward_cuda(const at::Tensor& grad,
     return grad_input;
   }
 
-  AT_DISPATCH_FLOATING_TYPES(grad.type(), "ROIPool_backward", [&] {
+  AT_DISPATCH_FLOATING_TYPES(grad.scalar_type(), "ROIPool_backward", [&] {
     RoIPoolFBackward<scalar_t><<<grid, block, 0, stream>>>(
          grad.numel(),
          grad.contiguous().data<scalar_t>(),
