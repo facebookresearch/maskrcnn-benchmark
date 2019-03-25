@@ -97,6 +97,7 @@ def inference(
         expected_results=expected_results,
         expected_results_sigma_tol=expected_results_sigma_tol,
     )
+    print('Comaptible matrix:', model.state_dict()['roi_heads.box.compatible_matrix'].cpu().data.numpy())
 
     return evaluate(dataset=dataset,
                     predictions=predictions,

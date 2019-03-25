@@ -6,6 +6,8 @@ import os
 
 import torch
 import torch.distributed as dist
+from torch.nn.utils import clip_grad_norm_
+# from torch.nn.utils import clip_grad_value_
 
 from maskrcnn_benchmark.data import make_data_loader
 from maskrcnn_benchmark.engine.inference import inference
@@ -70,6 +72,7 @@ def do_train(
     end = time.time()
     if is_main_process():
         writer = SummaryWriter()
+
     for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
         data_time = time.time() - end
         iteration = iteration + 1
@@ -81,7 +84,6 @@ def do_train(
         targets = [target.to(device) for target in targets]
 
         loss_dict = model(images, targets)
-
         losses = sum(loss for loss in loss_dict.values())
 
         # reduce losses over all GPUs for logging purposes
@@ -91,6 +93,7 @@ def do_train(
 
         optimizer.zero_grad()
         losses.backward()
+        clip_grad_norm_(model.parameters(), cfg.SOLVER.GRAD_CLIP)
         optimizer.step()
 
         batch_time = time.time() - end
@@ -128,6 +131,7 @@ def do_train(
 
         if iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
+
         if iteration % cfg.SOLVER.VAL_PERIOD == 0:
             run_test(cfg, model, distributed, str(iteration))
             if is_best_val_map:
@@ -183,6 +187,8 @@ def run_test(cfg, model, distributed, iteration_name):
         if not is_main_process():
             synchronize()
             return
+        print('Comaptible matrix:', model.state_dict()['roi_heads.box.compatible_matrix'].cpu().data.numpy())
+        print('Weight: ', model.state_dict()['roi_heads.box.influence_weight'].cpu().data.numpy())
         if iteration_name != 'final':
             for k,v in results.results.items():
                 for ki, vi in v.items():

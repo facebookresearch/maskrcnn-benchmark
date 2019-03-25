@@ -65,6 +65,8 @@ def main():
     checkpointer = DetectronCheckpointer(cfg, model, save_dir=output_dir)
     _ = checkpointer.load(cfg.MODEL.WEIGHT)
 
+    print('Comaptible matrix:', model.state_dict()['roi_heads.box.compatible_matrix'].cpu().data.numpy())
+
     iou_types = ("bbox",)
     if cfg.MODEL.MASK_ON:
         iou_types = iou_types + ("segm",)

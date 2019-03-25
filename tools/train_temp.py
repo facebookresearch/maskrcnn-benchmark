@@ -89,11 +89,15 @@ def main():
         is_distributed=False,
         start_iter=arguments["iteration"],
     )
-
+    # device = torch.device(cfg.MODEL.DEVICE)
     for iteration, (images, targets, _) in enumerate(data_loader, 0):
-        print(images.tensors.size())
-        print(images.image_sizes)
-        print(targets)
+        # images = images.to(device)
+        # targets = [target.to(device) for target in targets]
+
+        loss_dict = model(images, targets)
+        # print(images.tensors.size())
+        # print(images.image_sizes)
+        # print(targets)
         break
     # input = torch.autograd.Variable(torch.randn(1, 3, 800, 600))
     # y = model(input)

@@ -47,15 +47,15 @@ def align_and_update_state_dicts(model_state_dict, loaded_state_dict):
         key = current_keys[idx_new]
         key_old = loaded_keys[idx_old]
         model_state_dict[key] = loaded_state_dict[key_old]
-        logger.info(
-            log_str_template.format(
-                key,
-                max_size,
-                key_old,
-                max_size_loaded,
-                tuple(loaded_state_dict[key_old].shape),
-            )
-        )
+        # logger.info(
+        #     log_str_template.format(
+        #         key,
+        #         max_size,
+        #         key_old,
+        #         max_size_loaded,
+        #         tuple(loaded_state_dict[key_old].shape),
+        #     )
+        # )
 
 
 def strip_prefix_if_present(state_dict, prefix):
