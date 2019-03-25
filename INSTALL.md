@@ -1,7 +1,7 @@
 ## Installation
 
 ### Requirements:
-- PyTorch 1.0 from a nightly release. Installation instructions can be found in https://pytorch.org/get-started/locally/
+- PyTorch 1.0 from a nightly release. It **will not** work with 1.0 nor 1.0.1. Installation instructions can be found in https://pytorch.org/get-started/locally/
 - torchvision from master
 - cocoapi
 - yacs
@@ -24,18 +24,13 @@ conda activate maskrcnn_benchmark
 conda install ipython
 
 # maskrcnn_benchmark and coco api dependencies
-pip install -r requirements.txt
+pip install ninja yacs cython matplotlib tqdm
 
 # follow PyTorch installation in https://pytorch.org/get-started/locally/
 # we give the instructions for CUDA 9.0
-conda install pytorch-nightly cudatoolkit=9.0 -c pytorch
+conda install -c pytorch pytorch-nightly torchvision cudatoolkit=9.0
 
 export INSTALL_DIR=$PWD
-# install torchvision
-cd $INSTALL_DIR
-git clone https://github.com/pytorch/vision.git
-cd vision
-python setup.py install
 
 # install pycocotools
 cd $INSTALL_DIR
@@ -47,11 +42,13 @@ python setup.py build_ext install
 cd $INSTALL_DIR
 git clone https://github.com/facebookresearch/maskrcnn-benchmark.git
 cd maskrcnn-benchmark
+
 # the following will install the lib with
 # symbolic links, so that you can modify
 # the files if you want and won't need to
 # re-build it
 python setup.py build develop
+
 
 unset INSTALL_DIR
 

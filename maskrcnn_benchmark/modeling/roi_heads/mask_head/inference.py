@@ -2,7 +2,7 @@
 import numpy as np
 import torch
 from torch import nn
-import torch.nn.functional as F
+from maskrcnn_benchmark.layers.misc import interpolate
 
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 
@@ -132,7 +132,7 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
 
     # Resize mask
     mask = mask.to(torch.float32)
-    mask = F.interpolate(mask, size=(h, w), mode='bilinear', align_corners=False)
+    mask = interpolate(mask, size=(h, w), mode='bilinear', align_corners=False)
     mask = mask[0][0]
 
     if thresh >= 0:
