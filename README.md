@@ -68,27 +68,6 @@ image = ...
 predictions = coco_demo.run_on_opencv_image(image)
 ```
 
-### Use it on an arbitrary GPU device
-For some cases, while multi-GPU devices are installed in a machine, a possible situation is that 
-we only have accesse to a specified GPU device (e.g. CUDA:1 or CUDA:2) for inference, testing or training. 
-Here, the repository currently supports two methods to control devices.
-
-#### 1. using CUDA_VISIBLE_DEVICES environment variable (Recommend)
-Here is an example for Mask R-CNN R-50 FPN quick on the second device (CUDA:1):
-```bash
-export CUDA_VISIBLE_DEVICES=1
-python tools/train_net.py --config-file=configs/quick_schedules/e2e_mask_rcnn_R_50_FPN_quick.yaml
-```
-Now, the session will be totally loaded on the second GPU device (CUDA:1).
-
-#### 2. using MODEL.DEVICE flag
-In addition, the program could run on a sepcific GPU device by setting `MODEL.DEVICE` flag.
-```bash
-python tools/train_net.py --config-file=configs/quick_schedules/e2e_mask_rcnn_R_50_FPN_quick.yaml MODEL.DEVICE cuda:1
-```
-Where, we add a `MODEL.DEVICE cuda:1` flag to configure the target device. 
-*Pay attention, there is still a small part of memory stored in `cuda:0` for some reasons.*
-
 ## Perform training on COCO dataset
 
 For the following examples to work, you need to first install `maskrcnn_benchmark`.
