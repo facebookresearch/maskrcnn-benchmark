@@ -1,6 +1,7 @@
 // Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
+#include <ATen/cuda/CUDAGuard.h>
 
 #include <THC/THC.h>
 #include <THC/THCAtomics.cuh>
@@ -263,6 +264,8 @@ at::Tensor ROIAlign_forward_cuda(const at::Tensor& input,
   AT_ASSERTM(input.type().is_cuda(), "input must be a CUDA tensor");
   AT_ASSERTM(rois.type().is_cuda(), "rois must be a CUDA tensor");
 
+  at::cuda::CUDAGuard device_guard(input.device());
+
   auto num_rois = rois.size(0);
   auto channels = input.size(1);
   auto height = input.size(2);
@@ -280,7 +283,7 @@ at::Tensor ROIAlign_forward_cuda(const at::Tensor& input,
     return output;
   }
 
-  AT_DISPATCH_FLOATING_TYPES(input.scalar_type(), "ROIAlign_forward", [&] {
+  AT_DISPATCH_FLOATING_TYPES(input.type(), "ROIAlign_forward", [&] {
     RoIAlignForward<scalar_t><<<grid, block, 0, stream>>>(
          output_size,
          input.contiguous().data<scalar_t>(),
@@ -311,6 +314,7 @@ at::Tensor ROIAlign_backward_cuda(const at::Tensor& grad,
                                   const int sampling_ratio) {
   AT_ASSERTM(grad.type().is_cuda(), "grad must be a CUDA tensor");
   AT_ASSERTM(rois.type().is_cuda(), "rois must be a CUDA tensor");
+  at::cuda::CUDAGuard device_guard(grad.device());
 
   auto num_rois = rois.size(0);
   auto grad_input = at::zeros({batch_size, channels, height, width}, grad.options());
@@ -326,7 +330,7 @@ at::Tensor ROIAlign_backward_cuda(const at::Tensor& grad,
     return grad_input;
   }
 
-  AT_DISPATCH_FLOATING_TYPES(grad.scalar_type(), "ROIAlign_backward", [&] {
+  AT_DISPATCH_FLOATING_TYPES(grad.type(), "ROIAlign_backward", [&] {
     RoIAlignBackwardFeature<scalar_t><<<grid, block, 0, stream>>>(
          grad.numel(),
          grad.contiguous().data<scalar_t>(),
