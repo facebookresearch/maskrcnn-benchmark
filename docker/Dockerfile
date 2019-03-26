@@ -31,9 +31,8 @@ ENV CONDA_AUTO_UPDATE_CONDA=false
 RUN conda install -y ipython
 RUN pip install ninja yacs cython matplotlib opencv-python
 
-# Install PyTorch 1.0 Nightly
-ARG CUDA
-RUN echo conda install pytorch-nightly cudatoolkit=${CUDA} -c pytorch \
+# Install PyTorch 1.0 Nightly and OpenCV
+RUN conda install -y pytorch-nightly -c pytorch \
  && conda clean -ya
 
 # Install TorchVision master
