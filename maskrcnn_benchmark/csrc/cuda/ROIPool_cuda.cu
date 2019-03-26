@@ -1,6 +1,7 @@
 // Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
+#include <ATen/cuda/CUDAGuard.h>
 
 #include <THC/THC.h>
 #include <THC/THCAtomics.cuh>
@@ -115,6 +116,8 @@ std::tuple<at::Tensor, at::Tensor> ROIPool_forward_cuda(const at::Tensor& input,
   AT_ASSERTM(input.type().is_cuda(), "input must be a CUDA tensor");
   AT_ASSERTM(rois.type().is_cuda(), "rois must be a CUDA tensor");
 
+  at::cuda::CUDAGuard device_guard(input.device());
+
   auto num_rois = rois.size(0);
   auto channels = input.size(1);
   auto height = input.size(2);
@@ -167,6 +170,7 @@ at::Tensor ROIPool_backward_cuda(const at::Tensor& grad,
   AT_ASSERTM(grad.type().is_cuda(), "grad must be a CUDA tensor");
   AT_ASSERTM(rois.type().is_cuda(), "rois must be a CUDA tensor");
   // TODO add more checks
+  at::cuda::CUDAGuard device_guard(grad.device());
 
   auto num_rois = rois.size(0);
   auto grad_input = at::zeros({batch_size, channels, height, width}, grad.options());

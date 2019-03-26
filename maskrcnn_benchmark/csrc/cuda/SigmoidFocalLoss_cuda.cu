@@ -4,6 +4,7 @@
 // cyfu@cs.unc.edu
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
+#include <ATen/cuda/CUDAGuard.h>
 
 #include <THC/THC.h>
 #include <THC/THCAtomics.cuh>
@@ -111,6 +112,8 @@ at::Tensor SigmoidFocalLoss_forward_cuda(
   AT_ASSERTM(targets.type().is_cuda(), "targets must be a CUDA tensor");
   AT_ASSERTM(logits.dim() == 2, "logits should be NxClass");
 
+  at::cuda::CUDAGuard device_guard(logits.device());
+
   const int num_samples = logits.size(0);
 	
   auto losses = at::empty({num_samples, logits.size(1)}, logits.options());
@@ -156,7 +159,9 @@ at::Tensor SigmoidFocalLoss_backward_cuda(
 
   const int num_samples = logits.size(0);
   AT_ASSERTM(logits.size(1) == num_classes, "logits.size(1) should be num_classes");
-	
+
+  at::cuda::CUDAGuard device_guard(logits.device());
+
   auto d_logits = at::zeros({num_samples, num_classes}, logits.options());
   auto d_logits_size = num_samples * logits.size(1);
   cudaStream_t stream = at::cuda::getCurrentCUDAStream();
