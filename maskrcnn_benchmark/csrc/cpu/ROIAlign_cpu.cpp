@@ -239,7 +239,7 @@ at::Tensor ROIAlign_forward_cpu(const at::Tensor& input,
     return output;
   }
 
-  AT_DISPATCH_FLOATING_TYPES(input.scalar_type(), "ROIAlign_forward", [&] {
+  AT_DISPATCH_FLOATING_TYPES(input.type(), "ROIAlign_forward", [&] {
     ROIAlignForward_cpu_kernel<scalar_t>(
          output_size,
          input.data<scalar_t>(),
