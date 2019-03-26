@@ -372,7 +372,7 @@ _C.MODEL.FBNET.MASK_HEAD_STRIDE = 0
 _C.MODEL.FBNET.RPN_HEAD_BLOCKS = 0
 _C.MODEL.FBNET.RPN_BN_TYPE = ""
 
-
+_C.MODEL.ITERATION_NUM = 10
 # ---------------------------------------------------------------------------- #
 # Solver
 # ---------------------------------------------------------------------------- #

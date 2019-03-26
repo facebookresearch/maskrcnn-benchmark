@@ -93,7 +93,8 @@ def do_train(
 
         optimizer.zero_grad()
         losses.backward()
-        clip_grad_norm_(model.parameters(), cfg.SOLVER.GRAD_CLIP)
+        total_norm = clip_grad_norm_(model.parameters(), cfg.SOLVER.GRAD_CLIP)
+        # print('Total Norm: ', total_norm)
         optimizer.step()
 
         batch_time = time.time() - end
@@ -102,6 +103,8 @@ def do_train(
 
         eta_seconds = meters.time.global_avg * (max_iter - iteration)
         eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
+        if is_main_process():
+            writer.add_scalar('total_norm',total_norm, iteration)
 
         if iteration % 20 == 0 or iteration == max_iter:
             logger.info(

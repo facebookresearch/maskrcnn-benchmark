@@ -23,9 +23,10 @@ class ROIBoxHead(torch.nn.Module):
         self.predictor = make_roi_box_predictor(
             cfg, self.feature_extractor.out_channels)
         num_classes = cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES
-        self.compatible_matrix = Parameter(-torch.eye(num_classes, num_classes))
-        # self.compatible_matrix = Parameter(-torch.eye(num_classes-1, num_classes-1))
+        # self.compatible_matrix = Parameter(-torch.eye(num_classes, num_classes))
+        self.compatible_matrix = Parameter(-torch.eye(num_classes-1, num_classes-1))
         self.influence_weight = Parameter(torch.Tensor([1.0]))
+        self.iteration_num = cfg.MODEL.ITERATION_NUM
         # stdv = 1. / math.sqrt(self.compatible_matrix.size(1))
         # self.compatible_matrix.data.uniform_(-stdv, stdv)
         self.post_processor = make_roi_box_post_processor(cfg)
@@ -62,19 +63,19 @@ class ROIBoxHead(torch.nn.Module):
         q_values_splits = []
         for unaries in class_logits_split:
             # add to split background and normal classes
-            # background_logits = unaries[:,0]
-            # unaries = unaries[:,1:]
+            background_logits = unaries[:,0]
+            unaries = unaries[:,1:]
 
             q_values = unaries
             bbox_num, class_num = unaries.size()
 
             # print('Unaries:', unaries)
-            for i in range(10):
+            for i in range(self.iteration_num):
                 softmax_out = F.softmax(q_values, -1)
 
                 # use sum as message passing
                 # sum_softmax_out = torch.sum(softmax_out, dim = 0).repeat(bbox_num).view(bbox_num, class_num)
-                # message_passing = sum_softmax_out-softmax_out
+                # message_passing = F.softmax(sum_softmax_out-softmax_out)
 
                 # use max as message passing
                 message_passing = torch.max(softmax_out, dim = 0)[0].repeat(bbox_num).view(bbox_num, class_num)
@@ -87,8 +88,8 @@ class ROIBoxHead(torch.nn.Module):
 
                 # Adding unary potentials
                 q_values = unaries - pairwise
-            q_values_splits.append(q_values)
-            # q_values_splits.append(torch.cat((background_logits.unsqueeze(1), q_values),dim=1))
+            # q_values_splits.append(q_values)
+            q_values_splits.append(torch.cat((background_logits.unsqueeze(1), q_values),dim=1))
 
         class_logits = torch.cat(q_values_splits)
 
