@@ -49,6 +49,6 @@ RUN git clone https://github.com/cocodataset/cocoapi.git \
 # install PyTorch Detection
 RUN git clone https://github.com/facebookresearch/maskrcnn-benchmark.git \
  && cd maskrcnn-benchmark \
- && python setup.py build develop
+ && FORCE_CUDA=1 python setup.py build develop
 
 WORKDIR /maskrcnn-benchmark
