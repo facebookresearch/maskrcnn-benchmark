@@ -1,5 +1,6 @@
 ARG CUDA="9.0"
 ARG CUDNN="7"
+ARG FORCE_CUDA="1"
 
 FROM nvidia/cuda:${CUDA}-cudnn${CUDNN}-devel-ubuntu16.04
 
@@ -31,8 +32,11 @@ ENV CONDA_AUTO_UPDATE_CONDA=false
 RUN conda install -y ipython
 RUN pip install ninja yacs cython matplotlib opencv-python
 
+RUN echo $CUDA
+RUN echo $CUDNN
+RUN echo $FORCE_CUDA
+
 # Install PyTorch 1.0 Nightly
-ARG CUDA
 RUN echo conda install pytorch-nightly cudatoolkit=${CUDA} -c pytorch \
  && conda clean -ya
 
