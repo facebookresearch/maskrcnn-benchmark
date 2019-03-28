@@ -1,6 +1,5 @@
 ARG CUDA="9.0"
 ARG CUDNN="7"
-ARG FORCE_CUDA="1"
 
 FROM nvidia/cuda:${CUDA}-cudnn${CUDNN}-devel-ubuntu16.04
 
@@ -48,6 +47,8 @@ RUN git clone https://github.com/cocodataset/cocoapi.git \
  && python setup.py build_ext install
 
 # install PyTorch Detection
+ARG FORCE_CUDA="1"
+ENV FORCE_CUDA=${FORCE_CUDA}
 RUN git clone https://github.com/facebookresearch/maskrcnn-benchmark.git \
  && cd maskrcnn-benchmark \
  && python setup.py build develop
