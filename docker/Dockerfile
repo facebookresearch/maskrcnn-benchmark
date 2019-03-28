@@ -32,10 +32,6 @@ ENV CONDA_AUTO_UPDATE_CONDA=false
 RUN conda install -y ipython
 RUN pip install ninja yacs cython matplotlib opencv-python
 
-RUN echo $CUDA
-RUN echo $CUDNN
-RUN echo $FORCE_CUDA
-
 # Install PyTorch 1.0 Nightly
 RUN echo conda install pytorch-nightly cudatoolkit=${CUDA} -c pytorch \
  && conda clean -ya
@@ -51,7 +47,7 @@ RUN git clone https://github.com/cocodataset/cocoapi.git \
  && python setup.py build_ext install
 
 # install PyTorch Detection
-RUN git clone https://github.com/facebookresearch/maskrcnn-benchmark.git \
+RUN git clone https://github.com/bendidi/maskrcnn-benchmark.git \
  && cd maskrcnn-benchmark \
  && FORCE_CUDA=1 python setup.py build develop
 
