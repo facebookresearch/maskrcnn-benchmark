@@ -16,7 +16,8 @@ from maskrcnn_benchmark.utils.collect_env import collect_env_info
 from maskrcnn_benchmark.utils.comm import synchronize, get_rank
 from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
-
+from maskrcnn_benchmark.utils.comm import is_main_process
+import pickle
 
 def main():
     parser = argparse.ArgumentParser(description="PyTorch Object Detection Inference")
@@ -65,7 +66,10 @@ def main():
     checkpointer = DetectronCheckpointer(cfg, model, save_dir=output_dir)
     _ = checkpointer.load(cfg.MODEL.WEIGHT)
 
-    print('Comaptible matrix:', model.state_dict()['roi_heads.box.compatible_matrix'].cpu().data.numpy())
+    if is_main_process():
+        compatible_matrix = model.state_dict()['roi_heads.box.compatible_matrix'].cpu().data.numpy()
+        print('Comaptible matrix:', compatible_matrix)
+        pickle.dump(compatible_matrix, open( "compatible_matrix.pickle", "wb" ) )
 
     iou_types = ("bbox",)
     if cfg.MODEL.MASK_ON:
