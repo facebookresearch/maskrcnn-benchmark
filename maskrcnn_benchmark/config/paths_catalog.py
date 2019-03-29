@@ -23,6 +23,14 @@ class DatasetCatalog(object):
             "img_dir": "coco/val2017",
             "ann_file": "coco/annotations/instances_val2017_subset_6.json"
         },
+        "coco_2017_train_sub_20": {
+            "img_dir": "coco/train2017",
+            "ann_file": "coco/annotations/instances_train2017_subset_20.json"
+        },
+        "coco_2017_val_sub_20": {
+            "img_dir": "coco/val2017",
+            "ann_file": "coco/annotations/instances_val2017_subset_20.json"
+        },
         # sub-6 + outlier class
         "coco_2017_train_sub_6_outlier": {
             "img_dir": "coco/train2017",
