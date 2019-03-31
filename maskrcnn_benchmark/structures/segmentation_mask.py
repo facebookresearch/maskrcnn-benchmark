@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
+import cv2
 
 import pycocotools.mask as mask_utils
 
@@ -15,8 +16,14 @@ class Mask(object):
     a 2d tensor
     """
 
-    def __init__(self, masks, size, mode):
-        self.masks = masks
+    def __init__(self, mask, size, mode):
+        if isinstance(mask, dict):
+            mask = mask_utils.decode(mask)
+            mask = torch.from_numpy(mask)
+        elif isinstance(mask, Mask):
+            mask = mask.mask
+
+        self.mask = mask
         self.size = size
         self.mode = mode
 
@@ -29,24 +36,31 @@ class Mask(object):
         width, height = self.size
         if method == FLIP_LEFT_RIGHT:
             dim = width
-            idx = 2
+            idx = 1
         elif method == FLIP_TOP_BOTTOM:
             dim = height
-            idx = 1
+            idx = 0
 
-        flip_idx = list(range(dim)[::-1])
-        flipped_masks = self.masks.index_select(dim, flip_idx)
-        return Mask(flipped_masks, self.size, self.mode)
+        flip_idx = torch.tensor(list(range(dim)[::-1]))
+        flipped_mask = self.mask.index_select(idx, flip_idx)
+        return Mask(flipped_mask, self.size, self.mode)
 
     def crop(self, box):
         w, h = box[2] - box[0], box[3] - box[1]
-
-        cropped_masks = self.masks[:, box[1] : box[3], box[0] : box[2]]
-        return Mask(cropped_masks, size=(w, h), mode=self.mode)
+        box = box.round().int()
+        cropped_mask = self.mask[box[1] : box[3], box[0] : box[2]]
+        return Mask(cropped_mask, size=(w, h), mode=self.mode)
 
     def resize(self, size, *args, **kwargs):
-        pass
+        mask = self.mask.cpu().numpy()
+        mask = cv2.resize(mask, dsize=(size[0], size[1]), interpolation=cv2.INTER_NEAREST)
+        mask = torch.from_numpy(mask)
+        return Mask(mask, size=size, mode=self.mode)
 
+    def convert(self, mode):
+        width, height = self.size
+        if mode == "mask":
+            return self.mask
 
 class Polygons(object):
     """
@@ -158,7 +172,12 @@ class SegmentationMask(object):
         """
         assert isinstance(polygons, list)
 
-        self.polygons = [Polygons(p, size, mode) for p in polygons]
+        self.polygons = []
+        for p in polygons:
+            if type(p) is dict or type(p) is Mask:
+                self.polygons.append(Mask(p, size, mode))
+            else:
+                self.polygons.append(Polygons(p, size, mode))
         self.size = size
         self.mode = mode
 
