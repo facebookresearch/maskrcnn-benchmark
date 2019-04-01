@@ -1,7 +1,7 @@
 ## Installation
 
 ### Requirements:
-- PyTorch 1.0 from a nightly release. Installation instructions can be found in https://pytorch.org/get-started/locally/
+- PyTorch 1.0 from a nightly release. It **will not** work with 1.0 nor 1.0.1. Installation instructions can be found in https://pytorch.org/get-started/locally/
 - torchvision from master
 - cocoapi
 - yacs
@@ -23,8 +23,14 @@ conda activate maskrcnn_benchmark
 # this installs the right pip and dependencies for the fresh python
 conda install ipython
 
-export INSTALL_DIR=$PWD
+# maskrcnn_benchmark and coco api dependencies
+pip install ninja yacs cython matplotlib tqdm
 
+# follow PyTorch installation in https://pytorch.org/get-started/locally/
+# we give the instructions for CUDA 9.0
+conda install -c pytorch pytorch-nightly torchvision cudatoolkit=9.0
+
+export INSTALL_DIR=$PWD
 
 # install pycocotools
 cd $INSTALL_DIR
@@ -36,13 +42,6 @@ python setup.py build_ext install
 cd $INSTALL_DIR
 git clone https://github.com/facebookresearch/maskrcnn-benchmark.git
 cd maskrcnn-benchmark
-
-# maskrcnn_benchmark and coco api dependencies
-pip install -r requirements.txt
-
-# follow PyTorch installation in https://pytorch.org/get-started/locally/
-# we give the instructions for CUDA 9.0
-conda install -c pytorch pytorch torchvision cudatoolkit=9.0
 
 # the following will install the lib with
 # symbolic links, so that you can modify
@@ -59,13 +58,17 @@ unset INSTALL_DIR
 
 ### Option 2: Docker Image (Requires CUDA, Linux only)
 
-Build image with defaults (`CUDA=9.0`, `CUDNN=7`):
+Build image with defaults (`CUDA=9.0`, `CUDNN=7`, `FORCE_CUDA=1`):
 
     nvidia-docker build -t maskrcnn-benchmark docker/
     
 Build image with other CUDA and CUDNN versions:
 
-    nvidia-docker build -t maskrcnn-benchmark --build-arg CUDA=9.2 --build-arg CUDNN=7 docker/ 
+    nvidia-docker build -t maskrcnn-benchmark --build-arg CUDA=9.2 --build-arg CUDNN=7 docker/
+    
+Build image with FORCE_CUDA disabled:
+
+    nvidia-docker build -t maskrcnn-benchmark --build-arg FORCE_CUDA=0 docker/
     
 Build and run image with built-in jupyter notebook(note that the password is used to log in jupyter notebook):
 

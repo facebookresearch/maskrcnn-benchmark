@@ -198,10 +198,20 @@ That's it. You can also add extra fields to the boxlist, such as segmentation ma
 
 For a full example of how the `COCODataset` is implemented, check [`maskrcnn_benchmark/data/datasets/coco.py`](maskrcnn_benchmark/data/datasets/coco.py).
 
-### Note:
+Once you have created your dataset, it needs to be added in a couple of places:
+- [`maskrcnn_benchmark/data/datasets/__init__.py`](maskrcnn_benchmark/data/datasets/__init__.py): add it to `__all__`
+- [`maskrcnn_benchmark/config/paths_catalog.py`](maskrcnn_benchmark/config/paths_catalog.py): `DatasetCatalog.DATASETS` and corresponding `if` clause in `DatasetCatalog.get()`
+
+### Testing
 While the aforementioned example should work for training, we leverage the
 cocoApi for computing the accuracies during testing. Thus, test datasets
 should currently follow the cocoApi for now.
+
+To enable your dataset for testing, add a corresponding if statement in [`maskrcnn_benchmark/data/datasets/evaluation/__init__.py`](maskrcnn_benchmark/data/datasets/evaluation/__init__.py):
+```python
+if isinstance(dataset, datasets.MyDataset):
+        return coco_evaluation(**args)
+```
 
 ## Finetuning from Detectron weights on custom datasets
 Create a script `tools/trim_detectron_model.py` like [here](https://gist.github.com/wangg12/aea194aa6ab6a4de088f14ee193fd968).
