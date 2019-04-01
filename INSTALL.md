@@ -58,13 +58,17 @@ unset INSTALL_DIR
 
 ### Option 2: Docker Image (Requires CUDA, Linux only)
 
-Build image with defaults (`CUDA=9.0`, `CUDNN=7`):
+Build image with defaults (`CUDA=9.0`, `CUDNN=7`, `FORCE_CUDA=1`):
 
     nvidia-docker build -t maskrcnn-benchmark docker/
     
 Build image with other CUDA and CUDNN versions:
 
-    nvidia-docker build -t maskrcnn-benchmark --build-arg CUDA=9.2 --build-arg CUDNN=7 docker/ 
+    nvidia-docker build -t maskrcnn-benchmark --build-arg CUDA=9.2 --build-arg CUDNN=7 docker/
+    
+Build image with FORCE_CUDA disabled:
+
+    nvidia-docker build -t maskrcnn-benchmark --build-arg FORCE_CUDA=0 docker/
     
 Build and run image with built-in jupyter notebook(note that the password is used to log in jupyter notebook):
 
