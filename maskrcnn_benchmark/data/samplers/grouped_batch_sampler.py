@@ -40,7 +40,7 @@ class GroupedBatchSampler(BatchSampler):
     def _prepare_batches(self):
         dataset_size = len(self.group_ids)
         # get the sampled indices from the sampler
-        sampled_ids = torch.as_tensor(list(self.sampler))
+        sampled_ids = torch.as_tensor(list(self.sampler)).long()
         # potentially not all elements of the dataset were sampled
         # by the sampler (e.g., DistributedSampler).
         # construct a tensor which contains -1 if the element was
