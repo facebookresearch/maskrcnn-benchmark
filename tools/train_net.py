@@ -43,10 +43,8 @@ def train(cfg, local_rank, distributed):
 
     # Initialize mixed-precision training
     use_mixed_precision = cfg.DTYPE == "float16"
-    amp_handle = amp.init(enabled=use_mixed_precision, verbose=cfg.AMP_VERBOSE)
-
-    # wrap the optimizer for mixed precision
-    optimizer = amp_handle.wrap_optimizer(optimizer)
+    amp_opt_level = 'O1' if use_mixed_precision else 'O0'
+    model, optimizer = amp.initialize(model, optimizer, opt_level=amp_opt_level)
 
     if distributed:
         model = torch.nn.parallel.DistributedDataParallel(
