@@ -109,7 +109,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
     if is_train:
         images_per_batch = cfg.SOLVER.IMS_PER_BATCH
         assert (
-                images_per_batch % num_gpus == 0
+            images_per_batch % num_gpus == 0
         ), "SOLVER.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
             images_per_batch, num_gpus)
         images_per_gpu = images_per_batch // num_gpus
@@ -118,7 +118,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
     else:
         images_per_batch = cfg.TEST.IMS_PER_BATCH
         assert (
-                images_per_batch % num_gpus == 0
+            images_per_batch % num_gpus == 0
         ), "TEST.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
             images_per_batch, num_gpus)
         images_per_gpu = images_per_batch // num_gpus
