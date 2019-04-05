@@ -14,7 +14,8 @@ from .utils import cat
 # this could be merged with the for loop at the end of Pooler.forward
 # into a single script_method
 @torch.jit.script
-def merge_levels(levels, unmerged_results: List[torch.Tensor]):
+def merge_levels(levels, unmerged_results):
+    # type: (Tensor, List[Tensor]) -> Tensor
     first_result = unmerged_results[0]
     dtype, device = first_result.dtype, first_result.device
     res = torch.zeros((levels.size(0), first_result.size(1),

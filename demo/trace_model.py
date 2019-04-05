@@ -1,5 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import os
+from __future__ import division
+
 import numpy
 from io import BytesIO
 from matplotlib import pyplot
@@ -60,7 +62,8 @@ def single_image_to_top_predictions(image):
 
 
 @torch.jit.script
-def my_paste_mask(mask, bbox, height: int, width: int, threshold: float=0.5, padding: int=1, contour: bool=True, rectangle: bool=False):
+def my_paste_mask(mask, bbox, height, width, threshold=0.5, padding=1, contour=True, rectangle=False):
+    # type: (Tensor, Tensor, int, int, float, int, bool, bool) -> Tensor
     padded_mask = torch.constant_pad_nd(mask, (padding, padding, padding, padding))
     scale = 1.0 + 2.0 * float(padding) / float(mask.size(-1))
     center_x = (bbox[2] + bbox[0]) * 0.5
@@ -107,13 +110,15 @@ def my_paste_mask(mask, bbox, height: int, width: int, threshold: float=0.5, pad
 
 
 @torch.jit.script
-def add_annotations(image, labels, scores, bboxes, class_names: str=','.join(coco_demo.CATEGORIES), color=torch.tensor([255, 255, 255], dtype=torch.long)):
+def add_annotations(image, labels, scores, bboxes, class_names=','.join(coco_demo.CATEGORIES), color=torch.tensor([255, 255, 255], dtype=torch.long)):
+    # type: (Tensor, Tensor, Tensor, Tensor, str, Tensor) -> Tensor
     result_image = torch.ops.maskrcnn_benchmark.add_annotations(image, labels, scores, bboxes, class_names, color)
     return result_image
 
 
 @torch.jit.script
-def combine_masks(image, labels, masks, scores, bboxes, threshold: float=0.5, padding: int=1, contour: bool=True, rectangle: bool=False, palette=torch.tensor([33554431, 32767, 2097151])):
+def combine_masks(image, labels, masks, scores, bboxes, threshold=0.5, padding=1, contour=True, rectangle=False, palette=torch.tensor([33554431, 32767, 2097151])):
+    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, float, int, bool, bool, Tensor) -> Tensor
     height = image.size(0)
     width = image.size(1)
     image_with_mask = image.clone()
