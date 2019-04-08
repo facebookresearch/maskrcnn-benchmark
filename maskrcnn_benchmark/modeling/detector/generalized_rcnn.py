@@ -18,7 +18,7 @@ class GeneralizedRCNN(nn.Module):
     Main class for Generalized R-CNN. Currently supports boxes and masks.
     It consists of three main parts:
     - backbone
-    = rpn
+    - rpn
     - heads: takes the features + the proposals from the RPN and computes
         detections / masks from it.
     """
@@ -27,8 +27,8 @@ class GeneralizedRCNN(nn.Module):
         super(GeneralizedRCNN, self).__init__()
 
         self.backbone = build_backbone(cfg)
-        self.rpn = build_rpn(cfg)
-        self.roi_heads = build_roi_heads(cfg)
+        self.rpn = build_rpn(cfg, self.backbone.out_channels)
+        self.roi_heads = build_roi_heads(cfg, self.backbone.out_channels)
 
     def forward(self, images, targets=None):
         """

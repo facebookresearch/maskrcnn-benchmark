@@ -1,10 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-# Code is copy-pasted exactly as in torch.utils.data.distributed,
-# with a modification in the import to use the deprecated backend
+# Code is copy-pasted exactly as in torch.utils.data.distributed.
 # FIXME remove this once c10d fixes the bug it has
 import math
 import torch
-import torch.distributed.deprecated as dist
+import torch.distributed as dist
 from torch.utils.data.sampler import Sampler
 
 
@@ -38,7 +37,7 @@ class DistributedSampler(Sampler):
         self.epoch = 0
         self.num_samples = int(math.ceil(len(self.dataset) * 1.0 / self.num_replicas))
         self.total_size = self.num_samples * self.num_replicas
-        self.shuffle = True
+        self.shuffle = shuffle
 
     def __iter__(self):
         if self.shuffle:
