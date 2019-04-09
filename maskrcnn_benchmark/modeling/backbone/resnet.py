@@ -33,7 +33,7 @@ StageSpec = namedtuple(
     "StageSpec",
     [
         "index",  # Index of the stage, eg 1, 2, ..,. 5
-        "block_count",  # Numer of residual blocks in the stage
+        "block_count",  # Number of residual blocks in the stage
         "return_features",  # True => return the last feature map from this stage
     ],
 )
@@ -187,6 +187,7 @@ class ResNetHead(nn.Module):
             stride = None
             self.add_module(name, module)
             self.stages.append(name)
+        self.out_channels = out_channels
 
     def forward(self, x):
         for stage in self.stages:
@@ -410,6 +411,8 @@ _STAGE_SPECS = Registry({
     "R-101-C4": ResNet101StagesTo4,
     "R-101-C5": ResNet101StagesTo5,
     "R-50-FPN": ResNet50FPNStagesTo5,
+    "R-50-FPN-RETINANET": ResNet50FPNStagesTo5,
     "R-101-FPN": ResNet101FPNStagesTo5,
+    "R-101-FPN-RETINANET": ResNet101FPNStagesTo5,
     "R-152-FPN": ResNet152FPNStagesTo5,
 })

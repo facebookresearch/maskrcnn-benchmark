@@ -1,5 +1,5 @@
 INPUT:
-  MIN_SIZE_TRAIN: 800
+  MIN_SIZE_TRAIN: (800,)
   MAX_SIZE_TRAIN: 1333
   MIN_SIZE_TEST: 800
   MAX_SIZE_TEST: 1333
@@ -8,8 +8,9 @@ MODEL:
   WEIGHT: "catalog://ImageNetPretrained/MSRA/R-50-GN"
   BACKBONE:
     CONV_BODY: "R-50-FPN"
-    OUT_CHANNELS: 256
   RESNETS: # use GN for backbone
+    BACKBONE_OUT_CHANNELS: 256
+    STRIDE_IN_1X1: False
     TRANS_FUNC: "BottleneckWithGN"
     STEM_FUNC: "StemWithGN"
   FPN:

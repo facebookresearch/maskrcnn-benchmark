@@ -70,8 +70,10 @@ ln -s /path/to/cityscapes datasets/data/cityscapes
 1. Download gtFine_trainvaltest.zip from https://www.cityscapes-dataset.com/downloads/ (login required)
 2. Extract it to /path/to/gtFine_trainvaltest
 ```
-gtFine_trainvaltest
-|_ gtFine
+cityscapes
+|_ gtFine_trainvaltest.zip
+|_ gtFine_trainvaltest
+   |_ gtFine
 ```
 3. Run the below commands to convert the annotations
 
@@ -79,10 +81,10 @@ gtFine_trainvaltest
 cd ~/github
 git clone https://github.com/mcordts/cityscapesScripts.git
 cd cityscapesScripts
-cp ~/github/maskrcnn-benchmark/tool/cityscapes/instances2dict_with_polygons.py cityscapesscripts/evaluation
+cp ~/github/maskrcnn-benchmark/tools/cityscapes/instances2dict_with_polygons.py cityscapesscripts/evaluation
 python setup.py install
 cd ~/github/maskrcnn-benchmark
-python tools/cityscapes/convert_cityscapes_to_coco.py --datadir /path/to/gtFine_trainvaltest --outdir /path/to/cityscapes/annotations
+python tools/cityscapes/convert_cityscapes_to_coco.py --datadir /path/to/cityscapes --outdir /path/to/cityscapes/annotations
 ```
 
 Example configuration files for Cityscapes could be found [here](https://github.com/facebookresearch/maskrcnn-benchmark/blob/master/configs/cityscapes/).

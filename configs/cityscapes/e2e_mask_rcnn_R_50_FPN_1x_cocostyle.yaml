@@ -3,7 +3,8 @@ MODEL:
   WEIGHT: "catalog://ImageNetPretrained/MSRA/R-50"
   BACKBONE:
     CONV_BODY: "R-50-FPN"
-    OUT_CHANNELS: 256
+  RESNETS:
+    BACKBONE_OUT_CHANNELS: 256
   RPN:
     USE_FPN: True
     ANCHOR_STRIDE: (4, 8, 16, 32, 64)
