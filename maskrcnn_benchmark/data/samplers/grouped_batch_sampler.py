@@ -76,7 +76,7 @@ class GroupedBatchSampler(BatchSampler):
         # the order that we have in the sampler. For that, we will consider the
         # ordering as coming from the first element of each batch, and sort
         # correspondingly
-        first_element_of_batch = [t[0].item() for t in merged]
+        first_element_of_batch = [t[0].item() for t in merged if t.numel() > 0]
         # get and inverse mapping from sampled indices and the position where
         # they occur (as returned by the sampler)
         inv_sampled_ids_map = {v: k for k, v in enumerate(sampled_ids.tolist())}
