@@ -33,7 +33,7 @@ StageSpec = namedtuple(
     "StageSpec",
     [
         "index",  # Index of the stage, eg 1, 2, ..,. 5
-        "block_count",  # Numer of residual blocks in the stage
+        "block_count",  # Number of residual blocks in the stage
         "return_features",  # True => return the last feature map from this stage
     ],
 )
