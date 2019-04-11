@@ -1,5 +1,5 @@
 import cv2
-
+import copy
 import torch
 import numpy as np
 from maskrcnn_benchmark.layers.misc import interpolate
@@ -195,7 +195,7 @@ class PolygonInstance(object):
             polygons = valid_polygons
 
         elif isinstance(polygons, PolygonInstance):
-            polygons = polygons.polygons.copy()
+            polygons = copy.copy(polygons.polygons)
 
         else:
             RuntimeError(
