@@ -1,5 +1,5 @@
 import cv2
-
+import copy
 import torch
 import numpy as np
 from maskrcnn_benchmark.layers.misc import interpolate
@@ -195,7 +195,7 @@ class PolygonInstance(object):
             polygons = valid_polygons
 
         elif isinstance(polygons, PolygonInstance):
-            polygons = polygons.polygons.copy()
+            polygons = copy.copy(polygons.polygons)
 
         else:
             RuntimeError(
@@ -523,7 +523,9 @@ class SegmentationMask(object):
             next_segmentation = self.__getitem__(self.iter_idx)
             self.iter_idx += 1
             return next_segmentation
-        raise StopIteration
+        raise StopIteration()
+        
+    next = __next__  # Python 2 compatibility
 
     def __repr__(self):
         s = self.__class__.__name__ + "("
