@@ -11,7 +11,8 @@ import pycocotools.mask as mask_utils
 from .coco import COCODataset
 
 from maskrcnn_benchmark.structures.bounding_box import BoxList
-from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask, Polygons
+from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask#, PolygonInstance
+from maskrcnn_benchmark.structures.keypoint import Keypoints
 from maskrcnn_benchmark.structures.object_mask import ObjectMask
 
 
@@ -242,7 +243,7 @@ class COCOPoseDataset(COCODataset):
                 vertexes = ObjectMask(vertex_centers, img.size)
                 target.add_field("vertex", vertexes)
 
-            centers = Polygons(centers, img.size, mode=None)
+            centers = Keypoints([[c[0],c[1],1] for c in centers], img.size)  # set all kp to class of 1
             target.add_field("centers", centers)
 
         if self.cfg["Depth"]:

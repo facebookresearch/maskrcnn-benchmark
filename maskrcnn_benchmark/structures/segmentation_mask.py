@@ -313,7 +313,7 @@ class PolygonInstance(object):
                 item = item.tolist()
             for i in item:
                 selected_polygons.append(self.polygons[i])
-        return Polygons(selected_polygons, size=self.size, mode=self.mode)
+        return PolygonInstance(selected_polygons, size=self.size)
 
     def __repr__(self):
         s = self.__class__.__name__ + "("

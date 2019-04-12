@@ -145,6 +145,9 @@ if __name__ == '__main__':
     root = "./datasets/FAT/data"
     ann_file = "./datasets/FAT/coco_fat_debug.json"
     # ann_file = "./datasets/FAT/coco_fat_mixed_temple_0.json"
+
+    # root = "/home/bot/LabelMe/Images/loading"
+    # ann_file = "/home/bot/LabelMe/scripts/loading.json"
     dataset = coco_pose.COCOPoseDataset(ann_file, root, remove_images_without_annotations, transforms, cfg)
 
     sampler = make_data_sampler(dataset, shuffle, is_distributed)
@@ -201,7 +204,7 @@ if __name__ == '__main__':
             
             if cfg.MODEL.VERTEX_ON or cfg.MODEL.POSE_ON:
                 c_field = t1.get_field("centers")
-                centers = np.array([c.polygons[0].numpy() for c in c_field])
+                centers = np.array([c.keypoints[0].numpy()[:,:2] for c in c_field]).squeeze()
 
                 if cfg.MODEL.VERTEX_ON:
                     v_field = t1.get_field("vertex")
@@ -218,8 +221,8 @@ if __name__ == '__main__':
 
             for ix,label in enumerate(labels):
                 print("Label: %d, %s"%(label, CLASSES[label]))
-                p = m_field.polygons[ix]
-                m = p.convert('mask')
+                p = m_field.instances.polygons[ix]
+                m = p.convert_to_binarymask()
                 # visualize_mask(m.numpy())
                 m = m.numpy()  # uint8 format, 0-1
                 m *= 255
