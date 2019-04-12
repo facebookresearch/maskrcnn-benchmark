@@ -312,13 +312,22 @@ if __name__ == '__main__':
 
     # model_file = "./checkpoints/fat_debug_res14/model_final.pth"
 
-    config_file = "./configs/fat_depth_debug.yaml"
-    model_file = "./checkpoints/fat_depth_debug_14/model_final.pth"
-    model_file = "./checkpoints/fat_depth_debug_14_berhu/model_final.pth"
-    image_dir = "./datasets/FAT/data"
-    image_files = ["mixed/temple_0/000885.left","mixed/temple_0/001774.left"]
+    # config_file = "./configs/fat_depth_debug.yaml"
+    # model_file = "./checkpoints/fat_depth_debug_14/model_final.pth"
+    # model_file = "./checkpoints/fat_depth_debug_14_berhu/model_final.pth"
+    # image_dir = "./datasets/FAT/data"
+    # image_files = ["mixed/temple_0/000885.left","mixed/temple_0/001774.left"]
+    # image_ext = ".jpg"
+    # depth_ext = ".depth.png"
+
+    CLASSES = ["__background__", "class_x"]
+    # config_file = "./configs/rebin.yaml"
+    config_file = "./configs/loading_bbox.yaml"
+
+    model_file = "./checkpoints/loading_bbox/model_final.pth"
+    image_dir = "/home/bot/LabelMe/Images/loading_test"
+    # image_files = ["mixed/temple_0/000885.left","mixed/temple_0/001774.left"]
     image_ext = ".jpg"
-    depth_ext = ".depth.png"
 
     cfg.merge_from_file(config_file)
     img_transformer = ImageTransformer(cfg)
@@ -345,8 +354,10 @@ if __name__ == '__main__':
             extents[ix] = np.max(points[ix], axis=0) - np.min(points[ix],axis=0)
 
     max_depth = 7
+
+    for image_file in glob.glob("%s/*%s"%(image_dir, image_ext)):
     # for image_file in glob.glob("%s/*1-%s"%(image_dir, image_ext)):
-    for image_file in ["%s/%s%s"%(image_dir, f, image_ext) for f in image_files]:
+    # for image_file in ["%s/%s%s"%(image_dir, f, image_ext) for f in image_files]:
         img = cv2.imread(image_file)
 
         # img = cv2.flip(img, 1)
@@ -376,39 +387,41 @@ if __name__ == '__main__':
         predictions = select_top_predictions(predictions, confidence_threshold)
 
         labels = predictions.get_field("labels").numpy() 
-        masks = predictions.get_field("mask").numpy().squeeze()
         scores = predictions.get_field("scores").numpy()
         bboxes = predictions.bbox.numpy()
         bboxes = np.round(bboxes).astype(np.int32)
 
+        N = len(bboxes)
+
+        if cfg.MODEL.MASK_ON:
+            masks = predictions.get_field("mask").numpy().squeeze()
+            label_mask = np.zeros((N, height, width), dtype=np.float32)
         if cfg.MODEL.VERTEX_ON:
             verts = predictions.get_field("vertex").numpy()
-        if cfg.MODEL.POSE_ON:
-            poses = predictions.get_field("pose").numpy()
+            vertex_pred = np.zeros((N, 3, height, width), dtype=np.float32)
         if cfg.MODEL.DEPTH_ON:
             pred_depths = predictions.get_field("depth").numpy()
-
-        thresh = 0.5
-
-        N = len(masks)
-        label_mask = np.zeros((N, height, width), dtype=np.float32)
-        vertex_pred = np.zeros((N, 3, height, width), dtype=np.float32)
-        depth_pred = np.zeros((N, height, width), dtype=np.float32)
+            depth_pred = np.zeros((N, height, width), dtype=np.float32)
+        if cfg.MODEL.POSE_ON:
+            poses = predictions.get_field("pose").numpy()
 
         ix = 0
         img_copy = img.copy()
-        for ix, (bbox, mask, label, score) in enumerate(zip(bboxes, masks, labels, scores)):
+        for ix, (bbox, label, score) in enumerate(zip(bboxes, labels, scores)):
 
-            mask = paste_mask_on_image(mask, bbox, height, width, thresh=thresh)
+            img_copy = cv2.rectangle(img_copy, tuple(bbox[:2]), tuple(bbox[2:]), (0,0,255), 2)
 
-            label_mask[ix] = mask
+            if cfg.MODEL.MASK_ON:
+                mask = paste_mask_on_image(masks[ix], bbox, height, width, thresh=0.5)
 
-            _, contours, hierarchy = cv2.findContours(
-                mask.astype(np.uint8) * 255, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
-            )
-            color = get_random_color()
-            img_copy = cv2.drawContours(img_copy, contours, -1, color, 3)
-            img_copy = cv2.putText(img_copy, "%s (%.3f)"%(CLASSES[label],score), tuple(bbox[:2]), cv2.FONT_HERSHEY_COMPLEX, 0.5, color)
+                label_mask[ix] = mask
+
+                _, contours, hierarchy = cv2.findContours(
+                    mask.astype(np.uint8) * 255, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+                )
+                color = get_random_color()
+                img_copy = cv2.drawContours(img_copy, contours, -1, color, 3)
+                img_copy = cv2.putText(img_copy, "%s (%.3f)"%(CLASSES[label],score), tuple(bbox[:2]), cv2.FONT_HERSHEY_COMPLEX, 0.5, color)
 
             if cfg.MODEL.VERTEX_ON:
                 vert = verts[ix]
@@ -451,7 +464,10 @@ if __name__ == '__main__':
         # cv2.waitKey(0)
 
         if not (cfg.MODEL.DEPTH_ON or cfg.MODEL.VERTEX_ON and cfg.MODEL.POSE_ON):
+            cv2.imshow("pred", img_copy)
+            cv2.waitKey(0)
             continue
+
         factor_depth = 10000
         depth_file = image_file.replace(image_ext, depth_ext)
         depth_img = cv2.imread(depth_file, cv2.IMREAD_UNCHANGED)
