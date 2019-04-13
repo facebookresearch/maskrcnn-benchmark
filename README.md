@@ -243,8 +243,9 @@ note = {Accessed: [Insert date here]}
 - [RetinaMask: Learning to predict masks improves state-of-the-art single-shot detection for free](https://arxiv.org/abs/1901.03353). 
   Cheng-Yang Fu, Mykhailo Shvets, and Alexander C. Berg.
   Tech report, arXiv,1901.03353.
-
-
+- [FCOS: Fully Convolutional One-Stage Object Detection](https://arxiv.org/abs/1904.01355).
+  Zhi Tian, Chunhua Shen, Hao Chen and Tong He.
+  Tech report, arXiv,1904.01355. [[code](https://github.com/tianzhi0549/FCOS)]
 
 ## License
 
