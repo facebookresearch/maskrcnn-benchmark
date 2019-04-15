@@ -54,10 +54,13 @@ class BinaryMaskList(object):
         elif isinstance(masks, (list, tuple)):
             if isinstance(masks[0], torch.Tensor):
                 masks = torch.stack(masks, dim=2).clone()
-            elif isinstance(masks[0], dict) and "count" in masks[0]:
+            elif isinstance(masks[0], dict) and "counts" in masks[0]:
                 # RLE interpretation
-
-                masks = mask_utils
+                assert all(
+                    [(size[0], size[1]) == tuple(inst["size"]) for inst in masks]
+                )
+                masks = mask_utils.decode(masks)
+                masks = torch.tensor(masks).permute(2, 0, 1)
             else:
                 RuntimeError(
                     "Type of `masks[0]` could not be interpreted: %s" % type(masks)
