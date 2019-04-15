@@ -55,7 +55,7 @@ class ImageTransformer(object):
         image_list = to_image_list(image, self.cfg.DATALOADER.SIZE_DIVISIBILITY)
         return image_list, [target.get_field('scale')]
 
-def select_top_predictions(predictions, confidence_threshold=0.7):
+def select_top_predictions(predictions, confidence_threshold=0.7, score_field="scores"):
     """
     Select only predictions which have a `score` > self.confidence_threshold,
     and returns the predictions in descending order of score
@@ -69,10 +69,10 @@ def select_top_predictions(predictions, confidence_threshold=0.7):
             of the detection properties can be found in the fields of
             the BoxList via `prediction.fields()`
     """
-    scores = predictions.get_field("scores")
+    scores = predictions.get_field(score_field)
     keep = torch.nonzero(scores > confidence_threshold).squeeze(1)
     predictions = predictions[keep]
-    scores = predictions.get_field("scores")
+    scores = predictions.get_field(score_field)
     _, idx = scores.sort(0, descending=True)
     return predictions[idx]
 
@@ -325,7 +325,7 @@ if __name__ == '__main__':
     # config_file = "./configs/rebin.yaml"
     config_file = "./configs/loading_bbox.yaml"
 
-    model_file = "./checkpoints/loading_bbox/model_final.pth"
+    model_file = "./checkpoints/loading_bbox_rpn_only/model_final.pth"
     image_dir = "/home/bot/LabelMe/Images/loading_test"
     # image_files = ["mixed/temple_0/000885.left","mixed/temple_0/001774.left"]
     image_ext = ".jpg"
@@ -383,17 +383,23 @@ if __name__ == '__main__':
             continue
         predictions = predictions[0]
 
+        score_field = "scores"
+        if cfg.MODEL.RPN_ONLY:
+            score_field = "objectness"
         # reshape prediction (a BoxList) into the original image size
         predictions = predictions.resize((width, height))
-        predictions = select_top_predictions(predictions, confidence_threshold)
+        predictions = select_top_predictions(predictions, confidence_threshold, score_field)
 
-        labels = predictions.get_field("labels").numpy() 
-        scores = predictions.get_field("scores").numpy()
         bboxes = predictions.bbox.numpy()
         bboxes = np.round(bboxes).astype(np.int32)
 
         N = len(bboxes)
+        img_copy = img.copy()
 
+        scores = predictions.get_field(score_field).numpy()  # from roi box head
+
+        if not cfg.MODEL.RPN_ONLY:
+            labels = predictions.get_field("labels").numpy()
         if cfg.MODEL.MASK_ON:
             masks = predictions.get_field("mask").numpy().squeeze()
             label_mask = np.zeros((N, height, width), dtype=np.float32)
@@ -406,11 +412,12 @@ if __name__ == '__main__':
         if cfg.MODEL.POSE_ON:
             poses = predictions.get_field("pose").numpy()
 
-        ix = 0
-        img_copy = img.copy()
-        for ix, (bbox, label, score) in enumerate(zip(bboxes, labels, scores)):
+        for ix, (bbox, score) in enumerate(zip(bboxes, scores)):
 
             img_copy = cv2.rectangle(img_copy, tuple(bbox[:2]), tuple(bbox[2:]), (0,0,255), 2)
+
+            if not cfg.MODEL.RPN_ONLY:
+                label = labels[ix]
 
             if cfg.MODEL.MASK_ON:
                 mask = paste_mask_on_image(masks[ix], bbox, height, width, thresh=0.5)
@@ -458,8 +465,6 @@ if __name__ == '__main__':
 
             # cv2.imshow("masks", img_copy)
             # cv2.waitKey(0)
-
-            ix += 1
 
         # cv2.imshow("masks", img_copy)
         # cv2.waitKey(0)
