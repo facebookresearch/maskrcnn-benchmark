@@ -1,7 +1,6 @@
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.modeling.detector import build_detection_model
 from maskrcnn_benchmark.structures.image_list import to_image_list
-from maskrcnn_benchmark.layers.hough_voting import HoughVoting
 from maskrcnn_benchmark.data.build import build_transforms
 from torchvision.transforms import functional as TVF
 
@@ -280,6 +279,8 @@ def render_object_pose(im, depth, labels, meta_data, pose_data, points):
 
 
 def build_hough_voting_layer():
+    from maskrcnn_benchmark.layers.hough_voting import HoughVoting
+
     skip_pixels = 20
     inlier_threshold = 0.9
 

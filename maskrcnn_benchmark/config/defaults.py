@@ -169,6 +169,39 @@ _C.MODEL.RPN.FPN_POST_NMS_TOP_N_TEST = 2000
 _C.MODEL.RPN.RPN_HEAD = "SingleConvRPNHead"
 
 
+# ****************************ROTATED DETECTIONS****************************** #
+# ---------------------------------------------------------------------------- #
+# RRPN options
+# ---------------------------------------------------------------------------- #
+_C.MODEL.ROTATED = False
+
+_C.MODEL.RRPN = CN()
+_C.MODEL.RRPN.USE_FPN = False
+
+# Base RRPN anchor sizes (width) given in absolute pixels w.r.t. the scaled network input
+_C.MODEL.RRPN.ANCHOR_SIZES = (48, 84, 128, 224, 352)
+# Stride of the feature map that RRPN is attached.
+# For FPN, number of strides should match number of scales
+_C.MODEL.RRPN.ANCHOR_STRIDE = (16,)
+# RRPN anchor aspect ratios i.e. width-to-height ratio (RECOMMENDED >= 1.0)
+# IF < 1.0, width-to-height will be resized such that width >= height
+# and angles will be adjusted accordingly (+/-90 degrees)
+_C.MODEL.RRPN.ASPECT_RATIOS = (1.0, 2.0)
+# RRPN anchor angles (-90 to 90) to represent all possible anchor rotations
+_C.MODEL.RRPN.ANCHOR_ANGLES = (-90, -54, -18, 18, 54)
+# Remove RRPN anchors with bounding boxes that go outside the image by
+# RRPN_STRADDLE_THRESH pixels. Since these are based on bboxes of rotated rectangles,
+# default should be set higher than normal RPN STRADDLE_THRESH i.e. by 30 pixels
+# Set to -1 or a large value, e.g. 100000, to disable pruning anchors
+_C.MODEL.RRPN.STRADDLE_THRESH = 30
+
+# ---------------------------------------------------------------------------- #
+# RROI options
+# ---------------------------------------------------------------------------- #
+_C.MODEL.RROI_ = CN()
+
+
+
 # ---------------------------------------------------------------------------- #
 # ROI HEADS options
 # ---------------------------------------------------------------------------- #

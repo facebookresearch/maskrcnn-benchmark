@@ -394,6 +394,11 @@ std::vector<at::Tensor> hough_voting_forward_cuda
   at::Tensor top_box = at::zeros({N, 7}, vertmap.options());
   at::Tensor top_pose = at::zeros({N, 7}, vertmap.options());
 
+  if (N == 0)
+  {
+    return {top_box, top_pose};
+  }
+
   HoughVotingForwardLaucher(
         labels.contiguous().data<int>(), masks.contiguous().data<int>(), vertmap.contiguous().data<float>(), extents.contiguous().data<float>(), 
         meta_data.contiguous().data<float>(), poses.contiguous().data<float>(),
