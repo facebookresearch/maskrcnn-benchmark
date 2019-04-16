@@ -138,8 +138,7 @@ and we have divided the learning rate by 8x.
 We also changed the batch size during testing, but that is generally not necessary because testing
 requires much less memory than training.
 
-Furthermore, we set ```MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN 2000``` as the proposals are selected for per the batch rather than per image. The value is calculated by 1000 x images-per-gpu. Here we have 2 images per GPU, therefore we set the number as 1000 x 2 = 2000. If we have 8 images per GPU, the value should be set as 8000.  
-https://github.com/facebookresearch/maskrcnn-benchmark/blob/c5c4d52eeb924c800027a51862c984558d57fa4c/maskrcnn_benchmark/modeling/rpn/inference.py#L154-L170
+Furthermore, we set ```MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN 2000``` as the proposals are selected for per the batch rather than per image. The value is calculated by **1000 x images-per-gpu**. Here we have 2 images per GPU, therefore we set the number as 1000 x 2 = 2000. If we have 8 images per GPU, the value should be set as 8000. See https://github.com/facebookresearch/maskrcnn-benchmark/issues/672 for more details.
 
 ### Multi-GPU training
 We use internally `torch.distributed.launch` in order to launch
