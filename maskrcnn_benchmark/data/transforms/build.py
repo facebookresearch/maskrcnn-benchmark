@@ -17,9 +17,9 @@ def build_transforms(cfg, is_train=True):
         mean=cfg.INPUT.PIXEL_MEAN, std=cfg.INPUT.PIXEL_STD, to_bgr255=to_bgr255
     )
     color_jitter = T.ColorJitter(
-        brightness=cfg.INPUT.BRIGHTNETSS,
+        brightness=cfg.INPUT.BRIGHTNESS,
         contrast=cfg.INPUT.CONTRAST,
-        saturation=cfg.INPUT.SITURATION,
+        saturation=cfg.INPUT.SATURATION,
         hue=cfg.INPUT.HUE,
         )
 
