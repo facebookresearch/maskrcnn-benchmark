@@ -158,7 +158,7 @@ class RPNPostProcessor(torch.nn.Module):
         # and not per batch
         if self.training:
             objectness = torch.cat(
-               [boxlist.get_field("objectness") for boxlist in boxlists], dim=0
+                [boxlist.get_field("objectness") for boxlist in boxlists], dim=0
             )
             box_sizes = [len(boxlist) for boxlist in boxlists]
             post_nms_top_n = min(self.fpn_post_nms_top_n, len(objectness))
