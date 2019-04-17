@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
+import torch.nn.functional as F
 from torch import nn
 
 
@@ -17,6 +18,15 @@ class FrozenBatchNorm2d(nn.Module):
         self.register_buffer("running_var", torch.ones(n))
 
     def forward(self, x):
+        if torch._C._get_tracing_state():
+            return F.batch_norm(
+                x,
+                self.running_mean,
+                self.running_var,
+                self.weight,
+                self.bias
+            )
+
         scale = self.weight * self.running_var.rsqrt()
         bias = self.bias - self.running_mean * scale
         scale = scale.reshape(1, -1, 1, 1)
