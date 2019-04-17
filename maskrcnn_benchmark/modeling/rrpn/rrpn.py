@@ -4,12 +4,11 @@ import torch.nn.functional as F
 from torch import nn
 
 from maskrcnn_benchmark.modeling import registry
-from maskrcnn_benchmark.modeling.box_coder import BoxCoder
-from maskrcnn_benchmark.modeling.rpn.retinanet.retinanet import build_retinanet
+from maskrcnn_benchmark.modeling.rotated_box_coder import BoxCoder
 from .loss import make_rpn_loss_evaluator
 from .anchor_generator import make_anchor_generator
 from .inference import make_rpn_postprocessor
-
+from .utils import REGRESSION_CN
 
 class RPNHeadConvRegressor(nn.Module):
     """
@@ -26,7 +25,7 @@ class RPNHeadConvRegressor(nn.Module):
         super(RPNHeadConvRegressor, self).__init__()
         self.cls_logits = nn.Conv2d(in_channels, num_anchors, kernel_size=1, stride=1)
         self.bbox_pred = nn.Conv2d(
-            in_channels, num_anchors * 4, kernel_size=1, stride=1
+            in_channels, num_anchors * REGRESSION_CN, kernel_size=1, stride=1
         )
 
         for l in [self.cls_logits, self.bbox_pred]:
@@ -70,7 +69,7 @@ class RPNHeadFeatureSingleConv(nn.Module):
         return x
 
 
-@registry.RPN_HEADS.register("SingleConvRPNHead")
+@registry.RPN_HEADS.register("SingleConvRRPNHead")
 class RPNHead(nn.Module):
     """
     Adds a simple RPN Head with classification and regression heads
@@ -89,7 +88,7 @@ class RPNHead(nn.Module):
         )
         self.cls_logits = nn.Conv2d(in_channels, num_anchors, kernel_size=1, stride=1)
         self.bbox_pred = nn.Conv2d(
-            in_channels, num_anchors * 4, kernel_size=1, stride=1
+            in_channels, num_anchors * REGRESSION_CN, kernel_size=1, stride=1
         )
 
         for l in [self.conv, self.cls_logits, self.bbox_pred]:
@@ -106,14 +105,14 @@ class RPNHead(nn.Module):
         return logits, bbox_reg
 
 
-class RPNModule(torch.nn.Module):
+class RRPNModule(torch.nn.Module):
     """
     Module for RPN computation. Takes feature maps from the backbone and RPN
     proposals and losses. Works for both FPN and non-FPN.
     """
 
     def __init__(self, cfg, in_channels):
-        super(RPNModule, self).__init__()
+        super(RRPNModule, self).__init__()
 
         self.cfg = cfg.clone()
 
@@ -124,7 +123,7 @@ class RPNModule(torch.nn.Module):
             cfg, in_channels, anchor_generator.num_anchors_per_location()[0]
         )
 
-        rpn_box_coder = BoxCoder(weights=(1.0, 1.0, 1.0, 1.0))
+        rpn_box_coder = BoxCoder(weights=None)# (1.0, 1.0, 1.0, 1.0, 1.0))
 
         box_selector_train = make_rpn_postprocessor(cfg, rpn_box_coder, is_train=True)
         box_selector_test = make_rpn_postprocessor(cfg, rpn_box_coder, is_train=False)
@@ -174,12 +173,13 @@ class RPNModule(torch.nn.Module):
                 boxes = self.box_selector_train(
                     anchors, objectness, rpn_box_regression, targets
                 )
-        loss_objectness, loss_rpn_box_reg = self.loss_evaluator(
+        loss_objectness, loss_rpn_box_reg, loss_rpn_angle = self.loss_evaluator(
             anchors, objectness, rpn_box_regression, targets
         )
         losses = {
             "loss_objectness": loss_objectness,
             "loss_rpn_box_reg": loss_rpn_box_reg,
+            "loss_rpn_angle": loss_rpn_angle,
         }
         return boxes, losses
 
@@ -197,15 +197,6 @@ class RPNModule(torch.nn.Module):
         return boxes, {}
 
 
-def build_rpn(cfg, in_channels):
-    """
-    This gives the gist of it. Not super important because it doesn't change as much
-    """
-    if cfg.MODEL.ROTATED:
-        from maskrcnn_benchmark.modeling.rrpn.rrpn import RRPNModule
-        return RRPNModule(cfg, in_channels)
+def build_rrpn(cfg, in_channels):
 
-    if cfg.MODEL.RETINANET_ON:
-        return build_retinanet(cfg, in_channels)
-
-    return RPNModule(cfg, in_channels)
+    return RRPNModule(cfg, in_channels)

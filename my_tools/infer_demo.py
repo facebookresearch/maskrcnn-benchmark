@@ -325,7 +325,7 @@ if __name__ == '__main__':
     # config_file = "./configs/rebin.yaml"
     config_file = "./configs/loading_bbox.yaml"
 
-    model_file = "./checkpoints/loading_bbox_rpn_only/model_final.pth"
+    model_file = "./checkpoints/loading_bbox_rotated_rpn_only/model_final.pth"
     image_dir = "/home/bot/LabelMe/Images/loading_test"
     # image_files = ["mixed/temple_0/000885.left","mixed/temple_0/001774.left"]
     image_ext = ".jpg"
@@ -387,6 +387,7 @@ if __name__ == '__main__':
         if cfg.MODEL.RPN_ONLY:
             score_field = "objectness"
         # reshape prediction (a BoxList) into the original image size
+        pred_size = predictions.size
         predictions = predictions.resize((width, height))
         predictions = select_top_predictions(predictions, confidence_threshold, score_field)
 
@@ -414,7 +415,21 @@ if __name__ == '__main__':
 
         for ix, (bbox, score) in enumerate(zip(bboxes, scores)):
 
-            img_copy = cv2.rectangle(img_copy, tuple(bbox[:2]), tuple(bbox[2:]), (0,0,255), 2)
+            if cfg.MODEL.ROTATED:
+                from maskrcnn_benchmark.modeling.rrpn.anchor_generator import draw_anchors
+
+                # TODO: RRECTS RESIZE
+                w_ratio = float(width) / pred_size[0]
+                h_ratio = float(height) / pred_size[1]
+                rrects = predictions.get_field("rrects")
+                rr = rrects.cpu().numpy()
+                rr[:, 0] *= w_ratio
+                rr[:, 2] *= w_ratio
+                rr[:, 1] *= h_ratio
+                rr[:, 3] *= h_ratio
+                img_copy = draw_anchors(img_copy, rr)
+            else:
+                img_copy = cv2.rectangle(img_copy, tuple(bbox[:2]), tuple(bbox[2:]), (0, 0, 255), 2)
 
             if not cfg.MODEL.RPN_ONLY:
                 label = labels[ix]

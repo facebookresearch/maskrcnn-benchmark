@@ -70,23 +70,24 @@ def get_image_list_and_feature_maps(image, feature_strides):
 
 def test_rpn(image_tensor):
     USE_FPN = False
-    cfg.MODEL.RPN.USE_FPN = USE_FPN
+    CFG_RPN = cfg.MODEL.RPN
+    CFG_RPN.USE_FPN = USE_FPN
 
     # RPN anchor aspect ratios
-    cfg.MODEL.RPN.ASPECT_RATIOS = (0.5, 1.0, 2.0)
+    CFG_RPN.ASPECT_RATIOS = (0.5, 1.0, 2.0)
     # Base RPN anchor sizes given in absolute pixels w.r.t. the scaled network input
-    cfg.MODEL.RPN.ANCHOR_SIZES = (32, 64, 128)
+    CFG_RPN.ANCHOR_SIZES = (32, 64, 128)
     # Stride of the feature map that RPN is attached.
     # For FPN, number of strides should match number of scales
-    cfg.MODEL.RPN.ANCHOR_STRIDE = (16,)
+    CFG_RPN.ANCHOR_STRIDE = (16,)
     # Remove RPN anchors that go outside the image by RPN_STRADDLE_THRESH pixels
     # Set to -1 or a large value, e.g. 100000, to disable pruning anchors
-    cfg.MODEL.RPN.STRADDLE_THRESH = 0
+    CFG_RPN.STRADDLE_THRESH = 0
 
     if USE_FPN:
-        cfg.MODEL.RPN.ANCHOR_STRIDE = tuple(np.array(cfg.MODEL.RPN.ANCHOR_SIZES) // 8)
+        CFG_RPN.ANCHOR_STRIDE = tuple(np.array(CFG_RPN.ANCHOR_SIZES) // 8)
 
-    image_list, feature_maps = get_image_list_and_feature_maps(image_tensor, cfg.MODEL.RPN.ANCHOR_STRIDE)
+    image_list, feature_maps = get_image_list_and_feature_maps(image_tensor, CFG_RPN.ANCHOR_STRIDE)
 
     anchor_generator = make_anchor_generator(cfg)
 
@@ -117,26 +118,27 @@ def test_rpn(image_tensor):
 
 def test_rrpn(image_tensor):
     USE_FPN = False
-    cfg.MODEL.RRPN.USE_FPN = USE_FPN
 
-    cfg.MODEL.RRPN.ANCHOR_SIZES = (48, 84, 128)
+    CFG_RRPN = cfg.MODEL.RPN
+    CFG_RRPN.USE_FPN = USE_FPN
+
+    CFG_RRPN.ANCHOR_SIZES = (48, 84, 128)
     # Stride of the feature map that RRPN is attached.
     # For FPN, number of strides should match number of scales
-    cfg.MODEL.RRPN.ANCHOR_STRIDE = (16,)
+    CFG_RRPN.ANCHOR_STRIDE = (16,)
     # RRPN anchor aspect ratios i.e. width-to-height ratio (RECOMMENDED >= 1.0)
-    cfg.MODEL.RRPN.ASPECT_RATIOS = (1.0, 2.0)
+    CFG_RRPN.ASPECT_RATIOS = (1.0, 2.0)
     # RRPN anchor angles (-90 to 90) to represent all possible anchor rotations
-    # cfg.MODEL.RRPN.ANCHOR_ANGLES = [-90, -60, -30, 0, 30, 60]  # [-45, -15, 15] #[-90, -75, -60, -45, -30, -15]
-    cfg.MODEL.RRPN.ANCHOR_ANGLES = (-90, -54, -18, 18, 54)  # [-45, -15, 15] #[-90, -75, -60, -45, -30, -15]
+    CFG_RRPN.ANCHOR_ANGLES = (-90, -54, -18, 18, 54)  # [-45, -15, 15] #[-90, -75, -60, -45, -30, -15]
 
     # Remove RRPN anchors that go outside the image by RPN_STRADDLE_THRESH pixels
     # Set to -1 or a large value, e.g. 100000, to disable pruning anchors
-    cfg.MODEL.RRPN.STRADDLE_THRESH = 30
+    CFG_RRPN.STRADDLE_THRESH = 30
 
     if USE_FPN:
-        cfg.MODEL.RRPN.ANCHOR_STRIDE = tuple(np.array(cfg.MODEL.RRPN.ANCHOR_SIZES) // 8)
+        CFG_RRPN.ANCHOR_STRIDE = tuple(np.array(CFG_RRPN.ANCHOR_SIZES) // 8)
 
-    image_list, feature_maps = get_image_list_and_feature_maps(image_tensor, cfg.MODEL.RRPN.ANCHOR_STRIDE)
+    image_list, feature_maps = get_image_list_and_feature_maps(image_tensor, CFG_RRPN.ANCHOR_STRIDE)
 
     anchor_generator = make_rrpn_anchor_generator(cfg)
     all_anchors = anchor_generator.forward(image_list, feature_maps)

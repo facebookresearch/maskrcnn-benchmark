@@ -87,10 +87,12 @@ class AnchorGenerator(torch.nn.Module):
             for anchors_per_feature_map in anchors_over_all_feature_maps:
                 # anchors_in_image.append(anchors_per_feature_map)
 
+                # TODO: Make this a util function?
                 rect_pts = convert_rect_to_pts2(anchors_per_feature_map, torch)
                 pts_min = torch.min(rect_pts, dim=1)[0]
                 pts_max = torch.max(rect_pts, dim=1)[0]
                 bboxes = torch.cat((pts_min, pts_max),1)
+
                 boxlist = BoxList(
                     bboxes, (image_width, image_height), mode="xyxy"
                 )
@@ -105,13 +107,14 @@ class AnchorGenerator(torch.nn.Module):
 
 
 def make_anchor_generator(config):
-    anchor_sizes = config.MODEL.RRPN.ANCHOR_SIZES
-    aspect_ratios = config.MODEL.RRPN.ASPECT_RATIOS
-    anchor_stride = config.MODEL.RRPN.ANCHOR_STRIDE
-    anchor_angles = config.MODEL.RRPN.ANCHOR_ANGLES
-    straddle_thresh = config.MODEL.RRPN.STRADDLE_THRESH
+    CFG_RPN = config.MODEL.RPN
+    anchor_sizes = CFG_RPN.ANCHOR_SIZES
+    aspect_ratios = CFG_RPN.ASPECT_RATIOS
+    anchor_stride = CFG_RPN.ANCHOR_STRIDE
+    anchor_angles = CFG_RPN.ANCHOR_ANGLES
+    straddle_thresh = CFG_RPN.STRADDLE_THRESH
 
-    if config.MODEL.RRPN.USE_FPN:
+    if CFG_RPN.USE_FPN:
         # raise NotImplementedError
         assert len(anchor_stride) == len(
             anchor_sizes
@@ -209,9 +212,7 @@ def generate_anchors(anchor_sizes, anchor_ratios, anchor_angles,
 
 
 def convert_pts_to_rect(pts):
-    box = pts.copy()  # np.int0(np.round(pts))
-    box = box.reshape([4, 2])
-    rect1 = cv2.minAreaRect(box)
+    rect1 = cv2.minAreaRect(pts)
 
     x, y, w, h, theta = rect1[0][0], rect1[0][1], rect1[1][0], rect1[1][1], rect1[2]
     if h >= w:
@@ -227,7 +228,13 @@ def convert_pts_to_rect(pts):
 def convert_rect_to_pts2(anchors, lib=np):
     N = len(anchors)
 
-    rect_pts = lib.zeros((N, 4, 2), dtype=lib.float32)
+    if lib == np:
+        rect_pts = lib.zeros((N, 4, 2), dtype=lib.float32)
+    elif lib == torch:
+        rect_pts = lib.zeros((N, 4, 2), dtype=lib.float32, device=anchors.device)
+    else:
+        raise NotImplementedError
+
     if N == 0:
         return rect_pts
 
@@ -235,10 +242,10 @@ def convert_rect_to_pts2(anchors, lib=np):
     cy = anchors[:,1]
     w = anchors[:,2]
     h = anchors[:,3]
-    angle = np.deg2rad(anchors[:,4])
+    angle = anchors[:,4] / 180. * np.pi
 
-    b = np.cos(angle)*0.5
-    a = np.sin(angle)*0.5
+    b = lib.cos(angle)*0.5
+    a = lib.sin(angle)*0.5
 
     rect_pts[:,0,0] = cx - a*h - b*w
     rect_pts[:,0,1] = cy + b*h - a*w
