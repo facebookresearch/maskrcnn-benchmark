@@ -16,8 +16,6 @@ def do_voc_evaluation(dataset, predictions, output_folder, logger):
     gt_boxlists = []
     for image_id, prediction in enumerate(predictions):
         img_info = dataset.get_img_info(image_id)
-        if len(prediction) == 0:
-            continue
         image_width = img_info["width"]
         image_height = img_info["height"]
         prediction = prediction.resize((image_width, image_height))
