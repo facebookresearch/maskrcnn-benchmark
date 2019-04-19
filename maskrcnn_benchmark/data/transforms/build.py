@@ -16,9 +16,16 @@ def build_transforms(cfg, is_train=True):
     normalize_transform = T.Normalize(
         mean=cfg.INPUT.PIXEL_MEAN, std=cfg.INPUT.PIXEL_STD, to_bgr255=to_bgr255
     )
+    color_jitter = T.ColorJitter(
+        brightness=cfg.INPUT.BRIGHTNESS,
+        contrast=cfg.INPUT.CONTRAST,
+        saturation=cfg.INPUT.SATURATION,
+        hue=cfg.INPUT.HUE,
+        )
 
     transform = T.Compose(
         [
+            color_jitter,
             T.Resize(min_size, max_size),
             T.RandomHorizontalFlip(flip_prob),
             T.ToTensor(),

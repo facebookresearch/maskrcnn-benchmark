@@ -54,6 +54,12 @@ _C.INPUT.PIXEL_STD = [1., 1., 1.]
 # Convert image to BGR format (for Caffe2 models), in range 0-255
 _C.INPUT.TO_BGR255 = True
 
+# Image ColorJitter
+_C.INPUT.BRIGHTNESS = 0.0
+_C.INPUT.CONTRAST = 0.0
+_C.INPUT.SATURATION = 0.0
+_C.INPUT.HUE = 0.0
+
 
 # -----------------------------------------------------------------------------
 # Dataset
