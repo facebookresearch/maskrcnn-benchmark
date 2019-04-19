@@ -129,7 +129,7 @@ you'll also need to change the learning rate, the number of iterations and the l
 
 Here is an example for Mask R-CNN R-50 FPN with the 1x schedule:
 ```bash
-python tools/train_net.py --config-file "configs/e2e_mask_rcnn_R_50_FPN_1x.yaml" SOLVER.IMS_PER_BATCH 2 SOLVER.BASE_LR 0.0025 SOLVER.MAX_ITER 720000 SOLVER.STEPS "(480000, 640000)" TEST.IMS_PER_BATCH 1
+python tools/train_net.py --config-file "configs/e2e_mask_rcnn_R_50_FPN_1x.yaml" SOLVER.IMS_PER_BATCH 2 SOLVER.BASE_LR 0.0025 SOLVER.MAX_ITER 720000 SOLVER.STEPS "(480000, 640000)" TEST.IMS_PER_BATCH 1 MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN 2000
 ```
 This follows the [scheduling rules from Detectron.](https://github.com/facebookresearch/Detectron/blob/master/configs/getting_started/tutorial_1gpu_e2e_faster_rcnn_R-50-FPN.yaml#L14-L30)
 Note that we have multiplied the number of iterations by 8x (as well as the learning rate schedules),
@@ -138,6 +138,7 @@ and we have divided the learning rate by 8x.
 We also changed the batch size during testing, but that is generally not necessary because testing
 requires much less memory than training.
 
+Furthermore, we set ```MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN 2000``` as the proposals are selected for per the batch rather than per image. The value is calculated by **1000 x images-per-gpu**. Here we have 2 images per GPU, therefore we set the number as 1000 x 2 = 2000. If we have 8 images per GPU, the value should be set as 8000. See [#672](https://github.com/facebookresearch/maskrcnn-benchmark/issues/672) for more details.
 
 ### Multi-GPU training
 We use internally `torch.distributed.launch` in order to launch
@@ -147,8 +148,9 @@ process will only use a single GPU.
 
 ```bash
 export NGPUS=8
-python -m torch.distributed.launch --nproc_per_node=$NGPUS /path_to_maskrcnn_benchmark/tools/train_net.py --config-file "path/to/config/file.yaml"
+python -m torch.distributed.launch --nproc_per_node=$NGPUS /path_to_maskrcnn_benchmark/tools/train_net.py --config-file "path/to/config/file.yaml" MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN images_per_gpu x 1000
 ```
+Note we should set ```MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN``` follow the rule in Single-GPU training.
 
 ## Abstractions
 For more information on some of the main abstractions in our implementation, see [ABSTRACTIONS.md](ABSTRACTIONS.md).
