@@ -54,6 +54,12 @@ _C.INPUT.PIXEL_STD = [1., 1., 1.]
 # Convert image to BGR format (for Caffe2 models), in range 0-255
 _C.INPUT.TO_BGR255 = True
 
+# Image ColorJitter
+_C.INPUT.BRIGHTNESS = 0.0
+_C.INPUT.CONTRAST = 0.0
+_C.INPUT.SATURATION = 0.0
+_C.INPUT.HUE = 0.0
+
 
 # -----------------------------------------------------------------------------
 # Dataset
@@ -425,3 +431,13 @@ _C.TEST.DETECTIONS_PER_IMG = 100
 _C.OUTPUT_DIR = "."
 
 _C.PATHS_CATALOG = os.path.join(os.path.dirname(__file__), "paths_catalog.py")
+
+# ---------------------------------------------------------------------------- #
+# Precision options
+# ---------------------------------------------------------------------------- #
+
+# Precision of input, allowable: (float32, float16)
+_C.DTYPE = "float32"
+
+# Enable verbosity in apex.amp
+_C.AMP_VERBOSE = False

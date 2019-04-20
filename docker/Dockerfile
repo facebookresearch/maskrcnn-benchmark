@@ -46,6 +46,11 @@ RUN git clone https://github.com/cocodataset/cocoapi.git \
  && cd cocoapi/PythonAPI \
  && python setup.py build_ext install
 
+# install apex
+RUN git clone https://github.com/NVIDIA/apex.git \
+ && cd apex \
+ && python setup.py install --cuda_ext --cpp_ext
+
 # install PyTorch Detection
 ARG FORCE_CUDA="1"
 ENV FORCE_CUDA=${FORCE_CUDA}
