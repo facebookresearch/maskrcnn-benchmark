@@ -1,5 +1,6 @@
 import torch
 from torch.autograd import Function
+from torch.autograd.function import once_differentiable
 from torch.nn.modules.utils import _pair
 
 from maskrcnn_benchmark import _C
@@ -67,6 +68,7 @@ class DeformConvFunction(Function):
         return output
 
     @staticmethod
+    @once_differentiable
     def backward(ctx, grad_output):
         input, offset, weight = ctx.saved_tensors
 
@@ -201,6 +203,7 @@ class ModulatedDeformConvFunction(Function):
         return output
 
     @staticmethod
+    @once_differentiable
     def backward(ctx, grad_output):
         if not grad_output.is_cuda:
             raise NotImplementedError
