@@ -35,8 +35,8 @@ def cache_url(url, model_dir=None, progress=True):
         >>> cached_file = maskrcnn_benchmark.utils.model_zoo.cache_url('https://s3.amazonaws.com/pytorch/models/resnet18-5c106cde.pth')
     """
     if model_dir is None:
-        torch_home = os.path.expanduser(os.getenv('TORCH_HOME', '~/.torch'))
-        model_dir = os.getenv('TORCH_MODEL_ZOO', os.path.join(torch_home, 'models'))
+        torch_home = os.path.expanduser(os.getenv("TORCH_HOME", "~/.torch"))
+        model_dir = os.getenv("TORCH_MODEL_ZOO", os.path.join(torch_home, "models"))
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     parts = urlparse(url)
