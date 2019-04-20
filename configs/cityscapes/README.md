@@ -195,11 +195,19 @@ def clip_weights_from_pretrain_of_coco_to_cityscapes(f, out_file):
 	print("f: {}\nout_file: {}".format(f, out_file))
 	torch.save(m, out_file)
 ```
-Step 3: modify the `input config` in the `yaml` file, like this:  
+Step 3: modify the `input&solver` configuration in the `yaml` file, like this:  
 ```
 INPUT:
   MIN_SIZE_TRAIN: (800, 832, 863, 896, 928, 960, 992, 1024, 1024)
   MAX_SIZE_TRAIN: 2048
   MIN_SIZE_TEST: 1024
   MAX_SIZE_TEST: 2048
-``` 
+
+SOLVER:
+  BASE_LR: 0.01
+  IMS_PER_BATCH: 8
+  WEIGHT_DECAY: 0.0001
+  STEPS: (3000,)
+  MAX_ITER: 4000
+```
+
