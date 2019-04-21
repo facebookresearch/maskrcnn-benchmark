@@ -83,12 +83,16 @@ class RPNHead(nn.Module):
             num_anchors (int): number of anchors to be predicted
         """
         super(RPNHead, self).__init__()
+        conv_channels = in_channels * 2
         self.conv = nn.Conv2d(
-            in_channels, in_channels, kernel_size=3, stride=1, padding=1
+            in_channels, conv_channels, kernel_size=3, stride=1, padding=3//2
         )
-        self.cls_logits = nn.Conv2d(in_channels, num_anchors, kernel_size=1, stride=1)
+        # self.conv2 = nn.Conv2d(
+        #     in_channels, conv_channels, kernel_size=3, stride=1, padding=1
+        # )
+        self.cls_logits = nn.Conv2d(conv_channels, num_anchors, kernel_size=1, stride=1)
         self.bbox_pred = nn.Conv2d(
-            in_channels, num_anchors * REGRESSION_CN, kernel_size=1, stride=1
+            conv_channels, num_anchors * REGRESSION_CN, kernel_size=1, stride=1
         )
 
         for l in [self.conv, self.cls_logits, self.bbox_pred]:
@@ -100,6 +104,7 @@ class RPNHead(nn.Module):
         bbox_reg = []
         for feature in x:
             t = F.relu(self.conv(feature))
+            # t = F.relu(self.conv2(t))
             logits.append(self.cls_logits(t))
             bbox_reg.append(self.bbox_pred(t))
         return logits, bbox_reg
@@ -123,7 +128,7 @@ class RRPNModule(torch.nn.Module):
             cfg, in_channels, anchor_generator.num_anchors_per_location()[0]
         )
 
-        rpn_box_coder = BoxCoder(weights=None)# (1.0, 1.0, 1.0, 1.0, 1.0))
+        rpn_box_coder = BoxCoder(weights=cfg.MODEL.RPN.BBOX_REG_WEIGHTS)# (1.0, 1.0, 1.0, 1.0, 1.0))
 
         box_selector_train = make_rpn_postprocessor(cfg, rpn_box_coder, is_train=True)
         box_selector_test = make_rpn_postprocessor(cfg, rpn_box_coder, is_train=False)

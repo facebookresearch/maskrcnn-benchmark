@@ -165,14 +165,14 @@ class RPNLossComputation(object):
         pos_regression_targets = regression_targets[sampled_pos_inds]
         normalize_reg_targets(pos_regression_targets)
         box_loss = smooth_l1_loss(
-            pos_regression,#[:, :-1],
-            pos_regression_targets,#[:, :-1],
+            pos_regression[:, :-1],
+            pos_regression_targets[:, :-1],
             beta=1.0 / 9,
             size_average=False,
         )
         box_loss = box_loss / total_pos
 
-        angle_loss = 0 # 0.5 * torch.abs(torch.sin(pos_regression[:, -1] - pos_regression_targets[:, -1])).mean()
+        angle_loss = torch.abs(torch.sin(pos_regression[:, -1] - pos_regression_targets[:, -1])).mean()
 
         # balance negative and positive weights
         sampled_labels = labels[sampled_inds]

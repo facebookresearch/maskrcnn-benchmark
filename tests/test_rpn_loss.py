@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
     print(num_anchors)
 
-    box_coder = BoxCoder(weights=None)
+    box_coder = BoxCoder(weights=cfg.MODEL.RPN.BBOX_REG_WEIGHTS)
     fg_bg_sampler = BalancedPositiveNegativeSampler(
         cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE, cfg.MODEL.RPN.POSITIVE_FRACTION
     )

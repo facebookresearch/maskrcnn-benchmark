@@ -181,8 +181,12 @@ _C.MODEL.RPN.RPN_HEAD = "SingleConvRPNHead"
 # ****************************ROTATED DETECTIONS****************************** #
 _C.MODEL.ROTATED = False
 
-# RRPN anchor angles (-90 to 90) to represent all possible anchor rotations
-_C.MODEL.RPN.ANCHOR_ANGLES = (-90, -54, -18, 18, 54)
+# RRPN anchor angles (-90 to 0) to represent all possible anchor (rectangle) rotations
+_C.MODEL.RPN.ANCHOR_ANGLES = (-90, -60, -30)
+
+# Default weights on (dx, dy, dw, dh) for normalizing bbox regression targets
+# These are empirically chosen to approximately lead to unit variance targets
+_C.MODEL.RPN.BBOX_REG_WEIGHTS = (10.0, 10.0, 5.0, 5.0)
 
 if _C.MODEL.ROTATED:  # FOR REFERENCE ONLY
     # Base RRPN anchor sizes (width) given in absolute pixels w.r.t. the scaled network input
@@ -190,15 +194,17 @@ if _C.MODEL.ROTATED:  # FOR REFERENCE ONLY
     _C.MODEL.RPN.ANCHOR_SIZES = (48, 84, 128, 224, 352)
     # For FPN, number of strides should match number of scales
     _C.MODEL.RPN.ANCHOR_STRIDE = (16,)
-    # RRPN anchor aspect ratios i.e. width-to-height ratio (RECOMMENDED >= 1.0)
-    # IF < 1.0, width-to-height will be resized such that width >= height
-    # and angles will be adjusted accordingly (+/-90 degrees)
-    _C.MODEL.RPN.ASPECT_RATIOS = (1.0, 2.0)
+    # RRPN anchor aspect ratios i.e. width-to-height ratio
+    _C.MODEL.RPN.ASPECT_RATIOS = (0.5, 1.0, 2.0)
     # Remove RRPN anchors with bounding boxes that go outside the image by
     # RRPN_STRADDLE_THRESH pixels. Since these are based on bboxes of rotated rectangles,
     # default should be set higher than normal RPN STRADDLE_THRESH
     # Set to -1 or a large value, e.g. 100000, to disable pruning anchors
     _C.MODEL.RPN.STRADDLE_THRESH = 30
+
+    # Default weights on (dx, dy, dw, dh, dtheta) for normalizing rotated rect regression targets
+    _C.MODEL.RPN.BBOX_REG_WEIGHTS = (10.0, 10.0, 5.0, 5.0, 1.0)
+
     # Rotated IOU threshold
     _C.MODEL.RPN.FG_IOU_THRESHOLD = 0.6
     _C.MODEL.RPN.BG_IOU_THRESHOLD = 0.4

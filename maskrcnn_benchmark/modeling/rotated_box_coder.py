@@ -38,6 +38,11 @@ class BoxCoder(object):
             bbox_xform_clip (float)
         """
         self.weights = weights
+        if weights is not None:
+            lenw = len(weights)
+            assert 4 <= lenw <= 5
+            if lenw == 4:
+                self.weights = (weights[0],weights[1],weights[2],weights[3],1.0)
         self.bbox_xform_clip = bbox_xform_clip
         if not (lib == np or lib == torch):
             raise NotImplementedError
