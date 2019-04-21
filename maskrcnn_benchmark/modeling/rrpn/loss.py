@@ -20,6 +20,26 @@ from maskrcnn_benchmark.modeling.rrpn.utils import \
     get_boxlist_rotated_rect_tensor, concat_box_prediction_layers
 
 
+def normalize_reg_targets(reg_targets):
+    dims = reg_targets.shape
+    assert len(dims) == 2 and dims[1] == 5
+
+    reg_angles = reg_targets[:, -1]
+    reg_angles_sign = (reg_angles > 0).to(torch.float32)
+    reg_angles_sign[reg_angles_sign == 0] = -1
+    reg_angles_abs = torch.abs(reg_angles)
+    gt_45 = reg_angles_abs > 0.7854 # np.deg2rad(45)
+    gt_135 = reg_angles_abs > 2.3561 # np.deg2rad(135)
+    lt_135 = ~gt_135 # np.deg2rad(135)
+    gt_45_lt_135 = gt_45 * lt_135
+
+    reg_targets[gt_45_lt_135, -1] -= reg_angles_sign[gt_45_lt_135] * 1.5708 # np.deg2rad(90)
+    xd = reg_targets[gt_45_lt_135, 2:4]
+    reg_targets[gt_45_lt_135, 2] = xd[:, 1]
+    reg_targets[gt_45_lt_135, 3] = xd[:, 0]
+    reg_targets[gt_135, -1] -= reg_angles_sign[gt_135] * 3.1416 # np.deg2rad(180)
+
+
 class RPNLossComputation(object):
     """
     This class computes the RPN loss.
@@ -56,11 +76,6 @@ class RPNLossComputation(object):
         target_tensor = get_boxlist_rotated_rect_tensor(target, masks_field, rrects_field)
 
         match_quality_matrix = rotate_iou(target_tensor, anchor_tensor)
-
-        # CUSTOM LOGIC: SET ALL ANCHORS VS TARGETS WITH ROTATION DIFF > angle threshold TO IOU OF 0 (to prevent rotation ambiguity)
-        ANGLE_THRESH = 45 # degrees
-        angle_diffs = torch.abs(target_tensor[:,-1].unsqueeze(-1) - anchor_tensor[:, -1])
-        match_quality_matrix[angle_diffs >= ANGLE_THRESH] = 0
 
         matched_idxs = self.proposal_matcher(match_quality_matrix)
         # RPN doesn't need any fields from target
@@ -100,9 +115,11 @@ class RPNLossComputation(object):
                 inds_to_discard = matched_idxs == Matcher.BETWEEN_THRESHOLDS
                 labels_per_image[inds_to_discard] = -1
 
+            target_rrects = matched_targets.get_field("rrects")
+            anchor_rrects = anchors_per_image.get_field("rrects")
             # compute regression targets
             regression_targets_per_image = self.box_coder.encode(
-                matched_targets.get_field("rrects"), anchors_per_image.get_field("rrects")
+                target_rrects, anchor_rrects
             )
 
             labels.append(labels_per_image)
@@ -146,15 +163,16 @@ class RPNLossComputation(object):
 
         pos_regression = box_regression[sampled_pos_inds]
         pos_regression_targets = regression_targets[sampled_pos_inds]
+        normalize_reg_targets(pos_regression_targets)
         box_loss = smooth_l1_loss(
-            pos_regression[:, :-1],
-            pos_regression_targets[:, :-1],
+            pos_regression,#[:, :-1],
+            pos_regression_targets,#[:, :-1],
             beta=1.0 / 9,
             size_average=False,
         )
         box_loss = box_loss / total_pos
 
-        angle_loss = torch.abs(torch.sin(pos_regression[:, -1] - pos_regression_targets[:, -1])).mean()
+        angle_loss = 0 # 0.5 * torch.abs(torch.sin(pos_regression[:, -1] - pos_regression_targets[:, -1])).mean()
 
         # balance negative and positive weights
         sampled_labels = labels[sampled_inds]

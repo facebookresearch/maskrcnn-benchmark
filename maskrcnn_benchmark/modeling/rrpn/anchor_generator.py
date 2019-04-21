@@ -17,7 +17,8 @@ class AnchorGenerator(torch.nn.Module):
             aspect_ratios=(0.5, 1.0, 2.0),
             anchor_strides=(16),
             anchor_angles=(-90),
-            straddle_thresh=0
+            straddle_thresh=0,
+            make_width_larger=True
     ):
         super(AnchorGenerator, self).__init__()
         sizes = anchor_sizes
@@ -45,6 +46,8 @@ class AnchorGenerator(torch.nn.Module):
         # self.cell_anchors = BufferList(cell_anchors)
         self.straddle_thresh = straddle_thresh
 
+        self.make_width_larger = make_width_larger
+
     def num_anchors_per_location(self):
         return [len(sizes) * len(self.aspect_ratios) * len(self.anchor_angles) for sizes in self.anchor_sizes]
 
@@ -55,7 +58,8 @@ class AnchorGenerator(torch.nn.Module):
         ):
             h = grid_size[0]  # * stride
             w = grid_size[1]  # * stride
-            anchor = generate_anchors(sizes, self.aspect_ratios, self.anchor_angles, h, w, stride)
+            anchor = generate_anchors(sizes, self.aspect_ratios, self.anchor_angles,
+                                      h, w, stride, make_width_larger=self.make_width_larger)
 
             anchors.append(torch.tensor(anchor, dtype=torch.float32, device=device))
             # anchors.append(anchor)
@@ -114,6 +118,7 @@ def make_anchor_generator(config):
     anchor_angles = CFG_RPN.ANCHOR_ANGLES
     straddle_thresh = CFG_RPN.STRADDLE_THRESH
 
+    assert len(anchor_angles) > 0, "Anchor angles cannot be empty"
     if CFG_RPN.USE_FPN:
         # raise NotImplementedError
         assert len(anchor_stride) == len(
@@ -121,8 +126,14 @@ def make_anchor_generator(config):
         ), "FPN should have len(ANCHOR_STRIDE) == len(ANCHOR_SIZES)"
     else:
         assert len(anchor_stride) == 1, "Non-FPN should have a single ANCHOR_STRIDE"
+
+    # check if goes beyond 90
+    min_angle = np.min(anchor_angles)
+    max_angle = np.max(anchor_angles)
+    make_width_larger = np.abs(max_angle - min_angle) > 90
     anchor_generator = AnchorGenerator(
-        anchor_sizes, aspect_ratios, anchor_stride, anchor_angles, straddle_thresh
+        anchor_sizes, aspect_ratios, anchor_stride,
+        anchor_angles, straddle_thresh, make_width_larger
     )
     return anchor_generator
 
@@ -171,7 +182,7 @@ def enum_ratios_and_thetas2(anchors, anchor_ratios, anchor_angles):
 # def generate_anchors(base_anchor_size, anchor_scales, anchor_ratios, anchor_angles,
 #                  height, width, stride):
 def generate_anchors(anchor_sizes, anchor_ratios, anchor_angles,
-                     height, width, stride):
+                     height, width, stride, make_width_larger=True):
     """
     returns anchors: (N, 5), each element is [x_center,y_center,width,height,angle]
     N = H * W * (len anchor_sizes * len anchor_ratios * len anchor_angles)
@@ -202,26 +213,28 @@ def generate_anchors(anchor_sizes, anchor_ratios, anchor_angles,
     box_parameters = np.reshape(box_parameters, [-1, 3])
     anchors = np.concatenate([anchor_centers, box_parameters], axis=1)
 
-    h_gt_w = anchors[:, 3] >= anchors[:, 2]
-    anchors[h_gt_w, 2:4] = anchors[h_gt_w, 2:4][:, :-1]  # always make width bigger than height
-    anchors[h_gt_w, -1] -= 90
-    anchors[anchors[:, -1] < -90, -1] += 180
-    anchors[anchors[:, -1] > 90, -1] -= 180
+    if make_width_larger:
+        h_gt_w = anchors[:, 3] >= anchors[:, 2]
+        anchors[h_gt_w, 2:4] = anchors[h_gt_w, 2:4][:, :-1]  # always make width bigger than height
+        anchors[h_gt_w, -1] -= 90
+        anchors[anchors[:, -1] < -90, -1] += 180
+        anchors[anchors[:, -1] > 90, -1] -= 180
 
     return anchors
 
 
-def convert_pts_to_rect(pts):
+def convert_pts_to_rect(pts, make_width_larger=True):
     rect1 = cv2.minAreaRect(pts)
 
     x, y, w, h, theta = rect1[0][0], rect1[0][1], rect1[1][0], rect1[1][1], rect1[2]
-    if h >= w:
-        h, w = w, h
-        theta = theta - 90
-    if theta < -90.0:
-        theta = theta + 180
-    elif theta > 90.0:
-        theta = theta - 180
+    if make_width_larger:
+        if h >= w:
+            h, w = w, h
+            theta = theta - 90
+        if theta < -90.0:
+            theta = theta + 180
+        elif theta > 90.0:
+            theta = theta - 180
     return (x, y, w, h, theta)
 
 
@@ -299,7 +312,7 @@ def draw_anchors(img, anchors, color_list=[], fill=False, line_sz=2):
     for ix, anchor in enumerate(anchors):
         color = color_list[ix]
         rect = anchor
-        if len(anchor) != 8:
+        if len(anchor) == 5:
             rect = convert_rect_to_pts(anchor)
         rect = np.round(rect).astype(np.int32)
         if fill:

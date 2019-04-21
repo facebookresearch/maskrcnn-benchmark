@@ -7,6 +7,9 @@ from torchvision.transforms import functional as TVF
 import numpy as np
 from transforms3d.quaternions import quat2mat#, mat2quat
 
+import os
+import os.path as osp
+
 import torch
 import torch.nn.functional as F
 
@@ -323,12 +326,15 @@ if __name__ == '__main__':
 
     CLASSES = ["__background__", "class_x"]
     # config_file = "./configs/rebin.yaml"
-    config_file = "./configs/loading_bbox.yaml"
+    config_file = "./configs/coco_rpn_only.yaml"
 
-    model_file = "./checkpoints/loading_bbox_rotated_rpn_only/model_final.pth"
-    image_dir = "/home/bot/LabelMe/Images/loading_test"
+    model_file = "./checkpoints/coco_rotated_rpn_only/model_final.pth"
+    # model_file = "./checkpoints/coco_rpn_only/model_final.pth"
+    image_dir = "datasets/coco/val2014"
     # image_files = ["mixed/temple_0/000885.left","mixed/temple_0/001774.left"]
     image_ext = ".jpg"
+    image_files = ["COCO_val2014_000000001000.jpg", "COCO_val2014_000000010012.jpg"]
+    image_files = [osp.join(image_dir, f) for f in image_files]
 
     cfg.merge_from_file(config_file)
     img_transformer = ImageTransformer(cfg)
@@ -356,7 +362,7 @@ if __name__ == '__main__':
 
     max_depth = 7
 
-    for image_file in glob.glob("%s/*%s"%(image_dir, image_ext)):
+    for image_file in image_files: #glob.glob("%s/*%s"%(image_dir, image_ext)):
     # for image_file in glob.glob("%s/*1-%s"%(image_dir, image_ext)):
     # for image_file in ["%s/%s%s"%(image_dir, f, image_ext) for f in image_files]:
         img = cv2.imread(image_file)
@@ -422,7 +428,7 @@ if __name__ == '__main__':
                 w_ratio = float(width) / pred_size[0]
                 h_ratio = float(height) / pred_size[1]
                 rrects = predictions.get_field("rrects")
-                rr = rrects.cpu().numpy()
+                rr = rrects.cpu().numpy().copy()
                 rr[:, 0] *= w_ratio
                 rr[:, 2] *= w_ratio
                 rr[:, 1] *= h_ratio
