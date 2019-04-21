@@ -60,6 +60,12 @@ _C.INPUT.TO_BGR255 = True
 # Probability of flipping image horizontally during training
 _C.INPUT.FLIP_PROB_TRAIN = 0.5
 
+# Image ColorJitter
+_C.INPUT.BRIGHTNESS = 0.0
+_C.INPUT.CONTRAST = 0.0
+_C.INPUT.SATURATION = 0.0
+_C.INPUT.HUE = 0.0
+
 
 # -----------------------------------------------------------------------------
 # Dataset
@@ -165,6 +171,9 @@ _C.MODEL.RPN.MIN_SIZE = 0
 # all FPN levels
 _C.MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN = 2000
 _C.MODEL.RPN.FPN_POST_NMS_TOP_N_TEST = 2000
+# Apply the post NMS per batch (default) or per image during training
+# (default is True to be consistent with Detectron, see Issue #672)
+_C.MODEL.RPN.FPN_POST_NMS_PER_BATCH = True
 # Custom rpn head, empty to use default conv or separable conv
 _C.MODEL.RPN.RPN_HEAD = "SingleConvRPNHead"
 
@@ -340,6 +349,10 @@ _C.MODEL.RESNETS.BACKBONE_OUT_CHANNELS = 256 * 4
 _C.MODEL.RESNETS.RES2_OUT_CHANNELS = 256
 _C.MODEL.RESNETS.STEM_OUT_CHANNELS = 64
 
+_C.MODEL.RESNETS.STAGE_WITH_DCN = (False, False, False, False)
+_C.MODEL.RESNETS.WITH_MODULATED_DCN = False
+_C.MODEL.RESNETS.DEFORMABLE_GROUPS = 1
+
 
 # ---------------------------------------------------------------------------- #
 # RetinaNet Options (Follow the Detectron version)
@@ -488,3 +501,13 @@ _C.TEST.DETECTIONS_PER_IMG = 100
 _C.OUTPUT_DIR = "."
 
 _C.PATHS_CATALOG = os.path.join(os.path.dirname(__file__), "paths_catalog.py")
+
+# ---------------------------------------------------------------------------- #
+# Precision options
+# ---------------------------------------------------------------------------- #
+
+# Precision of input, allowable: (float32, float16)
+_C.DTYPE = "float32"
+
+# Enable verbosity in apex.amp
+_C.AMP_VERBOSE = False

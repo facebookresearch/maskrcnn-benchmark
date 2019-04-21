@@ -34,3 +34,6 @@ checkpoints
 log.txt
 inference/*
 runs/*
+
+/output
+

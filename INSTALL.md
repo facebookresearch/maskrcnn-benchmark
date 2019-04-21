@@ -7,7 +7,7 @@
 - yacs
 - matplotlib
 - GCC >= 4.9
-- (optional) OpenCV for the webcam demo
+- OpenCV
 
 
 ### Option 1: Step-by-step installation
@@ -24,7 +24,7 @@ conda activate maskrcnn_benchmark
 conda install ipython
 
 # maskrcnn_benchmark and coco api dependencies
-pip install ninja yacs cython matplotlib tqdm
+pip install ninja yacs cython matplotlib tqdm opencv-python
 
 # follow PyTorch installation in https://pytorch.org/get-started/locally/
 # we give the instructions for CUDA 9.0
@@ -37,6 +37,12 @@ cd $INSTALL_DIR
 git clone https://github.com/cocodataset/cocoapi.git
 cd cocoapi/PythonAPI
 python setup.py build_ext install
+
+# install apex
+cd $INSTALL_DIR
+git clone https://github.com/NVIDIA/apex.git
+cd apex
+python setup.py install --cuda_ext --cpp_ext
 
 # install PyTorch Detection
 cd $INSTALL_DIR
