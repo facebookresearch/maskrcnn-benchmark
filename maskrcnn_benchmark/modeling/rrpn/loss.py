@@ -20,25 +20,29 @@ from maskrcnn_benchmark.modeling.rrpn.utils import \
     get_boxlist_rotated_rect_tensor, concat_box_prediction_layers
 
 
-def normalize_reg_targets(reg_targets):
-    dims = reg_targets.shape
-    assert len(dims) == 2 and dims[1] == 5
+def compute_reg_targets(targets, anchors, box_coder):
+    dims = targets.shape
+    assert len(dims) == 2 and dims[1] == 5 and anchors.shape == dims
 
-    reg_angles = reg_targets[:, -1]
+    reg_angles = targets[:, -1] - anchors[:, -1]
     reg_angles_sign = (reg_angles > 0).to(torch.float32)
     reg_angles_sign[reg_angles_sign == 0] = -1
     reg_angles_abs = torch.abs(reg_angles)
-    gt_45 = reg_angles_abs > 0.7854 # np.deg2rad(45)
-    gt_135 = reg_angles_abs > 2.3561 # np.deg2rad(135)
-    lt_135 = ~gt_135 # np.deg2rad(135)
-    gt_45_lt_135 = gt_45 * lt_135
+    gt_45 = reg_angles_abs > 45 # np.deg2rad(45) # TODO: ASSUMES ANGLES ARE ONLY -90 to 0
 
-    reg_targets[gt_45_lt_135, -1] -= reg_angles_sign[gt_45_lt_135] * 1.5708 # np.deg2rad(90)
-    xd = reg_targets[gt_45_lt_135, 2:4]
-    reg_targets[gt_45_lt_135, 2] = xd[:, 1]
-    reg_targets[gt_45_lt_135, 3] = xd[:, 0]
-    reg_targets[gt_135, -1] -= reg_angles_sign[gt_135] * 3.1416 # np.deg2rad(180)
+    # targets_copy = targets.clone()
+    targets[gt_45, -1] -= reg_angles_sign[gt_45] * 90 # np.deg2rad(90)
 
+    xd = targets[gt_45, 2:4]
+    targets[gt_45, 2] = xd[:, 1]
+    targets[gt_45, 3] = xd[:, 0]
+
+    # compute regression targets
+    reg_targets = box_coder.encode(
+        targets, anchors
+    )
+
+    return reg_targets
 
 class RPNLossComputation(object):
     """
@@ -117,9 +121,10 @@ class RPNLossComputation(object):
 
             target_rrects = matched_targets.get_field("rrects")
             anchor_rrects = anchors_per_image.get_field("rrects")
+
             # compute regression targets
-            regression_targets_per_image = self.box_coder.encode(
-                target_rrects, anchor_rrects
+            regression_targets_per_image = compute_reg_targets(
+                target_rrects, anchor_rrects, self.box_coder
             )
 
             labels.append(labels_per_image)
@@ -163,16 +168,16 @@ class RPNLossComputation(object):
 
         pos_regression = box_regression[sampled_pos_inds]
         pos_regression_targets = regression_targets[sampled_pos_inds]
-        normalize_reg_targets(pos_regression_targets)
+        # normalize_reg_targets(pos_regression_targets)
         box_loss = smooth_l1_loss(
-            pos_regression[:, :-1],
-            pos_regression_targets[:, :-1],
+            pos_regression,#[:, :-1],
+            pos_regression_targets,#[:, :-1],
             beta=1.0 / 9,
             size_average=False,
         )
         box_loss = box_loss / total_pos
 
-        angle_loss = torch.abs(torch.sin(pos_regression[:, -1] - pos_regression_targets[:, -1])).mean()
+        angle_loss = 0 #torch.abs(torch.sin(pos_regression[:, -1] - pos_regression_targets[:, -1])).mean()
 
         # balance negative and positive weights
         sampled_labels = labels[sampled_inds]

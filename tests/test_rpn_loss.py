@@ -6,7 +6,7 @@ from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.data import make_data_loader
 
 from maskrcnn_benchmark.modeling.rrpn.inference import make_rpn_postprocessor, REGRESSION_CN
-from maskrcnn_benchmark.modeling.rrpn.loss import make_rpn_loss_evaluator, normalize_reg_targets
+from maskrcnn_benchmark.modeling.rrpn.loss import make_rpn_loss_evaluator
 
 from maskrcnn_benchmark.modeling.rotated_box_coder import BoxCoder
 
@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
     print(num_anchors)
 
-    box_coder = BoxCoder(weights=cfg.MODEL.RPN.BBOX_REG_WEIGHTS)
+    box_coder = BoxCoder(weights=None) #cfg.MODEL.RPN.BBOX_REG_WEIGHTS)
     fg_bg_sampler = BalancedPositiveNegativeSampler(
         cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE, cfg.MODEL.RPN.POSITIVE_FRACTION
     )
@@ -118,16 +118,17 @@ if __name__ == '__main__':
             cumu_cnt += cnt
 
             anchor_rrects = pos_anchors.get_field("rrects")
+            rr = anchor_rrects.cpu().numpy()
+            # print(rr)
 
             assert reg_targets.shape == anchor_rrects.shape
-            normalize_reg_targets(reg_targets)
 
             # reg_targets[gt_135, -1] = 0
 
             # reg_targets[:, -1] = reg_targets_angles
+            print(np.rad2deg(reg_targets[:, -1]))
             proposals = box_coder.decode(reg_targets, anchor_rrects).cpu().numpy()
 
-            rr = anchor_rrects.cpu().numpy()
             img = img_t.cpu().numpy()
             img = np.transpose(img, [1,2,0]).copy()
             # img = img[:,:,::-1]  # rgb to bgr

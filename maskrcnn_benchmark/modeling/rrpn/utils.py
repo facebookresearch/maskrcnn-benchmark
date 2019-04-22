@@ -63,7 +63,8 @@ def get_segmentation_mask_rotated_rect_tensor(seg_mask):
 
     for ix,poly in enumerate(polygons):
         pp = torch.cat([p.view(-1, 2) for p in poly])  # merge all subpolygons into one polygon
-        rrect = convert_pts_to_rect(pp.cpu().numpy())  # convert the polygon into a rotated rect
+        # TODO: MAKE CONFIGURABLE: make_width_larger?
+        rrect = convert_pts_to_rect(pp.cpu().numpy(), make_width_larger=False)  # convert the polygon into a rotated rect
         for i in range(5):
             rrect_tensor[ix,i] = rrect[i]
 
