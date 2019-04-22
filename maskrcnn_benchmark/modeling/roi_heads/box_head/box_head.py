@@ -20,6 +20,7 @@ class ROIBoxHead(torch.nn.Module):
             cfg, self.feature_extractor.out_channels)
         self.post_processor = make_roi_box_post_processor(cfg)
         self.loss_evaluator = make_roi_box_loss_evaluator(cfg)
+        self.ohem = cfg.MODEL.ROI_HEADS.OHEM
 
     def forward(self, features, proposals, targets=None):
         """
@@ -41,6 +42,12 @@ class ROIBoxHead(torch.nn.Module):
             # positive / negative ratio
             with torch.no_grad():
                 proposals = self.loss_evaluator.subsample(proposals, targets)
+                if self.ohem:
+                    x = self.feature_extractor(features, proposals)
+                    class_logits, box_regression = self.predictor(x)
+                    proposals = self.loss_evaluator.mining(
+                        [class_logits], [box_regression]
+                    )
 
         # extract features that will be fed to the final classifier. The
         # feature_extractor generally corresponds to the pooler + heads
