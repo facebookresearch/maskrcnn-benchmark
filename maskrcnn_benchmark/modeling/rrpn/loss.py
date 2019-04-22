@@ -12,13 +12,22 @@ from torch.nn import functional as F
 from ..balanced_positive_negative_sampler import BalancedPositiveNegativeSampler
 # from ..utils import cat
 
-from maskrcnn_benchmark.layers import smooth_l1_loss
+# from maskrcnn_benchmark.layers import smooth_l1_loss
 from maskrcnn_benchmark.modeling.matcher import Matcher
 from maskrcnn_benchmark.modeling.rotate_ops import rotate_iou
 from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
 from maskrcnn_benchmark.modeling.rrpn.utils import \
     get_boxlist_rotated_rect_tensor, concat_box_prediction_layers
 
+def smooth_l1_loss(input, target, beta=1. / 9):
+    """
+    very similar to the smooth_l1_loss from pytorch, but with
+    the extra beta parameter
+    """
+    n = torch.abs(input - target)
+    cond = n < beta
+    loss = torch.where(cond, 0.5 * n ** 2 / beta, n - 0.5 * beta)
+    return loss
 
 def compute_reg_targets(targets, anchors, box_coder):
     dims = targets.shape
@@ -97,6 +106,7 @@ class RPNLossComputation(object):
     def prepare_targets(self, anchors, targets):
         labels = []
         regression_targets = []
+        matched_gt_ids_per_image = []
         for anchors_per_image, targets_per_image in zip(anchors, targets):
             matched_targets = self.match_targets_to_anchors(
                 anchors_per_image, targets_per_image, self.copied_fields
@@ -129,8 +139,9 @@ class RPNLossComputation(object):
 
             labels.append(labels_per_image)
             regression_targets.append(regression_targets_per_image)
+            matched_gt_ids_per_image.append(matched_idxs)
 
-        return labels, regression_targets
+        return labels, regression_targets, matched_gt_ids_per_image
 
 
     def __call__(self, anchors, objectness, box_regression, targets):
@@ -148,7 +159,7 @@ class RPNLossComputation(object):
 
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]
 
-        labels, regression_targets = self.prepare_targets(anchors, targets)
+        labels, regression_targets, matched_gt_ids = self.prepare_targets(anchors, targets)
 
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
         sampled_pos_inds = torch.nonzero(torch.cat(sampled_pos_inds, dim=0)).squeeze(1)
@@ -166,6 +177,23 @@ class RPNLossComputation(object):
         labels = torch.cat(labels, dim=0)
         regression_targets = torch.cat(regression_targets, dim=0)
 
+        with torch.no_grad():
+            start_gt_idx = 0
+            for ix, t in enumerate(targets):
+                matched_gt_ids[ix] += start_gt_idx
+                start_gt_idx += len(t)
+
+            matched_gt_ids = torch.cat(matched_gt_ids)
+            pos_matched_gt_ids = matched_gt_ids[sampled_pos_inds]
+
+            label_cnts = torch.stack([(pos_matched_gt_ids == x).sum() for x in range(start_gt_idx)])
+            label_weights = total_pos / label_cnts.to(dtype=torch.float32)
+            label_weights /= start_gt_idx  # equal class weighting
+            pos_label_weights = torch.zeros_like(pos_matched_gt_ids, dtype=torch.float32)
+            for x in range(start_gt_idx):
+                if label_cnts[x] > 0:
+                    pos_label_weights[pos_matched_gt_ids==x] = label_weights[x]
+
         pos_regression = box_regression[sampled_pos_inds]
         pos_regression_targets = regression_targets[sampled_pos_inds]
         # normalize_reg_targets(pos_regression_targets)
@@ -173,16 +201,15 @@ class RPNLossComputation(object):
             pos_regression,#[:, :-1],
             pos_regression_targets,#[:, :-1],
             beta=1.0 / 9,
-            size_average=False,
         )
-        box_loss = box_loss / total_pos
+        box_loss = (box_loss * pos_label_weights.unsqueeze(1)).sum() / total_pos
 
         angle_loss = 0 #torch.abs(torch.sin(pos_regression[:, -1] - pos_regression_targets[:, -1])).mean()
 
         # balance negative and positive weights
         sampled_labels = labels[sampled_inds]
         objectness_weights = torch.ones_like(sampled_labels)
-        objectness_weights[sampled_labels == 1] = 0.5 * 1.0 / total_pos
+        objectness_weights[sampled_labels == 1] = 0.5 * pos_label_weights / total_pos
         objectness_weights[sampled_labels != 1] = 0.5 * 1.0 / total_neg
 
         criterion = torch.nn.BCELoss(reduce=False)

@@ -74,7 +74,7 @@ if __name__ == '__main__':
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]
         anchors_cnt = [len(a) for a in anchors]
 
-        labels, regression_targets = loss_evaluator.prepare_targets(anchors, targets)
+        labels, regression_targets, matched_gt_ids = loss_evaluator.prepare_targets(anchors, targets)
 
         sampled_pos_inds, sampled_neg_inds = fg_bg_sampler(labels)
 
@@ -89,6 +89,13 @@ if __name__ == '__main__':
         cumu_cnt = 0
 
         regression_targets = torch.cat(regression_targets, dim=0)#.cpu().numpy()
+
+        start_gt_idx = 0
+        for ix, t in enumerate(targets):
+            matched_gt_ids[ix] += start_gt_idx
+            start_gt_idx += len(t)
+
+        matched_gt_ids = torch.cat(matched_gt_ids)
 
         img_tensors = images.tensors
 
@@ -114,6 +121,7 @@ if __name__ == '__main__':
 
             pos_anchors = anchors[ix][inds - cumu_cnt]
             reg_targets = regression_targets[inds]
+            reg_target_gt_inds = matched_gt_ids[inds]
 
             cumu_cnt += cnt
 
@@ -127,6 +135,7 @@ if __name__ == '__main__':
 
             # reg_targets[:, -1] = reg_targets_angles
             print(np.rad2deg(reg_targets[:, -1]))
+            print(reg_target_gt_inds)
             proposals = box_coder.decode(reg_targets, anchor_rrects).cpu().numpy()
 
             img = img_t.cpu().numpy()
