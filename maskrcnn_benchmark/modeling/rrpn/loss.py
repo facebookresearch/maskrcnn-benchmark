@@ -99,14 +99,19 @@ class RPNLossComputation(object):
         # NB: need to clamp the indices because we can have a single
         # GT in the image, and matched_idxs can be -2, which goes
         # out of bounds
-        matched_targets = target[matched_idxs.clamp(min=0)]
+        matched_idxs_clamped = matched_idxs.clamp(min=0)
+        matched_targets = target[matched_idxs_clamped]
+        matched_ious = match_quality_matrix[matched_idxs_clamped,
+                        torch.arange(len(anchor_tensor), device=anchor_tensor.device)]
         matched_targets.add_field("matched_idxs", matched_idxs)
+        matched_targets.add_field("matched_ious", matched_ious)
         return matched_targets
 
     def prepare_targets(self, anchors, targets):
         labels = []
         regression_targets = []
         matched_gt_ids_per_image = []
+        matched_gt_ious_per_image = []
         for anchors_per_image, targets_per_image in zip(anchors, targets):
             matched_targets = self.match_targets_to_anchors(
                 anchors_per_image, targets_per_image, self.copied_fields
@@ -140,8 +145,9 @@ class RPNLossComputation(object):
             labels.append(labels_per_image)
             regression_targets.append(regression_targets_per_image)
             matched_gt_ids_per_image.append(matched_idxs)
+            matched_gt_ious_per_image.append(matched_targets.get_field("matched_ious"))
 
-        return labels, regression_targets, matched_gt_ids_per_image
+        return labels, regression_targets, matched_gt_ids_per_image, matched_gt_ious_per_image
 
 
     def __call__(self, anchors, objectness, box_regression, targets):
@@ -159,7 +165,8 @@ class RPNLossComputation(object):
 
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]
 
-        labels, regression_targets, matched_gt_ids = self.prepare_targets(anchors, targets)
+        labels, regression_targets, matched_gt_ids, \
+            matched_gt_ious = self.prepare_targets(anchors, targets)
 
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
         sampled_pos_inds = torch.nonzero(torch.cat(sampled_pos_inds, dim=0)).squeeze(1)
@@ -186,13 +193,14 @@ class RPNLossComputation(object):
             matched_gt_ids = torch.cat(matched_gt_ids)
             pos_matched_gt_ids = matched_gt_ids[sampled_pos_inds]
 
-            label_cnts = torch.stack([(pos_matched_gt_ids == x).sum() for x in range(start_gt_idx)])
+            label_idxs = [(pos_matched_gt_ids == x) for x in range(start_gt_idx)]
+            label_cnts = torch.stack([li.sum() for li in label_idxs])
             label_weights = total_pos / label_cnts.to(dtype=torch.float32)
             label_weights /= start_gt_idx  # equal class weighting
             pos_label_weights = torch.zeros_like(pos_matched_gt_ids, dtype=torch.float32)
             for x in range(start_gt_idx):
                 if label_cnts[x] > 0:
-                    pos_label_weights[pos_matched_gt_ids==x] = label_weights[x]
+                    pos_label_weights[label_idxs[x]] = label_weights[x]
 
         pos_regression = box_regression[sampled_pos_inds]
         pos_regression_targets = regression_targets[sampled_pos_inds]
