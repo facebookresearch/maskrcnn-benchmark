@@ -422,4 +422,5 @@ _C.OUTPUT_DIR = "."
 
 _C.PATHS_CATALOG = os.path.join(os.path.dirname(__file__), "paths_catalog.py")
 
-_C.TENSORBOARD_EXPERIMENT = "logs/maskrcnn-benchmark"  # tensorboard experiment location
+# TensorBoard experiment location
+_C.TENSORBOARD_EXPERIMENT = "logs/maskrcnn-benchmark"
