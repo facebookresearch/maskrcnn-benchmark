@@ -72,6 +72,24 @@ class RandomHorizontalFlip(object):
         return image, target
 
 
+class ColorJitter(object):
+    def __init__(self,
+                 brightness=None,
+                 contrast=None,
+                 saturation=None,
+                 hue=None,
+                 ):
+        self.color_jitter = torchvision.transforms.ColorJitter(
+            brightness=brightness,
+            contrast=contrast,
+            saturation=saturation,
+            hue=hue,)
+
+    def __call__(self, image, target):
+        image = self.color_jitter(image)
+        return image, target
+
+
 class ToTensor(object):
     def __call__(self, image, target):
         return F.to_tensor(image), target
