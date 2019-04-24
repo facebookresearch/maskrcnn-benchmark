@@ -193,14 +193,37 @@ class RPNLossComputation(object):
             matched_gt_ids = torch.cat(matched_gt_ids)
             pos_matched_gt_ids = matched_gt_ids[sampled_pos_inds]
 
-            label_idxs = [(pos_matched_gt_ids == x) for x in range(start_gt_idx)]
-            label_cnts = torch.stack([li.sum() for li in label_idxs])
-            label_weights = total_pos / label_cnts.to(dtype=torch.float32)
-            label_weights /= start_gt_idx  # equal class weighting
+            matched_gt_ious = torch.cat(matched_gt_ious)
+            pos_matched_gt_ious = matched_gt_ious[sampled_pos_inds]
+
             pos_label_weights = torch.zeros_like(pos_matched_gt_ids, dtype=torch.float32)
+
+            label_idxs = [torch.nonzero(pos_matched_gt_ids == x).squeeze() for x in range(start_gt_idx)]
+
+            # """OLD"""
+            label_cnts = [li.numel() for li in label_idxs]
+            # label_weights = total_pos / label_cnts.to(dtype=torch.float32)
+            # label_weights /= start_gt_idx  # equal class weighting
             for x in range(start_gt_idx):
                 if label_cnts[x] > 0:
-                    pos_label_weights[label_idxs[x]] = label_weights[x]
+                    pos_label_weights[label_idxs[x]] = total_pos / label_cnts[x] / start_gt_idx  # equal class weighting
+
+            # # """NEW"""
+            # MAX_GT_NUM = 6  # TODO: CONFIG
+            # label_cnts = [min(MAX_GT_NUM, nz.numel()) for nz in label_idxs]
+            # total_pos = sum(label_cnts)
+            # for x in range(start_gt_idx):
+            #     nz = label_idxs[x]
+            #     nnn = nz.numel()
+            #     if nnn <= MAX_GT_NUM:
+            #         if nnn > 0:
+            #             pos_label_weights[nz] = total_pos / nnn
+            #         continue
+            #     top_iou_ids = torch.sort(pos_matched_gt_ious[nz], descending=True)[1][:MAX_GT_NUM]
+            #     inds = nz[top_iou_ids]
+            #     pos_label_weights[inds] = total_pos / MAX_GT_NUM
+            #
+            # pos_label_weights = pos_label_weights / start_gt_idx
 
         pos_regression = box_regression[sampled_pos_inds]
         pos_regression_targets = regression_targets[sampled_pos_inds]

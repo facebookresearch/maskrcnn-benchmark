@@ -41,6 +41,7 @@ if __name__ == '__main__':
     except KeyError as e:
         print(e)
     cfg.INPUT.PIXEL_MEAN = [0,0,0]
+    # cfg.MODEL.RPN.ANCHOR_STRIDE = (32,)
     cfg.freeze()
 
     data_loader = make_data_loader(
@@ -105,6 +106,25 @@ if __name__ == '__main__':
 
         # pos_regression_targets = regression_targets[sampled_pos_inds]
         # print(np.rad2deg(pos_regression_targets[:,-1]))
+        device = matched_gt_ids.device
+
+        pos_matched_gt_ids = matched_gt_ids[sampled_pos_inds]
+        pos_matched_gt_ious = matched_gt_ious[sampled_pos_inds]
+        label_idxs = [torch.nonzero(pos_matched_gt_ids == x).squeeze() for x in range(start_gt_idx)]
+        label_weights = torch.zeros_like(pos_matched_gt_ids, dtype=torch.float32)
+        MAX_GT_NUM = 10
+        label_cnts = [min(MAX_GT_NUM, nz.numel()) for nz in label_idxs]
+        total_pos = sum(label_cnts)
+        for x in range(start_gt_idx):
+            nz = label_idxs[x]
+            if nz.numel() <= MAX_GT_NUM:
+                label_weights[nz] = total_pos / nz.numel()
+                continue
+            top_iou_ids = torch.sort(pos_matched_gt_ious[nz], descending=True)[1][:MAX_GT_NUM]
+            inds = nz[top_iou_ids]
+            label_weights[inds] = total_pos / MAX_GT_NUM
+
+        #                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       = total_pos / label_cnts.to(dtype=torch.float32)
 
         for ix,cnt in enumerate(anchors_cnt):
             gt = targets[ix]
