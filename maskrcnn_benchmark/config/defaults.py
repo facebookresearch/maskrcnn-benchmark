@@ -67,6 +67,7 @@ _C.INPUT.HUE = 0.0
 _C.DATASETS = CN()
 # List of the dataset names for training, as present in paths_catalog.py
 _C.DATASETS.TRAIN = ()
+_C.DATASETS.VAL = ()
 # List of the dataset names for testing, as present in paths_catalog.py
 _C.DATASETS.TEST = ()
 

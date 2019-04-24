@@ -71,6 +71,13 @@ def train(cfg, local_rank, distributed):
         is_distributed=distributed,
         start_iter=arguments["iteration"],
     )
+    data_loader_val = make_data_loader(
+        cfg,
+        is_train=True,
+        is_val=True,
+        is_distributed=distributed,
+        start_iter=arguments["iteration"],
+    )
 
     checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
 
@@ -83,6 +90,7 @@ def train(cfg, local_rank, distributed):
         device,
         checkpoint_period,
         arguments,
+        data_loader_val,
     )
 
     return model

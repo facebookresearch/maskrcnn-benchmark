@@ -7,6 +7,14 @@ import os
 class DatasetCatalog(object):
     DATA_DIR = "datasets"
     DATASETS = {
+        "coco_lip_2019_train": {
+            "img_dir": "/data/LIP/train_images",
+            "ann_file": "/data/LIP/annotations/train.json"
+        },
+        "coco_lip_2019_val": {
+            "img_dir": "/data/LIP/val_images",
+            "ann_file": "/data/LIP/annotations/val.json"
+        },
         "coco_2017_train": {
             "img_dir": "coco/train2017",
             "ann_file": "coco/annotations/instances_train2017.json"

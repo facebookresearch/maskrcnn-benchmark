@@ -11,6 +11,8 @@ from maskrcnn_benchmark.utils.metric_logger import MetricLogger
 
 from apex import amp
 
+from tensorboardX import SummaryWriter
+
 def reduce_loss_dict(loss_dict):
     """
     Reduce the loss dictionary from all processes so that process with rank
@@ -45,7 +47,10 @@ def do_train(
     device,
     checkpoint_period,
     arguments,
+    data_loader_val,
 ):
+    writer_train = SummaryWriter('/notebooks/tbx/run1/train')
+    writer_valid = SummaryWriter('/notebooks/tbx/run1/valid')
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
     logger.info("Start training")
     meters = MetricLogger(delimiter="  ")
@@ -105,8 +110,25 @@ def do_train(
                     memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
                 )
             )
+            for k, v in meters.meters.items():
+                writer_train.add_scalar(k, v.median, iteration)
         if iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
+            if data_loader_val is not None:
+                meters_val = MetricLogger(delimiter="  ")
+                with torch.no_grad():
+                    for idx_val, (images_val, targets_val, _) in enumerate(data_loader_val):
+                        if idx_val == 100:
+                            break
+                        images_val = images_val.to(device)
+                        targets_val = [target.to(device) for target in targets_val]
+                        loss_dict = model(images_val, targets_val)
+                        losses = sum(loss for loss in loss_dict.values())
+                        loss_dict_reduced = reduce_loss_dict(loss_dict)
+                        losses_reduced = sum(loss for loss in loss_dict_reduced.values())
+                        meters_val.update(loss=losses_reduced, **loss_dict_reduced)
+                for k, v in meters_val.meters.items():
+                    writer_valid.add_scalar(k, v.median, iteration)
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)
 
