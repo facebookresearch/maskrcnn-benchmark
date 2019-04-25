@@ -10,9 +10,9 @@ from yacs.config import CfgNode as CN
 # Whenever an argument can be either used for training or for testing, the
 # corresponding name will be post-fixed by a _TRAIN for a training parameter,
 # or _TEST for a test-specific parameter.
-# For example, the number of images during training will be
-# IMAGES_PER_BATCH_TRAIN, while the number of images for testing will be
-# IMAGES_PER_BATCH_TEST
+# For example, the maximum image side during training will be
+# INPUT.MAX_SIZE_TRAIN, while for testing it will be
+# INPUT.MAX_SIZE_TEST
 
 # -----------------------------------------------------------------------------
 # Config definition
