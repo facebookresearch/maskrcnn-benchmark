@@ -127,9 +127,18 @@ class DFConv2d(nn.Module):
     ):
         super(DFConv2d, self).__init__()
         if isinstance(kernel_size, (list, tuple)):
+            assert isinstance(stride, (list, tuple))
+            assert isinstance(dilation, (list, tuple))
             assert len(kernel_size) == 2
+            assert len(stride) == 2
+            assert len(dilation) == 2
+            padding = (
+                dilation[0] * (kernel_size[0] - 1) // 2,
+                dilation[1] * (kernel_size[1] - 1) // 2
+            )
             offset_base_channels = kernel_size[0] * kernel_size[1]
         else:
+            padding = dilation * (kernel_size - 1) // 2
             offset_base_channels = kernel_size * kernel_size
         if with_modulated_dcn:
             from maskrcnn_benchmark.layers import ModulatedDeformConv
@@ -143,8 +152,8 @@ class DFConv2d(nn.Module):
             in_channels,
             deformable_groups * offset_channels,
             kernel_size=kernel_size,
-            stride= stride,
-            padding= dilation,
+            stride=stride,
+            padding=padding,
             groups=1,
             dilation=dilation
         )           
@@ -155,8 +164,8 @@ class DFConv2d(nn.Module):
             in_channels,
             out_channels,
             kernel_size=kernel_size,
-            stride= stride,
-            padding=dilation,
+            stride=stride,
+            padding=padding,
             dilation=dilation,
             groups=groups,
             deformable_groups=deformable_groups,
@@ -165,7 +174,7 @@ class DFConv2d(nn.Module):
         self.with_modulated_dcn = with_modulated_dcn
         self.kernel_size = kernel_size
         self.stride = stride
-        self.padding = dilation
+        self.padding = padding
         self.dilation = dilation
 
     def forward(self, x):
