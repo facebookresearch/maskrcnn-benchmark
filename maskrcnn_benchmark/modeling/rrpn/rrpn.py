@@ -203,5 +203,6 @@ class RRPNModule(torch.nn.Module):
 
 
 def build_rrpn(cfg, in_channels):
+    assert cfg.MODEL.ROTATED
 
     return RRPNModule(cfg, in_channels)

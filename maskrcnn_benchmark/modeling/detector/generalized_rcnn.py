@@ -9,8 +9,26 @@ from torch import nn
 from maskrcnn_benchmark.structures.image_list import to_image_list
 
 from ..backbone import build_backbone
-from ..rpn.rpn import build_rpn
-from ..roi_heads.roi_heads import build_roi_heads
+
+
+def make_rpn(cfg, channels):
+    if cfg.MODEL.ROTATED:
+        from ..rrpn.rrpn import build_rrpn
+        return build_rrpn(cfg, channels)
+    else:
+        from ..rpn.rpn import build_rpn
+        return build_rpn(cfg, channels)
+
+
+def make_roi_heads(cfg, channels):
+    if not cfg.MODEL.ROTATED:
+        from ..roi_heads.roi_heads import build_roi_heads
+        return build_roi_heads(cfg, channels)
+    else:
+        if not cfg.MODEL.RPN_ONLY:
+            raise NotImplementedError("ROI Heads not implemented for Rotated!")
+        roi_heads = []  # TODO: IMPLEMENT
+        return roi_heads
 
 
 class GeneralizedRCNN(nn.Module):
@@ -27,8 +45,8 @@ class GeneralizedRCNN(nn.Module):
         super(GeneralizedRCNN, self).__init__()
 
         self.backbone = build_backbone(cfg)
-        self.rpn = build_rpn(cfg, self.backbone.out_channels)
-        self.roi_heads = build_roi_heads(cfg, self.backbone.out_channels)
+        self.rpn = make_rpn(cfg, self.backbone.out_channels)
+        self.roi_heads = make_roi_heads(cfg, self.backbone.out_channels)
 
     def forward(self, images, targets=None):
         """

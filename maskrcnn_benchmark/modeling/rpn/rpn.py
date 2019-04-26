@@ -201,10 +201,6 @@ def build_rpn(cfg, in_channels):
     """
     This gives the gist of it. Not super important because it doesn't change as much
     """
-    if cfg.MODEL.ROTATED:
-        from maskrcnn_benchmark.modeling.rrpn.rrpn import RRPNModule
-        return RRPNModule(cfg, in_channels)
-
     if cfg.MODEL.RETINANET_ON:
         return build_retinanet(cfg, in_channels)
 
