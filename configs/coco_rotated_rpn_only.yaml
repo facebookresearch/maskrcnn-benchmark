@@ -3,10 +3,18 @@ MODEL:
   WEIGHT: "/data/models/R-50.pkl"
   RPN_ONLY: True
   RPN:
+#    ANCHOR_ANGLES: (-90, -54, -18, 18, 54)
+
+#    ANCHOR_SIZES: (84, 128, 224, 352)
+    ANCHOR_SIZES: (32, 64, 128, 256, 512)
+    ANCHOR_STRIDE: (16,)
+
+    ANCHOR_ANGLES: (-90, -60, -30) #, -60, -30)
     ASPECT_RATIOS: (0.25, 0.5, 1.0, 2.0, 4.0)
 
     STRADDLE_THRESH: -1
 
+    # Rotated IOU threshold
     FG_IOU_THRESHOLD: 0.7
     BG_IOU_THRESHOLD: 0.3
 
@@ -16,10 +24,14 @@ MODEL:
     POST_NMS_TOP_N_TEST: 1000
     BATCH_SIZE_PER_IMAGE: 256
 
-    ANCHOR_SIZES: (32, 64, 128, 256, 512)
-#    ANCHOR_STRIDE: (16,)
+    # Default weights on (dx, dy, dw, dh, dtheta) for normalizing rotated rect regression targets
+    BBOX_REG_WEIGHTS: (10.0, 10.0, 5.0, 5.0, 3.0)
 
-OUTPUT_DIR: "checkpoints/coco_rpn_only"
+    RPN_HEAD: "SingleConvRRPNHead"
+  ROTATED: True
+OUTPUT_DIR: "checkpoints/coco_rotated_rpn_only"
+
+#OUTPUT_DIR: "checkpoints/coco_rpn_only"
 
 INPUT:
   MAX_SIZE_TEST: 800
