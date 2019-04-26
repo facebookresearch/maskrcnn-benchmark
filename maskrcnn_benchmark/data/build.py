@@ -23,7 +23,7 @@ def build_dataset(dataset_list, transforms, dataset_catalog, mode=DatasetMode.TR
         transforms (callable): transforms to apply to each (image, target) sample
         dataset_catalog (DatasetCatalog): contains the information on how to
             construct a dataset.
-        is_train (bool): whether to setup the dataset for training or testing
+        mode (DatasetMode): whether to setup the dataset for training, validation, or testing
     """
     if not isinstance(dataset_list, (list, tuple)):
         raise RuntimeError(
@@ -37,9 +37,9 @@ def build_dataset(dataset_list, transforms, dataset_catalog, mode=DatasetMode.TR
         # for COCODataset, we want to remove images without annotations
         # during training
         if data["factory"] == "COCODataset":
-            args["remove_images_without_annotations"] = is_train
+            args["remove_images_without_annotations"] = mode == DatasetMode.TRAIN
         if data["factory"] == "PascalVOCDataset":
-            args["use_difficult"] = not is_train
+            args["use_difficult"] = mode != DatasetMode.TRAIN
         args["transforms"] = transforms
         # make dataset from factory
         dataset = factory(**args)
@@ -163,8 +163,8 @@ def make_data_loader(cfg, mode=DatasetMode.TRAIN, is_distributed=False, start_it
     )
     DatasetCatalog = paths_catalog.DatasetCatalog
 
-    transforms = build_transforms(cfg, is_train)
-    datasets = build_dataset(dataset_list, transforms, DatasetCatalog, is_train)
+    transforms = build_transforms(cfg, mode)
+    datasets = build_dataset(dataset_list, transforms, DatasetCatalog, mode)
 
     data_loaders = []
     for dataset in datasets:
