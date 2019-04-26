@@ -1,6 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 from . import transforms as T
-from .. import DatasetMode
+from maskrcnn_benchmark.data.dataset_mode import DatasetMode
 
 
 def build_transforms(cfg, mode=DatasetMode.TRAIN):

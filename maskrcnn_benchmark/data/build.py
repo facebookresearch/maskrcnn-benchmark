@@ -2,7 +2,6 @@
 import bisect
 import copy
 import logging
-from enum import Enum
 
 import torch.utils.data
 from maskrcnn_benchmark.utils.comm import get_world_size
@@ -10,15 +9,10 @@ from maskrcnn_benchmark.utils.imports import import_file
 
 from . import datasets as D
 from . import samplers
+from .dataset_mode import DatasetMode
 
 from .collate_batch import BatchCollator
 from .transforms import build_transforms
-
-
-class DatasetMode(Enum):
-    TRAIN = 1
-    VALID = 2
-    TEST = 3
 
 
 def build_dataset(dataset_list, transforms, dataset_catalog, mode=DatasetMode.TRAIN):
