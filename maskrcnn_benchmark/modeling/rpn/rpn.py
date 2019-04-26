@@ -24,9 +24,12 @@ class RPNHeadConvRegressor(nn.Module):
             num_anchors (int): number of anchors to be predicted
         """
         super(RPNHeadConvRegressor, self).__init__()
+
+        box_reg_cn = 4 if not cfg.MODEL.ROTATED else 5
+
         self.cls_logits = nn.Conv2d(in_channels, num_anchors, kernel_size=1, stride=1)
         self.bbox_pred = nn.Conv2d(
-            in_channels, num_anchors * 4, kernel_size=1, stride=1
+            in_channels, num_anchors * box_reg_cn, kernel_size=1, stride=1
         )
 
         for l in [self.cls_logits, self.bbox_pred]:
@@ -84,12 +87,15 @@ class RPNHead(nn.Module):
             num_anchors (int): number of anchors to be predicted
         """
         super(RPNHead, self).__init__()
+
+        box_reg_cn = 4 if not cfg.MODEL.ROTATED else 5
+
         self.conv = nn.Conv2d(
             in_channels, in_channels, kernel_size=3, stride=1, padding=1
         )
         self.cls_logits = nn.Conv2d(in_channels, num_anchors, kernel_size=1, stride=1)
         self.bbox_pred = nn.Conv2d(
-            in_channels, num_anchors * 4, kernel_size=1, stride=1
+            in_channels, num_anchors * box_reg_cn, kernel_size=1, stride=1
         )
 
         for l in [self.conv, self.cls_logits, self.bbox_pred]:

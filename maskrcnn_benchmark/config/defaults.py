@@ -178,47 +178,6 @@ _C.MODEL.RPN.FPN_POST_NMS_PER_BATCH = True
 _C.MODEL.RPN.RPN_HEAD = "SingleConvRPNHead"
 
 
-# ****************************ROTATED DETECTIONS****************************** #
-_C.MODEL.ROTATED = False
-
-# RRPN anchor angles (-90 to 0) to represent all possible anchor (rectangle) rotations
-_C.MODEL.RPN.ANCHOR_ANGLES = (-90, -60, -30)
-
-# Default weights on (dx, dy, dw, dh) for normalizing bbox regression targets
-# These are empirically chosen to approximately lead to unit variance targets
-_C.MODEL.RPN.BBOX_REG_WEIGHTS = (10.0, 10.0, 5.0, 5.0)
-
-if _C.MODEL.ROTATED:  # FOR REFERENCE ONLY
-    # Base RRPN anchor sizes (width) given in absolute pixels w.r.t. the scaled network input
-    # generally does not need to be as big as normal RPN anchors
-    _C.MODEL.RPN.ANCHOR_SIZES = (48, 84, 128, 224, 352)
-    # For FPN, number of strides should match number of scales
-    _C.MODEL.RPN.ANCHOR_STRIDE = (16,)
-    # RRPN anchor aspect ratios i.e. width-to-height ratio
-    _C.MODEL.RPN.ASPECT_RATIOS = (0.5, 1.0, 2.0)
-    # Remove RRPN anchors with bounding boxes that go outside the image by
-    # RRPN_STRADDLE_THRESH pixels. Since these are based on bboxes of rotated rectangles,
-    # default should be set higher than normal RPN STRADDLE_THRESH
-    # Set to -1 or a large value, e.g. 100000, to disable pruning anchors
-    _C.MODEL.RPN.STRADDLE_THRESH = 30
-
-    # Default weights on (dx, dy, dw, dh, dtheta) for normalizing rotated rect regression targets
-    _C.MODEL.RPN.BBOX_REG_WEIGHTS = (10.0, 10.0, 5.0, 5.0, 1.0)
-
-    # Rotated IOU threshold
-    _C.MODEL.RPN.FG_IOU_THRESHOLD = 0.6
-    _C.MODEL.RPN.BG_IOU_THRESHOLD = 0.4
-
-    _C.MODEL.RPN.RPN_HEAD = "SingleConvRRPNHead"
-
-
-# ---------------------------------------------------------------------------- #
-# RROI options
-# ---------------------------------------------------------------------------- #
-_C.MODEL.RROI_ = CN()
-
-
-
 # ---------------------------------------------------------------------------- #
 # ROI HEADS options
 # ---------------------------------------------------------------------------- #
@@ -252,6 +211,49 @@ _C.MODEL.ROI_HEADS.NMS = 0.5
 # Maximum number of detections to return per image (100 is based on the limit
 # established for the COCO dataset)
 _C.MODEL.ROI_HEADS.DETECTIONS_PER_IMG = 100
+
+
+# ****************************ROTATED DETECTIONS****************************** #
+_C.MODEL.ROTATED = False
+
+# RRPN anchor angles (-90 to 0) to represent all possible anchor (rectangle) rotations
+_C.MODEL.RPN.ANCHOR_ANGLES = (-90, -60, -30)
+
+# Default weights on (dx, dy, dw, dh) for normalizing bbox regression targets
+_C.MODEL.RPN.BBOX_REG_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
+
+if _C.MODEL.ROTATED:  # FOR REFERENCE ONLY
+
+    # =========================== RPN ===========================
+    # Base RRPN anchor sizes (width) given in absolute pixels w.r.t. the scaled network input
+    # generally does not need to be as big as normal RPN anchors
+    _C.MODEL.RPN.ANCHOR_SIZES = (48, 84, 128, 224, 352)
+    # For FPN, number of strides should match number of scales
+    _C.MODEL.RPN.ANCHOR_STRIDE = (16,)
+    # RRPN anchor aspect ratios i.e. width-to-height ratio
+    _C.MODEL.RPN.ASPECT_RATIOS = (0.5, 1.0, 2.0)
+    # Remove RRPN anchors with bounding boxes that go outside the image by
+    # RRPN_STRADDLE_THRESH pixels. Since these are based on bboxes of rotated rectangles,
+    # default should be set higher than normal RPN STRADDLE_THRESH
+    # Set to -1 or a large value, e.g. 100000, to disable pruning anchors
+    _C.MODEL.RPN.STRADDLE_THRESH = 30
+
+    # Default weights on (dx, dy, dw, dh, dtheta) for normalizing rotated rect regression targets
+    # These are empirically chosen to approximately lead to unit variance targets
+    _C.MODEL.RPN.BBOX_REG_WEIGHTS = (10.0, 10.0, 5.0, 5.0, 3.0)
+
+    # Rotated IOU threshold
+    _C.MODEL.RPN.FG_IOU_THRESHOLD = 0.7
+    _C.MODEL.RPN.BG_IOU_THRESHOLD = 0.3
+
+    # =========================== ROI HEADS ===========================
+    # Rotated IOU threshold
+    _C.MODEL.ROI_HEADS.FG_IOU_THRESHOLD = 0.5
+    _C.MODEL.ROI_HEADS.BG_IOU_THRESHOLD = 0.5
+
+    # Default weights on (dx, dy, dw, dh, dtheta) for normalizing rotated rect regression targets
+    # These are empirically chosen to approximately lead to unit variance targets
+    _C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 5., 5., 3.0)
 
 
 _C.MODEL.ROI_BOX_HEAD = CN()

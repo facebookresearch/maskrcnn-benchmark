@@ -87,14 +87,15 @@ class RPNLossComputation(object):
         # anchor_tensor = anchor.get_field(rrects_field)
         anchor_tensor = get_boxlist_rotated_rect_tensor(anchor, masks_field, rrects_field)
         target_tensor = get_boxlist_rotated_rect_tensor(target, masks_field, rrects_field)
+        if not target.has_field(rrects_field):  # add rrects to gt if not already added
+            target.add_field(rrects_field, target_tensor)
 
         match_quality_matrix = rotate_iou(target_tensor, anchor_tensor)
 
         matched_idxs = self.proposal_matcher(match_quality_matrix)
         # RPN doesn't need any fields from target
         # for creating the labels, so clear them all
-        target = target.copy_with_fields(copied_fields)
-        target.add_field(rrects_field, target_tensor)
+        target = target.copy_with_fields(copied_fields + [rrects_field])
         # get the targets corresponding GT for each anchor
         # NB: need to clamp the indices because we can have a single
         # GT in the image, and matched_idxs can be -2, which goes

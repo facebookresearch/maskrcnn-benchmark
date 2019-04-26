@@ -30,6 +30,7 @@ at::Tensor rotate_nms_cpu_kernel(const at::Tensor& dets,
   auto angle = angle_t.data<scalar_t>();
 
   // auto areas = areas_t.data<scalar_t>();
+  bool limit_output = max_output >= 0;
 
   scalar_t rect_1[5];
   int num_to_keep = 0;
@@ -37,7 +38,7 @@ at::Tensor rotate_nms_cpu_kernel(const at::Tensor& dets,
     if (suppressed[i] == 1)
       continue;
     ++num_to_keep;
-    if (num_to_keep >= max_output)
+    if (limit_output && num_to_keep >= max_output)
       break;
 
     rect_1[0] = xc[i];

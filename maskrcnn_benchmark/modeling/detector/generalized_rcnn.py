@@ -25,10 +25,8 @@ def make_roi_heads(cfg, channels):
         from ..roi_heads.roi_heads import build_roi_heads
         return build_roi_heads(cfg, channels)
     else:
-        if not cfg.MODEL.RPN_ONLY:
-            raise NotImplementedError("ROI Heads not implemented for Rotated!")
-        roi_heads = []  # TODO: IMPLEMENT
-        return roi_heads
+        from ..rroi_heads.roi_heads import build_roi_heads
+        return build_roi_heads(cfg, channels)
 
 
 class GeneralizedRCNN(nn.Module):
