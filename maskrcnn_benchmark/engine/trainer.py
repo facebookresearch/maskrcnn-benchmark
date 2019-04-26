@@ -6,12 +6,10 @@ import time
 import torch
 import torch.distributed as dist
 
-from maskrcnn_benchmark.utils.comm import get_world_size
+from maskrcnn_benchmark.utils.comm import get_world_size, synchronize
 from maskrcnn_benchmark.utils.metric_logger import MetricLogger
 
 from apex import amp
-
-from tensorboardX import SummaryWriter
 
 def reduce_loss_dict(loss_dict):
     """
@@ -47,10 +45,8 @@ def do_train(
     device,
     checkpoint_period,
     arguments,
-    data_loader_val,
+    data_loader_val=None,
 ):
-    writer_train = SummaryWriter('/notebooks/tbx/run1/train')
-    writer_valid = SummaryWriter('/notebooks/tbx/run1/valid')
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
     logger.info("Start training")
     meters = MetricLogger(delimiter="  ")
@@ -110,11 +106,10 @@ def do_train(
                     memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
                 )
             )
-            for k, v in meters.meters.items():
-                writer_train.add_scalar(k, v.median, iteration)
         if iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
             if data_loader_val is not None:
+                synchronize()
                 meters_val = MetricLogger(delimiter="  ")
                 with torch.no_grad():
                     for idx_val, (images_val, targets_val, _) in enumerate(data_loader_val):
@@ -127,8 +122,24 @@ def do_train(
                         loss_dict_reduced = reduce_loss_dict(loss_dict)
                         losses_reduced = sum(loss for loss in loss_dict_reduced.values())
                         meters_val.update(loss=losses_reduced, **loss_dict_reduced)
-                for k, v in meters_val.meters.items():
-                    writer_valid.add_scalar(k, v.median, iteration)
+                logger.info(
+                    meters_val.delimiter.join(
+                        [
+                            "eta: {eta}",
+                            "iter: {iter}",
+                            "{meters}",
+                            "lr: {lr:.6f}",
+                            "max mem: {memory:.0f}",
+                        ]
+                    ).format(
+                        eta=eta_string,
+                        iter=iteration,
+                        meters=str(meters),
+                        lr=optimizer.param_groups[0]["lr"],
+                        memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
+                    )
+                )
+                synchronize()
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)
 

@@ -2,6 +2,7 @@
 import bisect
 import copy
 import logging
+from enum import Enum
 
 import torch.utils.data
 from maskrcnn_benchmark.utils.comm import get_world_size
@@ -14,7 +15,13 @@ from .collate_batch import BatchCollator
 from .transforms import build_transforms
 
 
-def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
+class DatasetMode(Enum):
+    TRAIN = 1
+    VALID = 2
+    TEST = 3
+
+
+def build_dataset(dataset_list, transforms, dataset_catalog, mode=DatasetMode.TRAIN):
     """
     Arguments:
         dataset_list (list[str]): Contains the names of the datasets, i.e.,
@@ -45,7 +52,7 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
         datasets.append(dataset)
 
     # for testing, return a list of datasets
-    if not is_train:
+    if mode != DatasetMode.TRAIN:
         return datasets
 
     # for training, concatenate all datasets into a single one
@@ -104,9 +111,9 @@ def make_batch_data_sampler(
     return batch_sampler
 
 
-def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_val=False):
+def make_data_loader(cfg, mode=DatasetMode.TRAIN, is_distributed=False, start_iter=0):
     num_gpus = get_world_size()
-    if is_train:
+    if mode == DatasetMode.TRAIN:
         images_per_batch = cfg.SOLVER.IMS_PER_BATCH
         assert (
             images_per_batch % num_gpus == 0
@@ -115,6 +122,18 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
         images_per_gpu = images_per_batch // num_gpus
         shuffle = True
         num_iters = cfg.SOLVER.MAX_ITER
+        dataset_list = cfg.DATASETS.TRAIN
+    elif mode == DatasetMode.VALID:
+        images_per_batch = cfg.SOLVER.IMS_PER_BATCH
+        assert (
+            images_per_batch % num_gpus == 0
+        ), "SOLVER.IMS_PER_BATCH ({}) must be divisible by the number "
+        "of GPUs ({}) used.".format(images_per_batch, num_gpus)
+        images_per_gpu = images_per_batch // num_gpus
+        shuffle = False if not is_distributed else True
+        num_iters = None
+        start_iter = 0
+        dataset_list = cfg.DATASETS.VAL
     else:
         images_per_batch = cfg.TEST.IMS_PER_BATCH
         assert (
@@ -125,6 +144,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
         shuffle = False if not is_distributed else True
         num_iters = None
         start_iter = 0
+        dataset_list = cfg.DATASETS.TEST
 
     if images_per_gpu > 1:
         logger = logging.getLogger(__name__)
@@ -148,9 +168,6 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
         "maskrcnn_benchmark.config.paths_catalog", cfg.PATHS_CATALOG, True
     )
     DatasetCatalog = paths_catalog.DatasetCatalog
-    dataset_list = cfg.DATASETS.TRAIN if is_train else cfg.DATASETS.TEST
-    if is_train and is_val:
-        dataset_list = cfg.DATASETS.VAL
 
     transforms = build_transforms(cfg, is_train)
     datasets = build_dataset(dataset_list, transforms, DatasetCatalog, is_train)
@@ -170,7 +187,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
             collate_fn=collator,
         )
         data_loaders.append(data_loader)
-    if is_train:
+    if mode == DatasetMode.TRAIN:
         # during training, a single (possibly concatenated) data_loader is returned
         assert len(data_loaders) == 1
         return data_loaders[0]
