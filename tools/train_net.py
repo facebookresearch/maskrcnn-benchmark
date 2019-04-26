@@ -13,7 +13,7 @@ import os
 import torch
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.data import make_data_loader
-from maskrcnn_benchmark.data import DatasetMode
+from maskrcnn_benchmark.data.dataset_mode import DatasetMode
 from maskrcnn_benchmark.solver import make_lr_scheduler
 from maskrcnn_benchmark.solver import make_optimizer
 from maskrcnn_benchmark.engine.inference import inference
