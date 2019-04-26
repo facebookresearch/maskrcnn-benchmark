@@ -43,6 +43,8 @@ class BoxCoder(object):
             assert 4 <= lenw <= 5
             if lenw == 4:
                 self.weights = (weights[0],weights[1],weights[2],weights[3],1.0)
+        else:
+            self.weights = (1.0, 1.0, 1.0, 1.0, 1.0)
         self.bbox_xform_clip = bbox_xform_clip
         if not (lib == np or lib == torch):
             raise NotImplementedError
@@ -108,47 +110,48 @@ class BoxCoder(object):
 
         return encode_boxes
 
-    def decode(self, encode_boxes, reference_boxes):
-        '''
-        :param encode_boxes:[N, 5]  # xc,yc,w,h,theta
-        :param reference_boxes: [N, 5] # xc,yc,w,h,theta
-        :param scale_factors: use for scale
-        in the rpn stage, reference_boxes are anchors
-        in the fast_rcnn stage, reference boxes are proposals(decode) produced by rpn stage
-        :return:decode boxes [N, 5]
-        '''
-        weights = self.weights
+    def decode(self, rel_codes, boxes):
+        """
+        From a set of original boxes and encoded relative box offsets,
+        get the decoded boxes.
+
+        Arguments:
+            rel_codes (Tensor): encoded boxes
+            boxes (Tensor): reference boxes.
+        """
         lib = self.lib
 
-        t_xcenter = encode_boxes[:, 0]
-        t_ycenter = encode_boxes[:, 1]
-        t_w = encode_boxes[:, 2]
-        t_h = encode_boxes[:, 3]
-        t_theta = encode_boxes[:, 4]
+        boxes = boxes.to(rel_codes.dtype)
 
-        if weights is not None:
-            wx, wy, ww, wh, wa = weights
-            t_xcenter /= wx
-            t_ycenter /= wy
-            t_w /= ww
-            t_h /= wh
-            t_theta /= wa
+        TO_REMOVE = 1  # TODO remove
+        widths = boxes[:, 2]
+        heights = boxes[:, 3]
+        ctr_x = boxes[:, 0]
+        ctr_y = boxes[:, 1]
+        reference_theta = boxes[:, 4]
 
-        dw = clamp(t_w, max=self.bbox_xform_clip, lib=lib)
-        dh = clamp(t_h, max=self.bbox_xform_clip, lib=lib)
+        wx, wy, ww, wh, wtheta = self.weights
+        dx = rel_codes[:, 0::5] / wx
+        dy = rel_codes[:, 1::5] / wy
+        dw = rel_codes[:, 2::5] / ww
+        dh = rel_codes[:, 3::5] / wh
+        dtheta = rel_codes[:, 4::5] / wtheta
 
-        reference_x_center = reference_boxes[:, 0]
-        reference_y_center = reference_boxes[:, 1]
-        reference_w = reference_boxes[:, 2]
-        reference_h = reference_boxes[:, 3]
-        reference_theta = reference_boxes[:, 4]
+        # Prevent sending too large values into torch.exp()
+        dw = clamp(dw, max=self.bbox_xform_clip, lib=lib)
+        dh = clamp(dh, max=self.bbox_xform_clip, lib=lib)
 
-        predict_x_center = t_xcenter * reference_w + reference_x_center
-        predict_y_center = t_ycenter * reference_h + reference_y_center
-        predict_w = lib.exp(dw) * reference_w
-        predict_h = lib.exp(dh) * reference_h
-        predict_theta = t_theta * 180 / np.pi + reference_theta  # radians to degrees
+        pred_ctr_x = dx * widths[:, None] + ctr_x[:, None]
+        pred_ctr_y = dy * heights[:, None] + ctr_y[:, None]
+        pred_w = lib.exp(dw) * widths[:, None]
+        pred_h = lib.exp(dh) * heights[:, None]
+        pred_theta = dtheta * 180 / np.pi + reference_theta[:, None]  # radians to degrees
 
-        decode_boxes = stack([predict_x_center, predict_y_center, predict_w, predict_h, predict_theta], dim=1, lib=lib)
+        pred_boxes = lib.zeros_like(rel_codes)
+        pred_boxes[:, 0::5] = pred_ctr_x
+        pred_boxes[:, 1::5] = pred_ctr_y
+        pred_boxes[:, 2::5] = pred_w
+        pred_boxes[:, 3::5] = pred_h
+        pred_boxes[:, 4::5] = pred_theta
 
-        return decode_boxes
+        return pred_boxes

@@ -250,7 +250,8 @@ at::Tensor rotate_nms_cuda(
 //  );
   THCudaCheck(cudaGetLastError());
 
-  num_to_keep = std::min(num_to_keep, max_output);
+  if (max_output >= 0)
+    num_to_keep = std::min(num_to_keep, max_output);
 
 //  printf("GPU: num_to_keep: %d\n", num_to_keep);
   return keep.narrow(/*dim=*/0, /*start=*/0, /*length=*/num_to_keep).to(

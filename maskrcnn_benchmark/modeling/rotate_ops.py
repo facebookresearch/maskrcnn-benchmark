@@ -81,7 +81,10 @@ class RotateNMS(nn.Module):
     INPUT:
     r_boxes: (N, 5)  [xc,yc,w,h,theta]  # NOTE there's no score field here
     """
-    def __init__(self, nms_threshold=0.7, post_nms_top_n=1000):
+    def __init__(self, nms_threshold=0.7, post_nms_top_n=-1):
+        """
+        param: post_nms_top_n < 0 means no max cap
+        """
         super(RotateNMS, self).__init__()
 
         self.nms_threshold = float(nms_threshold)
