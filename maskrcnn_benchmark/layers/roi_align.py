@@ -9,6 +9,7 @@ from maskrcnn_benchmark import _C
 # we need this for the custom ops to exist
 import maskrcnn_benchmark._custom_ops   # noqa: F401
 
+from maskrcnn_benchmark.utils import amp
 
 class _ROIAlign(Function):
     @staticmethod
@@ -48,7 +49,6 @@ class _ROIAlign(Function):
 
 roi_align = _ROIAlign.apply
 
-
 class ROIAlign(nn.Module):
     def __init__(self, output_size, spatial_scale, sampling_ratio):
         super(ROIAlign, self).__init__()
@@ -56,6 +56,7 @@ class ROIAlign(nn.Module):
         self.spatial_scale = spatial_scale
         self.sampling_ratio = sampling_ratio
 
+    @amp.float_function
     def forward(self, input, rois):
         if torch._C._get_tracing_state():  # we cannot currently trace through the autograd function
             return torch.ops.maskrcnn_benchmark.roi_align_forward(

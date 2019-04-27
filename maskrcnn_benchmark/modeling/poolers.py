@@ -69,6 +69,7 @@ class Pooler(nn.Module):
     can be inferred from the size of the feature map / size of original image,
     which is available thanks to the BoxList.
     """
+
     def __init__(self, output_size, scales, sampling_ratio):
         """
         Arguments:
@@ -94,6 +95,7 @@ class Pooler(nn.Module):
 
     def convert_to_roi_format(self, boxes):
         concat_boxes = cat([b.bbox for b in boxes], dim=0)
+        device, dtype = concat_boxes.device, concat_boxes.dtype
         ids = cat(
             [
                 # we use full_like to allow tracing with flexible shape
@@ -124,11 +126,12 @@ class Pooler(nn.Module):
         # num_channels = x[0].shape[1]
         # output_size = self.output_size[0]
 
+        dtype, device = x[0].dtype, x[0].device
         unmerged_results = []
         for level, (per_level_feature, pooler) in enumerate(zip(x, self.poolers)):
             idx_in_level = torch.nonzero(levels == level).squeeze(1)
             rois_per_level = rois[idx_in_level]
-            unmerged_results.append(pooler(per_level_feature, rois_per_level))
+            unmerged_results.append(pooler(per_level_feature, rois_per_level)).to(dtype)
 
         result = merge_levels(levels, unmerged_results)
         return result

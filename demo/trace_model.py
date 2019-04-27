@@ -1,6 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-import os
 from __future__ import division
+import os
 
 import numpy
 from io import BytesIO
