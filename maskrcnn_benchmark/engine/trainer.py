@@ -113,8 +113,6 @@ def do_train(
                 meters_val = MetricLogger(delimiter="  ")
                 with torch.no_grad():
                     for idx_val, (images_val, targets_val, _) in enumerate(data_loader_val):
-                        if idx_val == 100:
-                            break
                         images_val = images_val.to(device)
                         targets_val = [target.to(device) for target in targets_val]
                         loss_dict = model(images_val, targets_val)

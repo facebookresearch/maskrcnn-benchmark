@@ -46,7 +46,7 @@ def build_dataset(dataset_list, transforms, dataset_catalog, mode=DatasetMode.TR
         datasets.append(dataset)
 
     # for testing, return a list of datasets
-    if mode != DatasetMode.TRAIN:
+    if mode != DatasetMode.TEST:
         return datasets
 
     # for training, concatenate all datasets into a single one
@@ -181,8 +181,8 @@ def make_data_loader(cfg, mode=DatasetMode.TRAIN, is_distributed=False, start_it
             collate_fn=collator,
         )
         data_loaders.append(data_loader)
-    if mode == DatasetMode.TRAIN:
-        # during training, a single (possibly concatenated) data_loader is returned
+    if mode != DatasetMode.TEST:
+        # during training and validation, a single (possibly concatenated) data_loader is returned
         assert len(data_loaders) == 1
         return data_loaders[0]
     return data_loaders
