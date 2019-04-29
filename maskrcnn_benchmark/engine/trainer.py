@@ -109,8 +109,8 @@ def do_train(
         if iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
             if data_loader_val is not None:
-                synchronize()
                 meters_val = MetricLogger(delimiter="  ")
+                synchronize()
                 with torch.no_grad():
                     for idx_val, (images_val, targets_val, _) in enumerate(data_loader_val):
                         images_val = images_val.to(device)
@@ -120,6 +120,7 @@ def do_train(
                         loss_dict_reduced = reduce_loss_dict(loss_dict)
                         losses_reduced = sum(loss for loss in loss_dict_reduced.values())
                         meters_val.update(loss=losses_reduced, **loss_dict_reduced)
+                synchronize()
                 logger.info(
                     meters_val.delimiter.join(
                         [
@@ -137,7 +138,6 @@ def do_train(
                         memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
                     )
                 )
-                synchronize()
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)
 

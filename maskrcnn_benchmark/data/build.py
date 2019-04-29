@@ -37,9 +37,9 @@ def build_dataset(dataset_list, transforms, dataset_catalog, mode=DatasetMode.TR
         # for COCODataset, we want to remove images without annotations
         # during training
         if data["factory"] == "COCODataset":
-            args["remove_images_without_annotations"] = mode == DatasetMode.TRAIN
+            args["remove_images_without_annotations"] = mode != DatasetMode.TEST
         if data["factory"] == "PascalVOCDataset":
-            args["use_difficult"] = mode != DatasetMode.TRAIN
+            args["use_difficult"] = mode == DatasetMode.TEST
         args["transforms"] = transforms
         # make dataset from factory
         dataset = factory(**args)
