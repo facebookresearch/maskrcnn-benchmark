@@ -118,7 +118,7 @@ def make_data_loader(cfg, mode=DatasetMode.TRAIN, is_distributed=False, start_it
         num_iters = cfg.SOLVER.MAX_ITER
         dataset_list = cfg.DATASETS.TRAIN
     elif mode == DatasetMode.VALID:
-        images_per_batch = cfg.SOLVER.IMS_PER_BATCH
+        images_per_batch = cfg.TEST.IMS_PER_BATCH
         assert (
             images_per_batch % num_gpus == 0
         ), "SOLVER.IMS_PER_BATCH ({}) must be divisible by the number "
