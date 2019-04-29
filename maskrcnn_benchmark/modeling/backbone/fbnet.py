@@ -199,13 +199,6 @@ class FBNetROIHead(nn.Module):
             ("last", last)
         ]))
 
-        # output_blob = builder.add_final_pool(
-        #     # model, output_blob, kernel_size=cfg.FAST_RCNN.ROI_XFORM_RESOLUTION)
-        #     model,
-        #     output_blob,
-        #     kernel_size=int(cfg.FAST_RCNN.ROI_XFORM_RESOLUTION / stride_init),
-        # )
-
         self.out_channels = builder.last_depth
 
     def forward(self, x, proposals):

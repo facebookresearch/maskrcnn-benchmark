@@ -23,6 +23,8 @@ cur_val_map = 0.0
 is_best_val_map = False
 writer = None
 
+from apex import amp
+
 def reduce_loss_dict(loss_dict):
     """
     Reduce the loss dictionary from all processes so that process with rank
@@ -92,9 +94,16 @@ def do_train(
         meters.update(loss=losses_reduced, **loss_dict_reduced)
 
         optimizer.zero_grad()
+
         losses.backward()
         total_norm = clip_grad_norm_(model.parameters(), cfg.SOLVER.GRAD_CLIP)
         # print('Total Norm: ', total_norm)
+
+        # Note: If mixed precision is not used, this ends up doing nothing
+        # Otherwise apply loss scaling for mixed-precision recipe
+#         with amp.scale_loss(losses, optimizer) as scaled_losses:
+#             scaled_losses.backward()
+
         optimizer.step()
 
         batch_time = time.time() - end
