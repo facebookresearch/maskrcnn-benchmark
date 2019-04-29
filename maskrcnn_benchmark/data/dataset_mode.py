@@ -1,3 +1,4 @@
+# Author: Petr Vytovtov <p.vytovtov@partner.samsung.com>
 from enum import Enum
 
 

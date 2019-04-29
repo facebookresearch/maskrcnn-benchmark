@@ -124,6 +124,7 @@ def do_train(
                 logger.info(
                     meters_val.delimiter.join(
                         [
+                            "[Validation]: ",
                             "eta: {eta}",
                             "iter: {iter}",
                             "{meters}",

@@ -117,17 +117,6 @@ def make_data_loader(cfg, mode=DatasetMode.TRAIN, is_distributed=False, start_it
         shuffle = True
         num_iters = cfg.SOLVER.MAX_ITER
         dataset_list = cfg.DATASETS.TRAIN
-    elif mode == DatasetMode.VALID:
-        images_per_batch = cfg.TEST.IMS_PER_BATCH
-        assert (
-            images_per_batch % num_gpus == 0
-        ), "SOLVER.IMS_PER_BATCH ({}) must be divisible by the number "
-        "of GPUs ({}) used.".format(images_per_batch, num_gpus)
-        images_per_gpu = images_per_batch // num_gpus
-        shuffle = False if not is_distributed else True
-        num_iters = None
-        start_iter = 0
-        dataset_list = cfg.DATASETS.VAL
     else:
         images_per_batch = cfg.TEST.IMS_PER_BATCH
         assert (
@@ -138,7 +127,7 @@ def make_data_loader(cfg, mode=DatasetMode.TRAIN, is_distributed=False, start_it
         shuffle = False if not is_distributed else True
         num_iters = None
         start_iter = 0
-        dataset_list = cfg.DATASETS.TEST
+        dataset_list = cfg.DATASETS.TEST if mode == DatasetMode.TEST else cfg.DATASETS.VAL
 
     if images_per_gpu > 1:
         logger = logging.getLogger(__name__)
