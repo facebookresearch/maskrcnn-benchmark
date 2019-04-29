@@ -1,5 +1,3 @@
-# MAX cm-lcm-layer
-
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import math
 
@@ -25,41 +23,14 @@ class ROIBoxHead(torch.nn.Module):
         self.predictor = make_roi_box_predictor(
             cfg, self.feature_extractor.out_channels)
         num_classes = cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES
-        self.compatible_matrix = Parameter(torch.eye(num_classes-1, num_classes-1))
-        self.local_compatible_matrix = Parameter(torch.eye(num_classes-1, num_classes-1))
-        self.cm_weight = Parameter(torch.Tensor([0.5]))
-        self.local_cm_weight = Parameter(torch.Tensor([0.5]))
+        # self.compatible_matrix = Parameter(-torch.eye(num_classes, num_classes))
+        self.compatible_matrix = Parameter(-torch.eye(num_classes-1, num_classes-1))
+        self.influence_weight = Parameter(torch.Tensor([1.0]))
+        self.iteration_num = cfg.MODEL.ITERATION_NUM
+        # stdv = 1. / math.sqrt(self.compatible_matrix.size(1))
+        # self.compatible_matrix.data.uniform_(-stdv, stdv)
         self.post_processor = make_roi_box_post_processor(cfg)
         self.loss_evaluator = make_roi_box_loss_evaluator(cfg)
-
-    def compute_iou_as_similarity(self, a, b):
-        # We need to add a trailing dimension so that max/min gives us a (N,N) matrix
-        xA = torch.max(a[:,0].unsqueeze(1), b[:,0].unsqueeze(0))
-        yA = torch.max(a[:,1].unsqueeze(1), b[:,1].unsqueeze(0))
-        xB = torch.min(a[:,2].unsqueeze(1), b[:,2].unsqueeze(0))
-        yB = torch.min(a[:,3].unsqueeze(1), b[:,3].unsqueeze(0))
-
-        inter_w = xB - xA  + 1
-        inter_w[inter_w < 0] = 0
-        inter_h = yB - yA + 1
-        inter_h[inter_h < 0] = 0
-
-        intersection = inter_w * inter_h
-
-        a_width = a[:,2]-a[:,0] + 1
-        a_height = a[:,3]-a[:,1] + 1
-        b_width = b[:,2]-b[:,0] + 1
-        b_height = b[:,3]-b[:,1] + 1
-        a_area = a_width.unsqueeze(1) * a_height.unsqueeze(1)
-        b_area = b_width.unsqueeze(1) * b_height.unsqueeze(1)
-
-        iou = intersection / (a_area + torch.t(b_area) - intersection)
-
-        # set nan and +/- inf to 0
-        iou[iou == float('inf')] = 0
-        iou[iou != iou] = 0
-
-        return iou
 
     def forward(self, features, proposals, targets=None):
         """
@@ -87,48 +58,38 @@ class ROIBoxHead(torch.nn.Module):
         x = self.feature_extractor(features, proposals)
         # final classifier that converts the features into predictions
         class_logits, box_regression = self.predictor(x)
-
         boxes_per_image = [len(box) for box in proposals]
         class_logits_split = class_logits.split(boxes_per_image, dim=0)
         q_values_splits = []
-        for unaries, box_proposal in zip(class_logits_split,proposals):
+        for unaries in class_logits_split:
             # add to split background and normal classes
             background_logits = unaries[:,0]
             unaries = unaries[:,1:]
 
-            # compute global pairwise correlation
             q_values = unaries
             bbox_num, class_num = unaries.size()
 
-            softmax_out = F.softmax(q_values, -1)
+            # print('Unaries:', unaries)
+            for i in range(self.iteration_num):
+                softmax_out = F.softmax(q_values, -1)
 
-            # use sum as message passing
-            # sum_softmax_out = torch.sum(softmax_out, dim = 0).repeat(bbox_num).view(bbox_num, class_num)
-            # message_passing = F.softmax(sum_softmax_out-softmax_out)
+                # use sum as message passing
+                # sum_softmax_out = torch.sum(softmax_out, dim = 0).repeat(bbox_num).view(bbox_num, class_num)
+                # message_passing = F.softmax(sum_softmax_out-softmax_out)
 
-            # use max as message passing
-            message_passing = torch.max(softmax_out, dim = 0)[0].repeat(bbox_num).view(bbox_num, class_num)
+                # use max as message passing
+                message_passing = torch.max(softmax_out, dim = 0)[0].repeat(bbox_num).view(bbox_num, class_num)
 
-            # Compatibility transform
-            pairwise = torch.matmul(message_passing, self.compatible_matrix)
-            # compatible_matrix_symmetric = torch.mm(self.compatible_matrix, self.compatible_matrix.t())
-            # pairwise = torch.matmul(message_passing, compatible_matrix_symmetric)
+                # use max as message passing, ignore background
+                message_passing = self.influence_weight * message_passing
 
-            # compute local pairwise correlation
-            # compute distance similarity using IOU
-            boxes = box_proposal.bbox
-            with torch.no_grad():
-                dist_similarity = self.compute_iou_as_similarity(boxes,boxes)
+                # Compatibility transform
+                pairwise = torch.matmul(message_passing, self.compatible_matrix)
+                # compatible_matrix_symmetric = torch.mm(self.compatible_matrix, self.compatible_matrix.t())
+                # pairwise = torch.matmul(message_passing, compatible_matrix_symmetric)
 
-            local_message_passing = torch.matmul(dist_similarity, softmax_out)
-            # local_message_passing = F.softmax(local_message_passing, -1)
-            # normalize local_message_passing
-            # local_message_passing = local_message_passing/torch.t(torch.sum(local_message_passing, dim = 1)
-            #                                                        .repeat(class_num).view(class_num, bbox_num))
-            local_pairwise = torch.matmul(local_message_passing, self.local_compatible_matrix)
-
-            # Adding unary potentials
-            q_values = unaries + self.cm_weight * pairwise + self.local_cm_weight * local_pairwise  # * softmax_out
+                # Adding unary potentials
+                q_values = unaries - pairwise  # * softmax_out
             # q_values_splits.append(q_values)
             q_values_splits.append(torch.cat((background_logits.unsqueeze(1), q_values),dim=1))
 

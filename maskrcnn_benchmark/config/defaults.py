@@ -196,7 +196,12 @@ _C.MODEL.ROI_HEADS.NMS = 0.5
 # Maximum number of detections to return per image (100 is based on the limit
 # established for the COCO dataset)
 _C.MODEL.ROI_HEADS.DETECTIONS_PER_IMG = 100
-
+# For DPP inference
+_C.MODEL.ROI_HEADS.USE_DPP = False
+_C.MODEL.ROI_HEADS.SIM_MATRIX = ""
+_C.MODEL.ROI_HEADS.DPP_NMS = 0.5
+_C.MODEL.ROI_HEADS.SIM_POWER = 4
+_C.MODEL.ROI_HEADS.PROB_THRESHOLD = 0.5
 
 _C.MODEL.ROI_BOX_HEAD = CN()
 _C.MODEL.ROI_BOX_HEAD.FEATURE_EXTRACTOR = "ResNet50Conv5ROIFeatureExtractor"
@@ -424,3 +429,5 @@ _C.TEST.DETECTIONS_PER_IMG = 100
 _C.OUTPUT_DIR = "."
 
 _C.PATHS_CATALOG = os.path.join(os.path.dirname(__file__), "paths_catalog.py")
+
+

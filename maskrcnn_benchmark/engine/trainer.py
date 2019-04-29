@@ -191,17 +191,29 @@ def run_test(cfg, model, distributed, iteration_name):
             synchronize()
             return
         print('Comaptible matrix:', model.state_dict()['roi_heads.box.compatible_matrix'].cpu().data.numpy())
-        print('Weight: ', model.state_dict()['roi_heads.box.influence_weight'].cpu().data.numpy())
+        print('Local Comaptible matrix:', model.state_dict()['roi_heads.box.local_compatible_matrix'].cpu().data.numpy())
+        # print(model.state_dict().keys())
         if iteration_name != 'final':
-            for k,v in results.results.items():
-                for ki, vi in v.items():
-                    if ki == 'AP':
-                        cur_val_map = vi
-                        if vi > best_val_map:
-                            best_val_map = vi
-                            is_best_val_map = True
-                        else:
-                            is_best_val_map = False
-                    writer.add_scalar(dataset_name + '_' + k + '_' + ki, vi, int(iteration_name))
-                    # print(dataset_name + '_' + k + '_' + ki, vi)
+            # # for coco evaluation
+            if(dataset_name.startswith('coco')):
+                for k,v in results.results.items():
+                    for ki, vi in v.items():
+                        if ki == 'AP':
+                            cur_val_map = vi
+                            if vi > best_val_map:
+                                best_val_map = vi
+                                is_best_val_map = True
+                            else:
+                                is_best_val_map = False
+                        writer.add_scalar(dataset_name + '_' + k + '_' + ki, vi, int(iteration_name))
+                        print(dataset_name + '_' + k + '_' + ki, vi)
+            elif(dataset_name.startswith('voc')):
+                # for VOC evaluation
+                cur_val_map = results['map']
+                if cur_val_map > best_val_map:
+                    best_val_map = cur_val_map
+                    is_best_val_map = True
+                else:
+                    is_best_val_map = False
+                writer.add_scalar(dataset_name + '_map', cur_val_map, int(iteration_name))
         synchronize()

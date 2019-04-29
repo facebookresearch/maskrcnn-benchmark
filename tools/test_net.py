@@ -69,7 +69,12 @@ def main():
     if is_main_process():
         compatible_matrix = model.state_dict()['roi_heads.box.compatible_matrix'].cpu().data.numpy()
         print('Comaptible matrix:', compatible_matrix)
+        # print('Weight:', model.state_dict()['roi_heads.box.influence_weight'].cpu().data.numpy())
         pickle.dump(compatible_matrix, open( "compatible_matrix.pickle", "wb" ) )
+        local_compatible_matrix = model.state_dict()['roi_heads.box.local_compatible_matrix'].cpu().data.numpy()
+        print('Local Comaptible matrix:', local_compatible_matrix)
+        # print('Weight:', model.state_dict()['roi_heads.box.influence_weight'].cpu().data.numpy())
+        pickle.dump(local_compatible_matrix, open( "local_compatible_matrix.pickle", "wb" ) )
 
     iou_types = ("bbox",)
     if cfg.MODEL.MASK_ON:

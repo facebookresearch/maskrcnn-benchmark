@@ -87,7 +87,6 @@ def inference(
     predictions = _accumulate_predictions_from_multiple_gpus(predictions)
     if not is_main_process():
         return
-
     if output_folder:
         torch.save(predictions, os.path.join(output_folder, "predictions.pth"))
 
@@ -97,8 +96,12 @@ def inference(
         expected_results=expected_results,
         expected_results_sigma_tol=expected_results_sigma_tol,
     )
-    print('Comaptible matrix:', model.state_dict()['roi_heads.box.compatible_matrix'].cpu().data.numpy())
-
+    # print('Comaptible matrix:', model.state_dict()['roi_heads.box.compatible_matrix'].cpu().data.numpy())
+    # print('Comaptible matrix weight:', model.state_dict()['roi_heads.box.cm_weight'].cpu().data.numpy())
+    # print('Local Comaptible matrix:', model.state_dict()['roi_heads.box.local_compatible_matrix'].cpu().data.numpy())
+    # print('Local Comaptible matrix weight:', model.state_dict()['roi_heads.box.local_cm_weight'].cpu().data.numpy())
+    # print('Comaptible matrix-1:', model.state_dict()['roi_heads.box.compatible_matrix_list.1'].cpu().data.numpy())
+    # print(model.state_dict().keys())
     return evaluate(dataset=dataset,
                     predictions=predictions,
                     output_folder=output_folder,

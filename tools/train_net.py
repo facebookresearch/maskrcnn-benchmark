@@ -29,6 +29,7 @@ def train(cfg, local_rank, distributed):
     model = build_detection_model(cfg)
     print(model)
     device = torch.device(cfg.MODEL.DEVICE)
+    print(device)
     model.to(device)
 
     optimizer = make_optimizer(cfg, model)

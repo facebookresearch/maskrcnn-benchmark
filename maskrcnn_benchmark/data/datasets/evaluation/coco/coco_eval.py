@@ -42,6 +42,7 @@ def do_coco_evaluation(
     if "bbox" in iou_types:
         logger.info("Preparing bbox results")
         coco_results["bbox"] = prepare_for_coco_detection(predictions, dataset)
+        logger.info("Number of BBoxes: {} ".format(len(coco_results["bbox"])))
     if "segm" in iou_types:
         logger.info("Preparing segm results")
         coco_results["segm"] = prepare_for_coco_segmentation(predictions, dataset)

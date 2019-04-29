@@ -3,11 +3,14 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+import pickle
+import numpy as np
+
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_nms
 from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
-
+from maskrcnn_benchmark.layers.dpp import DPP
 
 class PostProcessor(nn.Module):
     """
@@ -22,7 +25,12 @@ class PostProcessor(nn.Module):
         nms=0.5,
         detections_per_img=100,
         box_coder=None,
-        cls_agnostic_bbox_reg=False
+        cls_agnostic_bbox_reg=False,
+        use_dpp = False,
+        sim_matrix = None,
+        dpp_nms = 0.5,
+        sim_power = 4,
+        prob_threshold = 0.5
     ):
         """
         Arguments:
@@ -39,6 +47,12 @@ class PostProcessor(nn.Module):
             box_coder = BoxCoder(weights=(10., 10., 5., 5.))
         self.box_coder = box_coder
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
+        self.use_dpp = use_dpp
+        if len(sim_matrix) > 0:
+            self.sim_classes = pickle.load(open(sim_matrix,"r"))
+        self.dpp_nms = dpp_nms
+        self.sim_power = sim_power
+        self.prob_threshold = prob_threshold
 
     def forward(self, x, boxes):
         """
@@ -79,7 +93,10 @@ class PostProcessor(nn.Module):
         ):
             boxlist = self.prepare_boxlist(boxes_per_img, prob, image_shape)
             boxlist = boxlist.clip_to_image(remove_empty=False)
-            boxlist = self.filter_results(boxlist, num_classes)
+            if self.use_dpp:
+                boxlist = self.filter_results_dpp(boxlist, num_classes)
+            else:
+                boxlist = self.filter_results(boxlist, num_classes)
             results.append(boxlist)
         return results
 
@@ -145,6 +162,61 @@ class PostProcessor(nn.Module):
             result = result[keep]
         return result
 
+    def filter_results_dpp(self, boxlist, num_classes):
+        """Returns bounding-box detection results by thresholding on scores and
+        applying DPP inference.
+        """
+
+        boxes = boxlist.bbox.reshape(-1, num_classes * 4)
+        scores = boxlist.get_field("scores").reshape(-1, num_classes)
+
+        device = scores.device
+        boxes = boxes.cpu().numpy()
+        scores = scores.cpu().numpy()
+
+        DPP_ = DPP()
+        keep = DPP_.dpp_MAP(scores, boxes, self.sim_classes, score_thresh=0.05, epsilon=0.01,\
+                    max_per_image=100, dpp_nms = self.dpp_nms, sim_power = self.sim_power,
+                            prob_threshold = self.prob_threshold, close_thr=0.00001)
+
+        result = []
+        if len(keep['box_id']) > 0:
+            for j in xrange(1, num_classes):
+                inds = np.where(keep['box_cls'] == j)[0]
+                box_ids = keep['box_id'][inds]
+                if len(box_ids) > 0:
+                    boxlist_for_class = BoxList(torch.from_numpy(boxes[box_ids,4*j:(j+1)*4]),
+                                                boxlist.size, mode="xyxy")
+                    boxlist_for_class.add_field("scores", torch.from_numpy(scores[box_ids,j]))
+                    num_labels = len(boxlist_for_class)
+                    boxlist_for_class.add_field(
+                        "labels", torch.full((num_labels,), j, dtype=torch.int64, device=device)
+                    )
+                    result.append(boxlist_for_class)
+        if len(result) > 0:
+            result = cat_boxlist(result)
+        else:
+            result = BoxList(torch.empty(0,4, dtype=torch.int64, device=device,), boxlist.size, mode = "xyxy")
+            result.add_field("scores", torch.empty(0, device=device))
+            result.add_field(
+                        "labels", torch.empty((0,), dtype=torch.int64, device=device)
+                    )
+
+        number_of_detections = len(result)
+
+        # Limit to max_per_image detections **over all classes**
+        if number_of_detections > self.detections_per_img > 0:
+            cls_scores = result.get_field("scores")
+            image_thresh, _ = torch.kthvalue(
+                cls_scores.cpu(), number_of_detections - self.detections_per_img + 1
+            )
+            keep = cls_scores >= image_thresh.item()
+            keep = torch.nonzero(keep).squeeze(1)
+            result = result[keep]
+        return result
+
+
+
 
 def make_roi_box_post_processor(cfg):
     use_fpn = cfg.MODEL.ROI_HEADS.USE_FPN
@@ -157,11 +229,22 @@ def make_roi_box_post_processor(cfg):
     detections_per_img = cfg.MODEL.ROI_HEADS.DETECTIONS_PER_IMG
     cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
 
+    use_dpp = cfg.MODEL.ROI_HEADS.USE_DPP
+    sim_matrix = cfg.MODEL.ROI_HEADS.SIM_MATRIX
+    dpp_nms = cfg.MODEL.ROI_HEADS.DPP_NMS
+    sim_power = cfg.MODEL.ROI_HEADS.SIM_POWER
+    prob_threshold = cfg.MODEL.ROI_HEADS.PROB_THRESHOLD
+
     postprocessor = PostProcessor(
         score_thresh,
         nms_thresh,
         detections_per_img,
         box_coder,
-        cls_agnostic_bbox_reg
+        cls_agnostic_bbox_reg,
+        use_dpp,
+        sim_matrix,
+        dpp_nms,
+        sim_power,
+        prob_threshold
     )
     return postprocessor

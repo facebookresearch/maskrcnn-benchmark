@@ -1,8 +1,8 @@
 MODEL:
   META_ARCHITECTURE: "GeneralizedRCNN"
-  WEIGHT: "catalog://ImageNetPretrained/MSRA/R-50"
+  WEIGHT: "catalog://ImageNetPretrained/MSRA/R-101"
   BACKBONE:
-    CONV_BODY: "R-50-FPN"
+    CONV_BODY: "R-101-FPN"
   RESNETS:
     BACKBONE_OUT_CHANNELS: 256
   RPN:
@@ -15,19 +15,19 @@ MODEL:
   ROI_HEADS:
     USE_FPN: True
   ROI_BOX_HEAD:
+    NUM_CLASSES: 7
     POOLER_RESOLUTION: 7
     POOLER_SCALES: (0.25, 0.125, 0.0625, 0.03125)
     POOLER_SAMPLING_RATIO: 2
     FEATURE_EXTRACTOR: "FPN2MLPFeatureExtractor"
     PREDICTOR: "FPNPredictor"
-    NUM_CLASSES: 9
 DATASETS:
-  TRAIN: ("cityscapes_fine_instanceonly_seg_train_cocostyle",)
-  TEST: ("cityscapes_fine_instanceonly_seg_val_cocostyle",)
+  TRAIN: ("coco_2017_train_sub_6",)
+  TEST: ("coco_2017_val_sub_6",)
 DATALOADER:
   SIZE_DIVISIBILITY: 32
 SOLVER:
-  BASE_LR: 0.01
+  BASE_LR: 0.02
   WEIGHT_DECAY: 0.0001
-  STEPS: (18000,)
-  MAX_ITER: 24000
+  STEPS: (9000, 12000)
+  MAX_ITER: 12000

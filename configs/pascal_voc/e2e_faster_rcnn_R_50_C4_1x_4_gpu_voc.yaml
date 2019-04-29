@@ -8,13 +8,13 @@ MODEL:
   ROI_BOX_HEAD:
     NUM_CLASSES: 21
 DATASETS:
-  TRAIN: ("voc_2007_train", "voc_2007_val")
-  TEST: ("voc_2007_test",)
+  TRAIN: ("voc_2012_train",)
+  TEST: ("voc_2012_val",)
 SOLVER:
   BASE_LR: 0.004
   WEIGHT_DECAY: 0.0001
-  STEPS: (12500, )
-  MAX_ITER: 17500
+  STEPS: (17500, )
+  MAX_ITER: 27500
   IMS_PER_BATCH: 4
 TEST:
   IMS_PER_BATCH: 4
