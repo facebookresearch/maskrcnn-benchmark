@@ -11,7 +11,7 @@
 
 
 ### Option 1: Step-by-step installation
-
+#### Linux 
 ```bash
 # first, make sure that your conda is setup properly with the right environment
 # for that, check that `which conda`, `which pip` and `which python` points to the
@@ -61,6 +61,46 @@ unset INSTALL_DIR
 # or if you are on macOS
 # MACOSX_DEPLOYMENT_TARGET=10.9 CC=clang CXX=clang++ python setup.py build develop
 ```
+#### Windows 10 
+open a cmd and change to desired installation directory 
+from now on will be refered as INSTALL_DIR 
+conda create --name maskrcnn_benchmark
+conda activate maskrcnn_benchmark
+
+# this installs the right pip and dependencies for the fresh python
+conda install ipython
+
+# maskrcnn_benchmark and coco api dependencies
+pip install ninja yacs cython matplotlib tqdm opencv-python
+
+# follow PyTorch installation in https://pytorch.org/get-started/locally/
+# we give the instructions for CUDA 9.0
+conda install -c pytorch pytorch-nightly torchvision cudatoolkit=9.0
+
+git clone https://github.com/cocodataset/cocoapi.git
+cd cocoapi/PythonAPI
+python setup.py build_ext install
+
+# navigate back to INSTALL_DIR
+cd ..
+cd .. 
+# install apex
+
+git clone https://github.com/NVIDIA/apex.git
+cd apex
+python setup.py install --cuda_ext --cpp_ext
+# navigate back to INSTALL_DIR
+cd .. 
+# install PyTorch Detection
+git clone https://github.com/facebookresearch/maskrcnn-benchmark.git
+cd maskrcnn-benchmark
+
+# the following will install the lib with
+# symbolic links, so that you can modify
+# the files if you want and won't need to
+# re-build it
+python setup.py build develop
+
 
 ### Option 2: Docker Image (Requires CUDA, Linux only)
 
