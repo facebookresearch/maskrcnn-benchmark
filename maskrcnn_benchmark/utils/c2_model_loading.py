@@ -143,6 +143,33 @@ def _load_c2_pickled_weights(file_path):
     return weights
 
 
+def _rename_conv_weights_for_deformable_conv_layers(state_dict, cfg):
+    import re
+    logger = logging.getLogger(__name__)
+    logger.info("Remapping conv weights for deformable conv weights")
+    layer_keys = sorted(state_dict.keys())
+    for ix, stage_with_dcn in enumerate(cfg.MODEL.RESNETS.STAGE_WITH_DCN, 1):
+        if not stage_with_dcn:
+            continue
+        for old_key in layer_keys:
+            pattern = ".*layer{}.*conv2.*".format(ix)
+            r = re.match(pattern, old_key)
+            if r is None:
+                continue
+            for param in ["weight", "bias"]:
+                if old_key.find(param) is -1:
+                    continue
+                new_key = old_key.replace(
+                    "conv2.{}".format(param), "conv2.conv.{}".format(param)
+                )
+                logger.info("pattern: {}, old_key: {}, new_key: {}".format(
+                    pattern, old_key, new_key
+                ))
+                state_dict[new_key] = state_dict[old_key]
+                del state_dict[old_key]
+    return state_dict
+
+
 _C2_STAGE_NAMES = {
     "R-50": ["1.2", "2.3", "3.5", "4.2"],
     "R-101": ["1.2", "2.3", "3.22", "4.2"],
@@ -157,14 +184,21 @@ C2_FORMAT_LOADER = Registry()
 @C2_FORMAT_LOADER.register("R-101-C4")
 @C2_FORMAT_LOADER.register("R-101-C5")
 @C2_FORMAT_LOADER.register("R-50-FPN")
+@C2_FORMAT_LOADER.register("R-50-FPN-RETINANET")
 @C2_FORMAT_LOADER.register("R-101-FPN")
+@C2_FORMAT_LOADER.register("R-101-FPN-RETINANET")
 @C2_FORMAT_LOADER.register("R-152-FPN")
 def load_resnet_c2_format(cfg, f):
     state_dict = _load_c2_pickled_weights(f)
     conv_body = cfg.MODEL.BACKBONE.CONV_BODY
     arch = conv_body.replace("-C4", "").replace("-C5", "").replace("-FPN", "")
+    arch = arch.replace("-RETINANET", "")
     stages = _C2_STAGE_NAMES[arch]
     state_dict = _rename_weights_for_resnet(state_dict, stages)
+    # ***********************************
+    # for deformable convolutional layer
+    state_dict = _rename_conv_weights_for_deformable_conv_layers(state_dict, cfg)
+    # ***********************************
     return dict(model=state_dict)
 
 

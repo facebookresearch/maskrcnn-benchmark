@@ -25,7 +25,7 @@ class BoxList(object):
             )
         if bbox.size(-1) != 4:
             raise ValueError(
-                "last dimenion of bbox should have a "
+                "last dimension of bbox should have a "
                 "size of 4, got {}".format(bbox.size(-1))
             )
         if mode not in ("xyxy", "xywh"):

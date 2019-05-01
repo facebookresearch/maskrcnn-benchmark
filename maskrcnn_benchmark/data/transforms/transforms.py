@@ -26,13 +26,15 @@ class Compose(object):
 
 class Resize(object):
     def __init__(self, min_size, max_size):
+        if not isinstance(min_size, (list, tuple)):
+            min_size = (min_size,)
         self.min_size = min_size
         self.max_size = max_size
 
     # modified from torchvision to add support for max size
     def get_size(self, image_size):
         w, h = image_size
-        size = self.min_size
+        size = random.choice(self.min_size)
         max_size = self.max_size
         if max_size is not None:
             min_original_size = float(min((w, h)))
@@ -67,6 +69,24 @@ class RandomHorizontalFlip(object):
         if random.random() < self.prob:
             image = F.hflip(image)
             target = target.transpose(0)
+        return image, target
+
+
+class ColorJitter(object):
+    def __init__(self,
+                 brightness=None,
+                 contrast=None,
+                 saturation=None,
+                 hue=None,
+                 ):
+        self.color_jitter = torchvision.transforms.ColorJitter(
+            brightness=brightness,
+            contrast=contrast,
+            saturation=saturation,
+            hue=hue,)
+
+    def __call__(self, image, target):
+        image = self.color_jitter(image)
         return image, target
 
 
