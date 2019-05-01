@@ -62,6 +62,7 @@ unset INSTALL_DIR
 # MACOSX_DEPLOYMENT_TARGET=10.9 CC=clang CXX=clang++ python setup.py build develop
 ```
 #### Windows 10 
+```bash
 open a cmd and change to desired installation directory 
 from now on will be refered as INSTALL_DIR 
 conda create --name maskrcnn_benchmark
@@ -100,7 +101,7 @@ cd maskrcnn-benchmark
 # the files if you want and won't need to
 # re-build it
 python setup.py build develop
-
+```
 
 ### Option 2: Docker Image (Requires CUDA, Linux only)
 
