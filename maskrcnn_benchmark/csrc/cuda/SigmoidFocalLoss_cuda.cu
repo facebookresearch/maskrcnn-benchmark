@@ -118,7 +118,7 @@ at::Tensor SigmoidFocalLoss_forward_cuda(
   cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
   dim3 grid(std::min(THCCeilDiv((long)losses_size, 512L), 4096L));
-  dim3 grid(std::min(THCCeilDiv(losses_size, 512L), 4096L));
+  
   dim3 block(512);
 
   if (losses.numel() == 0) {
