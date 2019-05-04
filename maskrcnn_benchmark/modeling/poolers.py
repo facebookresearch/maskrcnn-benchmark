@@ -121,13 +121,69 @@ class Pooler(nn.Module):
         return result
 
 
+class RotatedPooler(Pooler):
+    """
+    Pooler for Detection with or without FPN.
+    It currently hard-code ROIAlign in the implementation,
+    but that can be made more generic later on.
+    Also, the requirement of passing the scales is not strictly necessary, as they
+    can be inferred from the size of the feature map / size of original image,
+    which is available thanks to the BoxList.
+    """
+
+    def __init__(self, output_size, scales):
+        """
+        Arguments:
+            output_size (list[tuple[int]] or list[int]): output size for the pooled region
+            scales (list[float]): scales for each Pooler
+            sampling_ratio (int): sampling ratio for ROIAlign
+        """
+        from maskrcnn_benchmark.layers.rotate_roi_pool import RROIPool
+ 
+        super(Pooler, self).__init__()
+        poolers = []
+        for scale in scales:
+            poolers.append(
+                RROIPool(
+                    output_size, spatial_scale=scale
+                )
+            )
+        self.poolers = nn.ModuleList(poolers)
+        self.output_size = output_size
+        # get the levels in the feature map by leveraging the fact that the network always
+        # downsamples by a factor of 2 at each level.
+        lvl_min = -torch.log2(torch.tensor(scales[0], dtype=torch.float32)).item()
+        lvl_max = -torch.log2(torch.tensor(scales[-1], dtype=torch.float32)).item()
+        self.map_levels = LevelMapper(lvl_min, lvl_max)
+
+    def convert_to_roi_format(self, boxes):
+        concat_boxes = cat([b.get_field('rrects') for b in boxes], dim=0)
+        device, dtype = concat_boxes.device, concat_boxes.dtype
+        ids = cat(
+            [
+                torch.full((len(b), 1), i, dtype=dtype, device=device)
+                for i, b in enumerate(boxes)
+            ],
+            dim=0,
+        )
+        rois = torch.cat([ids, concat_boxes], dim=1)
+        return rois
+
+
 def make_pooler(cfg, head_name):
     resolution = cfg.MODEL[head_name].POOLER_RESOLUTION
     scales = cfg.MODEL[head_name].POOLER_SCALES
     sampling_ratio = cfg.MODEL[head_name].POOLER_SAMPLING_RATIO
-    pooler = Pooler(
-        output_size=(resolution, resolution),
-        scales=scales,
-        sampling_ratio=sampling_ratio,
-    )
+
+    if not cfg.MODEL.ROTATED:
+        pooler = Pooler(
+            output_size=(resolution, resolution),
+            scales=scales,
+            sampling_ratio=sampling_ratio,
+        )
+    else:
+        pooler = RotatedPooler(
+            output_size=(resolution, resolution),
+            scales=scales
+        )
     return pooler
