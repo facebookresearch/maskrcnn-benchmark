@@ -257,8 +257,8 @@ class COCOPoseDataset(COCODataset):
             target.add_field("depth", depth_D)
 
         target = target.clip_to_image(remove_empty=True)
-        if self.transforms is not None:
-            img, target = self.transforms(img, target)
+        if self._transforms is not None:
+            img, target = self._transforms(img, target)
 
         if "intrinsic_matrix" in meta:
             target.add_field("intrinsic_matrix", meta["intrinsic_matrix"])
