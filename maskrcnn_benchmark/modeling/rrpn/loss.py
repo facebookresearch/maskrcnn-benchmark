@@ -37,14 +37,22 @@ def compute_reg_targets(targets, anchors, box_coder):
     reg_angles_sign = (reg_angles > 0).to(torch.float32)
     reg_angles_sign[reg_angles_sign == 0] = -1
     reg_angles_abs = torch.abs(reg_angles)
-    gt_45 = reg_angles_abs > 45 # np.deg2rad(45) # TODO: ASSUMES ANGLES ARE ONLY -90 to 0
 
-    # targets_copy = targets.clone()
-    targets[gt_45, -1] -= reg_angles_sign[gt_45] * 90 # np.deg2rad(90)
+    # normalize angle diffs: 0 - 180
+    reg_angles_abs = reg_angles_abs % 180
 
-    xd = targets[gt_45, 2:4]
-    targets[gt_45, 2] = xd[:, 1]
-    targets[gt_45, 3] = xd[:, 0]
+    gt_45 = reg_angles_abs > 45
+    gt_135 = reg_angles_abs > 135
+    lt_135 = ~gt_135
+    gt_45_lt_135 = torch.mul(gt_45, lt_135)
+
+    targets[gt_45_lt_135, -1] -= reg_angles_sign[gt_45_lt_135] * 90
+
+    xd = targets[gt_45_lt_135, 2:4]
+    targets[gt_45_lt_135, 2] = xd[:, 1]
+    targets[gt_45_lt_135, 3] = xd[:, 0]
+
+    targets[gt_135, -1] -= reg_angles_sign[gt_135] * 180
 
     # compute regression targets
     reg_targets = box_coder.encode(
@@ -236,7 +244,7 @@ class RPNLossComputation(object):
         )
         box_loss = (box_loss * pos_label_weights.unsqueeze(1)).sum() / total_pos
 
-        angle_loss = 0 #torch.abs(torch.sin(pos_regression[:, -1] - pos_regression_targets[:, -1])).mean()
+        # angle_loss = 0 #torch.abs(torch.sin(pos_regression[:, -1] - pos_regression_targets[:, -1])).mean()
 
         # balance negative and positive weights
         sampled_labels = labels[sampled_inds]
@@ -252,7 +260,7 @@ class RPNLossComputation(object):
         #     objectness[sampled_inds], sampled_labels, weight=objectness_weights
         # )
 
-        return objectness_loss, box_loss, angle_loss
+        return objectness_loss, box_loss#, angle_loss
 
 
 def make_rpn_loss_evaluator(cfg, box_coder):

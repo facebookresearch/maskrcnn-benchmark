@@ -54,7 +54,7 @@ class ImageTransformer(object):
         image, target = self.transforms(image, target)
         # convert to an ImageList, padded so that it is divisible by
         # cfg.DATALOADER.SIZE_DIVISIBILITY
-        image = image.unsqueeze(0)
+        # image = image.unsqueeze(0)
         image_list = to_image_list(image, self.cfg.DATALOADER.SIZE_DIVISIBILITY)
         return image_list, [target.get_field('scale')]
 
@@ -326,14 +326,49 @@ if __name__ == '__main__':
 
     CLASSES = ["__background__", "class_x"]
     # config_file = "./configs/rebin.yaml"
-    config_file = "./configs/coco_rpn_only.yaml"
+    # config_file = "./configs/coco_rotated_rpn_only_fpn.yaml"
+    # model_file = "./checkpoints/coco_rotated_rpn_only_fpn/model_final.pth"
+    config_file = "./configs/coco_rotated_faster_rcnn.yaml"
+    model_file = "./checkpoints/coco_rotated_faster_rcnn/model_final.pth"
 
-    model_file = "./checkpoints/coco_rotated_rpn_only/model_final.pth"
-    # model_file = "./checkpoints/coco_rpn_only/model_final.pth"
+    # config_file = "./configs/coco_rotated_rpn_only.yaml"
+    # model_file = "./checkpoints/coco_rotated_rpn_only/model_final.pth"
     image_dir = "datasets/coco/val2014"
     # image_files = ["mixed/temple_0/000885.left","mixed/temple_0/001774.left"]
     image_ext = ".jpg"
-    image_files = ["COCO_val2014_000000001000.jpg", "COCO_val2014_000000010012.jpg"]
+    image_files = [u'COCO_val2014_000000001000.jpg', u'COCO_val2014_000000010012.jpg']
+    # image_files = [
+    #     u'COCO_train2014_000000417793.jpg',
+    #     u'COCO_train2014_000000147459.jpg',
+    #     u'COCO_train2014_000000417797.jpg',
+    #     u'COCO_train2014_000000032778.jpg',
+    #     u'COCO_train2014_000000393227.jpg',
+    #     u'COCO_train2014_000000139276.jpg',
+    #     u'COCO_train2014_000000114703.jpg',
+    #     u'COCO_train2014_000000229398.jpg',
+    #     u'COCO_train2014_000000401435.jpg',
+    #     u'COCO_train2014_000000581667.jpg',
+    #     u'COCO_train2014_000000213034.jpg',
+    #     u'COCO_train2014_000000024621.jpg',
+    #     u'COCO_train2014_000000294962.jpg',
+    #     u'COCO_train2014_000000548926.jpg',
+    #     u'COCO_train2014_000000188482.jpg',
+    #     u'COCO_train2014_000000337707.jpg',
+    #     u'COCO_train2014_000000458827.jpg',
+    #     u'COCO_train2014_000000000077.jpg',
+    #     u'COCO_train2014_000000417870.jpg',
+    #     u'COCO_train2014_000000163921.jpg',
+    #     u'COCO_train2014_000000516184.jpg',
+    #     u'COCO_train2014_000000237658.jpg',
+    #     u'COCO_train2014_000000204891.jpg',
+    #     u'COCO_train2014_000000467038.jpg',
+    #     u'COCO_train2014_000000270440.jpg',
+    #     u'COCO_train2014_000000311401.jpg',
+    #     u'COCO_train2014_000000221293.jpg',
+    #     u'COCO_train2014_000000565361.jpg',
+    #     u'COCO_train2014_000000139380.jpg',
+    #     u'COCO_train2014_000000019134.jpg'
+    # ][::-1]
     image_files = [osp.join(image_dir, f) for f in image_files]
 
     cfg.merge_from_file(config_file)
@@ -418,11 +453,12 @@ if __name__ == '__main__':
             depth_pred = np.zeros((N, height, width), dtype=np.float32)
         if cfg.MODEL.POSE_ON:
             poses = predictions.get_field("pose").numpy()
+        if cfg.MODEL.ROTATED:
+            from maskrcnn_benchmark.modeling.rrpn.anchor_generator import draw_anchors
 
         for ix, (bbox, score) in enumerate(zip(bboxes, scores)):
 
             if cfg.MODEL.ROTATED:
-                from maskrcnn_benchmark.modeling.rrpn.anchor_generator import draw_anchors
 
                 # TODO: RRECTS RESIZE
                 w_ratio = float(width) / pred_size[0]
@@ -491,6 +527,7 @@ if __name__ == '__main__':
         # cv2.waitKey(0)
 
         if not (cfg.MODEL.DEPTH_ON or cfg.MODEL.VERTEX_ON and cfg.MODEL.POSE_ON):
+            cv2.imshow("img", img)
             cv2.imshow("pred", img_copy)
             cv2.waitKey(0)
             continue

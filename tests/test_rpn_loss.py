@@ -117,8 +117,10 @@ if __name__ == '__main__':
         total_pos = sum(label_cnts)
         for x in range(start_gt_idx):
             nz = label_idxs[x]
-            if nz.numel() <= MAX_GT_NUM:
-                label_weights[nz] = total_pos / nz.numel()
+            nnn = nz.numel()
+            if nnn <= MAX_GT_NUM:
+                if nnn > 0:
+                    label_weights[nz] = total_pos / nz.numel()
                 continue
             top_iou_ids = torch.sort(pos_matched_gt_ious[nz], descending=True)[1][:MAX_GT_NUM]
             inds = nz[top_iou_ids]

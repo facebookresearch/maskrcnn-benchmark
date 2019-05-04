@@ -79,13 +79,13 @@ class RRPNModule(torch.nn.Module):
                 boxes = self.box_selector_train(
                     anchors, objectness, rpn_box_regression, targets
                 )
-        loss_objectness, loss_rpn_box_reg, loss_rpn_angle = self.loss_evaluator(
+        loss_objectness, loss_rpn_box_reg = self.loss_evaluator(
             anchors, objectness, rpn_box_regression, targets
         )
         losses = {
             "loss_objectness": loss_objectness,
             "loss_rpn_box_reg": loss_rpn_box_reg,
-            "loss_rpn_angle": loss_rpn_angle,
+            # "loss_rpn_angle": loss_rpn_angle,
         }
         return boxes, losses
 

@@ -9,36 +9,12 @@ from maskrcnn_benchmark.modeling.rotate_ops import rotate_iou
 from maskrcnn_benchmark.modeling.balanced_positive_negative_sampler import (
     BalancedPositiveNegativeSampler
 )
+from maskrcnn_benchmark.modeling.rrpn.loss import compute_reg_targets
 from maskrcnn_benchmark.modeling.rrpn.utils import get_boxlist_rotated_rect_tensor
 
 from maskrcnn_benchmark.modeling.utils import cat
 
 from .inference import REGRESSION_CN
-
-
-def compute_reg_targets(targets, anchors, box_coder):
-    dims = targets.shape
-    assert len(dims) == 2 and dims[1] == 5 and anchors.shape == dims
-
-    reg_angles = targets[:, -1] - anchors[:, -1]
-    reg_angles_sign = (reg_angles > 0).to(torch.float32)
-    reg_angles_sign[reg_angles_sign == 0] = -1
-    reg_angles_abs = torch.abs(reg_angles)
-    gt_45 = reg_angles_abs > 45 # np.deg2rad(45) # TODO: ASSUMES ANGLES ARE ONLY -90 to 0
-
-    # targets_copy = targets.clone()
-    targets[gt_45, -1] -= reg_angles_sign[gt_45] * 90 # np.deg2rad(90)
-
-    xd = targets[gt_45, 2:4]
-    targets[gt_45, 2] = xd[:, 1]
-    targets[gt_45, 3] = xd[:, 0]
-
-    # compute regression targets
-    reg_targets = box_coder.encode(
-        targets, anchors
-    )
-
-    return reg_targets
 
 
 class FastRCNNLossComputation(object):
