@@ -34,6 +34,8 @@ def get_extensions(extensions_dir, extension_name):
             "-D__CUDA_NO_HALF_OPERATORS__",
             "-D__CUDA_NO_HALF_CONVERSIONS__",
             "-D__CUDA_NO_HALF2_OPERATORS__",
+            "-O3",
+            "--use_fast_math"
         ]
 
     sources = [os.path.join(extensions_dir, s) for s in sources]
