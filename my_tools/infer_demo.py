@@ -328,15 +328,20 @@ if __name__ == '__main__':
     # config_file = "./configs/rebin.yaml"
     # config_file = "./configs/coco_rotated_rpn_only_fpn.yaml"
     # model_file = "./checkpoints/coco_rotated_rpn_only_fpn/model_final.pth"
+
     config_file = "./configs/coco_rotated_faster_rcnn.yaml"
     model_file = "./checkpoints/coco_rotated_faster_rcnn/model_final.pth"
+    # config_file = "./configs/coco_faster_rcnn.yaml"
+    # model_file = "./checkpoints/coco_faster_rcnn/model_final.pth"
 
-    # config_file = "./configs/coco_rotated_rpn_only.yaml"
-    # model_file = "./checkpoints/coco_rotated_rpn_only/model_final.pth"
-    image_dir = "datasets/coco/val2014"
+    image_dir = "/data/MSCOCO/val2014"
     # image_files = ["mixed/temple_0/000885.left","mixed/temple_0/001774.left"]
     image_ext = ".jpg"
-    image_files = [u'COCO_val2014_000000001000.jpg', u'COCO_val2014_000000010012.jpg']
+    # image_files = [u'COCO_val2014_000000001000.jpg', u'COCO_val2014_000000010012.jpg']
+    image_files = ['COCO_val2014_000000415360.jpg',
+         'COCO_val2014_000000438915.jpg',
+         'COCO_val2014_000000209028.jpg',
+         'COCO_val2014_000000500100.jpg']
     # image_files = [
     #     u'COCO_train2014_000000417793.jpg',
     #     u'COCO_train2014_000000147459.jpg',
@@ -455,6 +460,7 @@ if __name__ == '__main__':
             poses = predictions.get_field("pose").numpy()
         if cfg.MODEL.ROTATED:
             from maskrcnn_benchmark.modeling.rrpn.anchor_generator import draw_anchors
+            rrects = predictions.get_field("rrects").cpu().numpy()
 
         for ix, (bbox, score) in enumerate(zip(bboxes, scores)):
 
@@ -463,13 +469,13 @@ if __name__ == '__main__':
                 # TODO: RRECTS RESIZE
                 w_ratio = float(width) / pred_size[0]
                 h_ratio = float(height) / pred_size[1]
-                rrects = predictions.get_field("rrects")
-                rr = rrects.cpu().numpy().copy()
-                rr[:, 0] *= w_ratio
-                rr[:, 2] *= w_ratio
-                rr[:, 1] *= h_ratio
-                rr[:, 3] *= h_ratio
-                img_copy = draw_anchors(img_copy, rr)
+                rr = rrects[ix].copy()
+                rr[0] *= w_ratio
+                rr[2] *= w_ratio
+                rr[1] *= h_ratio
+                rr[3] *= h_ratio
+                print(rr)
+                img_copy = draw_anchors(img_copy, [rr])
             else:
                 img_copy = cv2.rectangle(img_copy, tuple(bbox[:2]), tuple(bbox[2:]), (0, 0, 255), 2)
 
