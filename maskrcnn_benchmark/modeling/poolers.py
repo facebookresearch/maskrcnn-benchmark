@@ -138,13 +138,14 @@ class RotatedPooler(Pooler):
             scales (list[float]): scales for each Pooler
             sampling_ratio (int): sampling ratio for ROIAlign
         """
-        from maskrcnn_benchmark.layers.rotate_roi_pool import RROIPool
+        from maskrcnn_benchmark.layers.rotate_roi_pool import RROIPool as RPool
+        # from maskrcnn_benchmark.layers.rotate_roi_align import RROIAlign as RPool
  
         super(Pooler, self).__init__()
         poolers = []
         for scale in scales:
             poolers.append(
-                RROIPool(
+                RPool(
                     output_size, spatial_scale=scale
                 )
             )

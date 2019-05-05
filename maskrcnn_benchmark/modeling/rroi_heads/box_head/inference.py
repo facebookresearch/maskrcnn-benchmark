@@ -69,7 +69,7 @@ class PostProcessor(nn.Module):
             box_regression = box_regression[:, -REGRESSION_CN:]
 
         box_regression = box_regression.view(sum(boxes_per_image), -1)
-        box_regression[:, -1] = 0
+        # box_regression[:, -1] = 0
         proposals = self.box_coder.decode(
             box_regression, concat_boxes
         )
