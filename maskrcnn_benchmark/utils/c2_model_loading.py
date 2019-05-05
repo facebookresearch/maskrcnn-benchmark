@@ -124,7 +124,7 @@ def _rename_weights_for_resnet(weights, stage_names):
         w = torch.from_numpy(v)
         # if "bn" in k:
         #     w = w.view(1, -1, 1, 1)
-        logger.info("C2 name: {: <{}} mapped name: {}".format(k, max_c2_key_size, key_map[k]))
+        # logger.info("C2 name: {: <{}} mapped name: {}".format(k, max_c2_key_size, key_map[k]))
         new_weights[key_map[k]] = w
 
     return new_weights
