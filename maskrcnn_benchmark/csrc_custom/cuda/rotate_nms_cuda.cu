@@ -28,7 +28,7 @@
   } while (0)
 
 #define DIVUP(m,n) ((m) / (n) + ((m) % (n) > 0))
-int const threadsPerBlock = 512;
+int const threadsPerBlock = sizeof(unsigned long long) * 8;
 
 
 template <typename T>
@@ -85,7 +85,7 @@ __global__ void rotate_nms_kernel(const int n_boxes, const float nms_overlap_thr
       }
     }
 
-    const int col_blocks = DIVUP(n_boxes, threadsPerBlock);
+    const int col_blocks = THCCeilDiv(n_boxes, threadsPerBlock);
     dev_mask[cur_box_idx * col_blocks + col_start] = t;
   }
 }
@@ -146,8 +146,8 @@ void _iou_matrix_launcher(float* overlaps, const float* boxes, const float* quer
         int n, int k, cudaStream_t stream)
 {
 
-  dim3 blocks(DIVUP(n, threadsPerBlock),
-              DIVUP(k, threadsPerBlock));
+  dim3 blocks(THCCeilDiv(n, threadsPerBlock),
+              THCCeilDiv(k, threadsPerBlock));
 
   dim3 threads(threadsPerBlock);
 
@@ -159,7 +159,7 @@ void _iou_matrix_launcher(float* overlaps, const float* boxes, const float* quer
 
 }
 
-void _rotate_nms_launcher(long* keep_out, int* num_out, const float* boxes, int boxes_num,
+void _rotate_nms_launcher(int64_t* keep_out, int* num_out, const float* boxes, int boxes_num,
           int boxes_dim, float nms_overlap_thresh, cudaStream_t stream)
 {
   /**
@@ -175,7 +175,7 @@ void _rotate_nms_launcher(long* keep_out, int* num_out, const float* boxes, int 
 
   */
 
-  const int col_blocks = DIVUP(boxes_num, threadsPerBlock);
+  const int col_blocks = THCCeilDiv(boxes_num, threadsPerBlock);
 
   unsigned long long* mask_dev = NULL;
   // Get the IoUs between each element in the array (N**2 operation)
@@ -212,7 +212,7 @@ void _rotate_nms_launcher(long* keep_out, int* num_out, const float* boxes, int 
     int inblock = i % threadsPerBlock;
 
     if (!(remv[nblock] & (1ULL << inblock))) {  // if not zero i.e. no overlap
-      keep_out[num_to_keep++] = long(i);
+      keep_out[num_to_keep++] = i;
       unsigned long long *p = &mask_host[0] + i * col_blocks;
 
       // Loop through the col_block array to aggregate all iou overlap results for that box
@@ -242,7 +242,7 @@ at::Tensor rotate_nms_cuda(
   cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
   int num_to_keep = 0;
-  _rotate_nms_launcher(keep.data<long>(), &num_to_keep, r_boxes.contiguous().data<float>(), boxes_num,
+  _rotate_nms_launcher(keep.data<int64_t>(), &num_to_keep, r_boxes.contiguous().data<float>(), boxes_num,
           channels, nms_threshold, stream);
 //  AveragedistanceBackwardLaucher(
 //    grad.contiguous().data<float>(), bottom_diff.contiguous().data<float>(),
