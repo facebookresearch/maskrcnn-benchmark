@@ -29,7 +29,9 @@ def smooth_l1_loss(input, target, beta=1. / 9):
     loss = torch.where(cond, 0.5 * n ** 2 / beta, n - 0.5 * beta)
     return loss
 
-def compute_reg_targets(targets, anchors, box_coder):
+def compute_reg_targets(targets_ori, anchors, box_coder):
+    targets = targets_ori.clone()
+
     dims = targets.shape
     assert len(dims) == 2 and dims[1] == 5 and anchors.shape == dims
 
@@ -48,7 +50,7 @@ def compute_reg_targets(targets, anchors, box_coder):
 
     targets[gt_45_lt_135, -1] -= reg_angles_sign[gt_45_lt_135] * 90
 
-    xd = targets[gt_45_lt_135, 2:4]
+    xd = targets_ori[gt_45_lt_135, 2:4]
     targets[gt_45_lt_135, 2] = xd[:, 1]
     targets[gt_45_lt_135, 3] = xd[:, 0]
 
@@ -202,9 +204,6 @@ class RPNLossComputation(object):
             matched_gt_ids = torch.cat(matched_gt_ids)
             pos_matched_gt_ids = matched_gt_ids[sampled_pos_inds]
 
-            matched_gt_ious = torch.cat(matched_gt_ious)
-            pos_matched_gt_ious = matched_gt_ious[sampled_pos_inds]
-
             pos_label_weights = torch.zeros_like(pos_matched_gt_ids, dtype=torch.float32)
 
             label_idxs = [torch.nonzero(pos_matched_gt_ids == x).squeeze() for x in range(start_gt_idx)]
@@ -219,6 +218,9 @@ class RPNLossComputation(object):
 
             # # """NEW"""
             # MAX_GT_NUM = 6  # TODO: CONFIG
+            # matched_gt_ious = torch.cat(matched_gt_ious)
+            # pos_matched_gt_ious = matched_gt_ious[sampled_pos_inds]
+            #
             # label_cnts = [min(MAX_GT_NUM, nz.numel()) for nz in label_idxs]
             # total_pos = sum(label_cnts)
             # for x in range(start_gt_idx):

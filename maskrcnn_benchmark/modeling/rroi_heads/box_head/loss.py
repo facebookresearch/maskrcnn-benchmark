@@ -1,7 +1,7 @@
 import torch
 from torch.nn import functional as F
 
-from maskrcnn_benchmark.layers import smooth_l1_loss
+# from maskrcnn_benchmark.layers import smooth_l1_loss
 from maskrcnn_benchmark.modeling.rotated_box_coder import BoxCoder
 from maskrcnn_benchmark.modeling.matcher import Matcher
 # from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
@@ -15,6 +15,17 @@ from maskrcnn_benchmark.modeling.rrpn.utils import get_boxlist_rotated_rect_tens
 from maskrcnn_benchmark.modeling.utils import cat
 
 from .inference import REGRESSION_CN
+
+
+def smooth_l1_loss(input, target, beta=1. / 9):
+    """
+    very similar to the smooth_l1_loss from pytorch, but with
+    the extra beta parameter
+    """
+    n = torch.abs(input - target)
+    cond = n < beta
+    loss = torch.where(cond, 0.5 * n ** 2 / beta, n - 0.5 * beta)
+    return loss
 
 
 class FastRCNNLossComputation(object):
@@ -68,6 +79,7 @@ class FastRCNNLossComputation(object):
     def prepare_targets(self, proposals, targets):
         labels = []
         regression_targets = []
+        matched_gt_ids_per_image = []
         for proposals_per_image, targets_per_image in zip(proposals, targets):
             matched_targets = self.match_targets_to_proposals(
                 proposals_per_image, targets_per_image
@@ -91,8 +103,9 @@ class FastRCNNLossComputation(object):
             )
             labels.append(labels_per_image)
             regression_targets.append(regression_targets_per_image)
+            matched_gt_ids_per_image.append(matched_idxs)
 
-        return labels, regression_targets
+        return labels, regression_targets, matched_gt_ids_per_image
 
     def subsample(self, proposals, targets):
         """
@@ -105,17 +118,20 @@ class FastRCNNLossComputation(object):
             targets (list[BoxList])
         """
 
-        labels, regression_targets = self.prepare_targets(proposals, targets)
+        labels, regression_targets, matched_gt_ids = self.prepare_targets(proposals, targets)
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
 
         proposals = list(proposals)
         # add corresponding label and regression_targets information to the bounding boxes
-        for labels_per_image, regression_targets_per_image, proposals_per_image in zip(
-            labels, regression_targets, proposals
+        for labels_per_image, regression_targets_per_image, m_gt_pi, proposals_per_image in zip(
+            labels, regression_targets, matched_gt_ids, proposals
         ):
             proposals_per_image.add_field("labels", labels_per_image)
             proposals_per_image.add_field(
                 "regression_targets", regression_targets_per_image
+            )
+            proposals_per_image.add_field(
+                "matched_idxs", m_gt_pi
             )
 
         # distributed sampled proposals, that were obtained on all feature maps
@@ -128,6 +144,7 @@ class FastRCNNLossComputation(object):
             proposals[img_idx] = proposals_per_image
 
         self._proposals = proposals
+        self._targets = targets
         return proposals
 
     def __call__(self, class_logits, box_regression):
@@ -158,20 +175,15 @@ class FastRCNNLossComputation(object):
             [proposal.get_field("regression_targets") for proposal in proposals], dim=0
         )
 
-        sampled_pos_inds_subset = torch.nonzero(labels > 0).squeeze(1)
-        labels_pos = labels[sampled_pos_inds_subset]
+        labels_gt_0 = labels > 0
+        sampled_pos_inds = torch.nonzero(labels_gt_0).squeeze(1)
+        labels_pos = labels[sampled_pos_inds]
         total_pos = labels_pos.numel()
+        total_samples = labels.numel()
+        total_neg = total_samples - total_pos
 
         if total_pos == 0:
             return labels_pos.sum(), labels_pos.sum()  # all 0, sum is convenient to get torch tensor
-
-        # perform weighted classification loss (to prevent class imbalance i.e. too many negative)
-        with torch.no_grad():
-            num_classes = class_logits.shape[-1]
-            label_cnts = torch.stack([(labels == x).sum() for x in range(num_classes)])
-            label_weights = 1.0 / label_cnts.to(dtype=torch.float32)
-            label_weights /= num_classes   # equal class weighting
-        classification_loss = F.cross_entropy(class_logits, labels, weight=label_weights)
 
         # get indices that correspond to the regression targets for
         # the corresponding ground truth labels, to be used with
@@ -181,13 +193,56 @@ class FastRCNNLossComputation(object):
         else:
             map_inds = REGRESSION_CN * labels_pos[:, None] + torch.arange(REGRESSION_CN, device=device)
 
+        pos_box_regression = box_regression[sampled_pos_inds[:, None], map_inds]
+        pos_reg_targets = regression_targets[sampled_pos_inds]
+
+        # NEW
+        targets = self._targets
+
+        matched_gt_ids = [p.get_field("matched_idxs") for p in proposals]
+
+        with torch.no_grad():
+            start_gt_idx = 0
+            for ix, t in enumerate(targets):
+                matched_gt_ids[ix] += start_gt_idx
+                start_gt_idx += len(t)
+
+            matched_gt_ids = torch.cat(matched_gt_ids)
+            pos_matched_gt_ids = matched_gt_ids[sampled_pos_inds]
+
+            pos_label_weights = torch.zeros_like(pos_matched_gt_ids, dtype=torch.float32)
+
+            label_idxs = [torch.nonzero(pos_matched_gt_ids == x).squeeze() for x in range(start_gt_idx)]
+
+            # """OLD"""
+            label_cnts = [li.numel() for li in label_idxs]
+            # label_weights = total_pos / label_cnts.to(dtype=torch.float32)
+            # label_weights /= start_gt_idx  # equal class weighting
+            for x in range(start_gt_idx):
+                if label_cnts[x] > 0:
+                    pos_label_weights[label_idxs[x]] = total_pos / label_cnts[x] / start_gt_idx  # equal class weighting
+
+        # # perform weighted classification loss (to prevent class imbalance i.e. too many negative)
+        # with torch.no_grad():
+        #     num_classes = class_logits.shape[-1]
+        #     label_cnts = torch.stack([(labels == x).sum() for x in range(num_classes)])
+        #     label_weights = 1.0 / label_cnts.to(dtype=torch.float32)
+        #     label_weights /= num_classes   # equal class weighting
+        num_classes = class_logits.shape[-1]
+        classification_loss = F.cross_entropy(class_logits, labels, reduce=False)#, weight=label_weights)
+        cls_weights = torch.ones_like(labels, dtype=torch.float32)
+        cls_weights[sampled_pos_inds] = pos_label_weights / total_pos / num_classes
+        cls_weights[torch.nonzero(~labels_gt_0).squeeze(1)] = 1.0 / total_neg / num_classes
+        classification_loss = torch.mul(classification_loss, cls_weights).sum()
+
         box_loss = smooth_l1_loss(
-            box_regression[sampled_pos_inds_subset[:, None], map_inds],
-            regression_targets[sampled_pos_inds_subset],
-            size_average=False,
-            beta=1,
+            pos_box_regression,
+            pos_reg_targets,
+            # size_average=True,
+            beta=1.0,
         )
-        box_loss = box_loss / labels.numel()
+        box_loss = box_loss.mean() # (box_loss * pos_label_weights.unsqueeze(1)).sum() / total_samples
+        # box_loss = box_loss / labels.numel()
 
         return classification_loss, box_loss
 
