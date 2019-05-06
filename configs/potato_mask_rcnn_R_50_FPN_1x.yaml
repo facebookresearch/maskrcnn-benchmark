@@ -30,7 +30,7 @@ MODEL:
     SHARE_BOX_FEATURE_EXTRACTOR: False
   MASK_ON: True
 DATASETS:
-  TRAIN: ("coco_potato_train",)
+  TRAIN: ("coco_potato_train","coco_potato_val")
   TEST: ("coco_potato_val",)
 DATALOADER:
   SIZE_DIVISIBILITY: 32
