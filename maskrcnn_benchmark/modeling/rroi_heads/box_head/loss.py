@@ -193,8 +193,8 @@ class FastRCNNLossComputation(object):
         else:
             map_inds = REGRESSION_CN * labels_pos[:, None] + torch.arange(REGRESSION_CN, device=device)
 
-        pos_box_regression = box_regression[sampled_pos_inds[:, None], map_inds]
-        pos_reg_targets = regression_targets[sampled_pos_inds]
+        # pos_box_regression = box_regression[sampled_pos_inds[:, None], map_inds]
+        # pos_reg_targets = regression_targets[sampled_pos_inds]
 
         # # NEW
         # targets = self._targets

@@ -30,8 +30,6 @@ MODEL:
 
     FPN_POST_NMS_TOP_N_TEST: 2000
 
-    RPN_HEAD: "SingleConvRRPNHead"
-
   ROTATED: True
 OUTPUT_DIR: "checkpoints/coco_rotated_rpn_only_fpn"
 INPUT:

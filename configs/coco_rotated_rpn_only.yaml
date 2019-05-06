@@ -27,7 +27,6 @@ MODEL:
     # Default weights on (dx, dy, dw, dh, dtheta) for normalizing rotated rect regression targets
     BBOX_REG_WEIGHTS: (10.0, 10.0, 5.0, 5.0, 3.0)
 
-    RPN_HEAD: "SingleConvRRPNHead"
   ROTATED: True
 OUTPUT_DIR: "checkpoints/coco_rotated_rpn_only"
 
