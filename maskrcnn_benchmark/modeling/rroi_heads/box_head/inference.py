@@ -69,7 +69,7 @@ class PostProcessor(nn.Module):
             box_regression = box_regression[:, -REGRESSION_CN:]
 
         box_regression = box_regression.view(sum(boxes_per_image), -1)
-        # box_regression[:, -1] = 0
+        # box_regression[:] = 0
         proposals = self.box_coder.decode(
             box_regression, concat_boxes
         )
@@ -139,6 +139,12 @@ class PostProcessor(nn.Module):
             bboxes_j = bboxes[inds, j * 4: (j + 1) * 4]
             rrects_j = rrects[inds, j * REGRESSION_CN : (j + 1) * REGRESSION_CN]
             scores_j = scores[inds, j]
+
+            # sort scores!
+            sorted_idx = torch.sort(scores_j, descending=True)[1]
+            bboxes_j = bboxes_j[sorted_idx]
+            rrects_j = rrects_j[sorted_idx]
+            scores_j = scores_j[sorted_idx]
 
             # perform nms
             keep = self.nms_rotate(rrects_j)

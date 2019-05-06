@@ -195,73 +195,82 @@ class RPNLossComputation(object):
         labels = torch.cat(labels, dim=0)
         regression_targets = torch.cat(regression_targets, dim=0)
 
-        with torch.no_grad():
-            start_gt_idx = 0
-            for ix, t in enumerate(targets):
-                matched_gt_ids[ix] += start_gt_idx
-                start_gt_idx += len(t)
-
-            matched_gt_ids = torch.cat(matched_gt_ids)
-            pos_matched_gt_ids = matched_gt_ids[sampled_pos_inds]
-
-            pos_label_weights = torch.zeros_like(pos_matched_gt_ids, dtype=torch.float32)
-
-            label_idxs = [torch.nonzero(pos_matched_gt_ids == x).squeeze() for x in range(start_gt_idx)]
-
-            # """OLD"""
-            label_cnts = [li.numel() for li in label_idxs]
-            # label_weights = total_pos / label_cnts.to(dtype=torch.float32)
-            # label_weights /= start_gt_idx  # equal class weighting
-            for x in range(start_gt_idx):
-                if label_cnts[x] > 0:
-                    pos_label_weights[label_idxs[x]] = total_pos / label_cnts[x] / start_gt_idx  # equal class weighting
-
-            # # """NEW"""
-            # MAX_GT_NUM = 6  # TODO: CONFIG
-            # matched_gt_ious = torch.cat(matched_gt_ious)
-            # pos_matched_gt_ious = matched_gt_ious[sampled_pos_inds]
-            #
-            # label_cnts = [min(MAX_GT_NUM, nz.numel()) for nz in label_idxs]
-            # total_pos = sum(label_cnts)
-            # for x in range(start_gt_idx):
-            #     nz = label_idxs[x]
-            #     nnn = nz.numel()
-            #     if nnn <= MAX_GT_NUM:
-            #         if nnn > 0:
-            #             pos_label_weights[nz] = total_pos / nnn
-            #         continue
-            #     top_iou_ids = torch.sort(pos_matched_gt_ious[nz], descending=True)[1][:MAX_GT_NUM]
-            #     inds = nz[top_iou_ids]
-            #     pos_label_weights[inds] = total_pos / MAX_GT_NUM
-            #
-            # pos_label_weights = pos_label_weights / start_gt_idx
-
-        pos_regression = box_regression[sampled_pos_inds]
-        pos_regression_targets = regression_targets[sampled_pos_inds]
-        # normalize_reg_targets(pos_regression_targets)
-        box_loss = smooth_l1_loss(
-            pos_regression,#[:, :-1],
-            pos_regression_targets,#[:, :-1],
-            beta=1.0 / 9,
-        )
-        box_loss = (box_loss * pos_label_weights.unsqueeze(1)).sum() / total_pos
-
-        # angle_loss = 0 #torch.abs(torch.sin(pos_regression[:, -1] - pos_regression_targets[:, -1])).mean()
-
-        # balance negative and positive weights
-        sampled_labels = labels[sampled_inds]
-        objectness_weights = torch.ones_like(sampled_labels)
-        objectness_weights[sampled_labels == 1] = 0.5 * pos_label_weights / total_pos
-        objectness_weights[sampled_labels != 1] = 0.5 * 1.0 / total_neg
-
-        criterion = torch.nn.BCELoss(reduce=False)
-        entropy_loss = criterion(objectness[sampled_inds].sigmoid(), sampled_labels)
-        objectness_loss = torch.mul(entropy_loss, objectness_weights).sum()
-
-        # objectness_loss = F.binary_cross_entropy_with_logits(
-        #     objectness[sampled_inds], sampled_labels, weight=objectness_weights
+        # with torch.no_grad():
+        #     start_gt_idx = 0
+        #     for ix, t in enumerate(targets):
+        #         matched_gt_ids[ix] += start_gt_idx
+        #         start_gt_idx += len(t)
+        #
+        #     matched_gt_ids = torch.cat(matched_gt_ids)
+        #     pos_matched_gt_ids = matched_gt_ids[sampled_pos_inds]
+        #
+        #     pos_label_weights = torch.zeros_like(pos_matched_gt_ids, dtype=torch.float32)
+        #
+        #     label_idxs = [torch.nonzero(pos_matched_gt_ids == x).squeeze() for x in range(start_gt_idx)]
+        #
+        #     # """OLD"""
+        #     label_cnts = [li.numel() for li in label_idxs]
+        #     # label_weights = total_pos / label_cnts.to(dtype=torch.float32)
+        #     # label_weights /= start_gt_idx  # equal class weighting
+        #     for x in range(start_gt_idx):
+        #         if label_cnts[x] > 0:
+        #             pos_label_weights[label_idxs[x]] = total_pos / label_cnts[x] / start_gt_idx  # equal class weighting
+        #
+        #     # # """NEW"""
+        #     # MAX_GT_NUM = 6  # TODO: CONFIG
+        #     # matched_gt_ious = torch.cat(matched_gt_ious)
+        #     # pos_matched_gt_ious = matched_gt_ious[sampled_pos_inds]
+        #     #
+        #     # label_cnts = [min(MAX_GT_NUM, nz.numel()) for nz in label_idxs]
+        #     # total_pos = sum(label_cnts)
+        #     # for x in range(start_gt_idx):
+        #     #     nz = label_idxs[x]
+        #     #     nnn = nz.numel()
+        #     #     if nnn <= MAX_GT_NUM:
+        #     #         if nnn > 0:
+        #     #             pos_label_weights[nz] = total_pos / nnn
+        #     #         continue
+        #     #     top_iou_ids = torch.sort(pos_matched_gt_ious[nz], descending=True)[1][:MAX_GT_NUM]
+        #     #     inds = nz[top_iou_ids]
+        #     #     pos_label_weights[inds] = total_pos / MAX_GT_NUM
+        #     #
+        #     # pos_label_weights = pos_label_weights / start_gt_idx
+        #
+        # pos_regression = box_regression[sampled_pos_inds]
+        # pos_regression_targets = regression_targets[sampled_pos_inds]
+        # # normalize_reg_targets(pos_regression_targets)
+        # box_loss = smooth_l1_loss(
+        #     pos_regression,#[:, :-1],
+        #     pos_regression_targets,#[:, :-1],
+        #     beta=1.0 / 9,
         # )
+        # box_loss = (box_loss * pos_label_weights.unsqueeze(1)).sum() / total_pos
+        #
+        # # angle_loss = 0 #torch.abs(torch.sin(pos_regression[:, -1] - pos_regression_targets[:, -1])).mean()
+        #
+        # # balance negative and positive weights
+        # sampled_labels = labels[sampled_inds]
+        # objectness_weights = torch.ones_like(sampled_labels)
+        # objectness_weights[sampled_labels == 1] = 0.5 * pos_label_weights / total_pos
+        # objectness_weights[sampled_labels != 1] = 0.5 * 1.0 / total_neg
+        #
+        # criterion = torch.nn.BCELoss(reduce=False)
+        # entropy_loss = criterion(objectness[sampled_inds].sigmoid(), sampled_labels)
+        # objectness_loss = torch.mul(entropy_loss, objectness_weights).sum()
+        #
+        # # objectness_loss = F.binary_cross_entropy_with_logits(
+        # #     objectness[sampled_inds], sampled_labels, weight=objectness_weights
+        # # )
+        box_loss = smooth_l1_loss(
+            box_regression[sampled_pos_inds],
+            regression_targets[sampled_pos_inds],
+            beta=1.0 / 9,
+            # size_average=False,
+        ).sum() / (sampled_inds.numel())
 
+        objectness_loss = F.binary_cross_entropy_with_logits(
+            objectness[sampled_inds], labels[sampled_inds]
+        )
         return objectness_loss, box_loss#, angle_loss
 
 
