@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-import os
-
 import cv2
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from torchvision import transforms as T
 
@@ -9,94 +9,16 @@ from maskrcnn_benchmark import layers as L
 from maskrcnn_benchmark.modeling.detector import build_detection_model
 from maskrcnn_benchmark.modeling.roi_heads.mask_head.inference import Masker
 from maskrcnn_benchmark.structures.image_list import to_image_list
+from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
 from maskrcnn_benchmark.utils import cv2_util
 from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
 
 
-class COCODemo(object):
+class POTATODemo(object):
     # COCO categories for pretty print
     CATEGORIES = [
         "__background",
-        "person",
-        "bicycle",
-        "car",
-        "motorcycle",
-        "airplane",
-        "bus",
-        "train",
-        "truck",
-        "boat",
-        "traffic light",
-        "fire hydrant",
-        "stop sign",
-        "parking meter",
-        "bench",
-        "bird",
-        "cat",
-        "dog",
-        "horse",
-        "sheep",
-        "cow",
-        "elephant",
-        "bear",
-        "zebra",
-        "giraffe",
-        "backpack",
-        "umbrella",
-        "handbag",
-        "tie",
-        "suitcase",
-        "frisbee",
-        "skis",
-        "snowboard",
-        "sports ball",
-        "kite",
-        "baseball bat",
-        "baseball glove",
-        "skateboard",
-        "surfboard",
-        "tennis racket",
-        "bottle",
-        "wine glass",
-        "cup",
-        "fork",
-        "knife",
-        "spoon",
-        "bowl",
-        "banana",
-        "apple",
-        "sandwich",
-        "orange",
-        "broccoli",
-        "carrot",
-        "hot dog",
-        "pizza",
-        "donut",
-        "cake",
-        "chair",
-        "couch",
-        "potted plant",
-        "bed",
-        "dining table",
-        "toilet",
-        "tv",
-        "laptop",
-        "mouse",
-        "remote",
-        "keyboard",
-        "cell phone",
-        "microwave",
-        "oven",
-        "toaster",
-        "sink",
-        "refrigerator",
-        "book",
-        "clock",
-        "vase",
-        "scissors",
-        "teddy bear",
-        "hair drier",
-        "toothbrush",
+        "potato"
     ]
 
     def __init__(
@@ -161,8 +83,7 @@ class COCODemo(object):
         )
         return transform
 
-    def run_on_opencv_image(self, image, frame=0, transparent=False, resize=False,
-                            output_path="/home/umberto/Output", desired_size=640):
+    def run_on_opencv_image(self, image):
         """
         Arguments:
             image (np.ndarray): an image as returned by OpenCV
@@ -178,16 +99,11 @@ class COCODemo(object):
         result = image.copy()
         if self.show_mask_heatmaps:
             return self.create_mask_montage(result, top_predictions)
+        result = self.overlay_boxes(result, top_predictions)
         if self.cfg.MODEL.MASK_ON:
-            if self.cfg.MODEL.EXTRACT_MASK:
-                self.extract_object_image_from_mask(result, top_predictions, frame, transparent=transparent,
-                                                    resize=resize,
-                                                    output_path=output_path, desired_size=desired_size)
             result = self.overlay_mask(result, top_predictions)
         if self.cfg.MODEL.KEYPOINT_ON:
             result = self.overlay_keypoints(result, top_predictions)
-
-        result = self.overlay_boxes(result, top_predictions)
         result = self.overlay_class_names(result, top_predictions)
 
         return result
@@ -307,70 +223,6 @@ class COCODemo(object):
 
         return composite
 
-    def resize_and_pad_image(self, image, desired_size=640):
-
-        old_size = image.shape[:2]  # old_size is in (height, width) format
-        ratio = float(desired_size) / max(old_size)
-        new_size = tuple([int(x * ratio) for x in old_size])
-
-        # new_size should be in (width, height) format
-        resized_image = cv2.resize(image, (new_size[1], new_size[0]))
-
-        delta_w = desired_size - new_size[1]
-        delta_h = desired_size - new_size[0]
-        top, bottom = delta_h // 2, delta_h - (delta_h // 2)
-        left, right = delta_w // 2, delta_w - (delta_w // 2)
-
-        padded_image = cv2.copyMakeBorder(resized_image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
-
-        return padded_image
-
-    def extract_object_image_from_mask(self, image, predictions, frame, transparent=False, resize=False,
-                                       output_path="/home/umberto/Output", desired_size=640):
-        """
-        Get the object relative to a mask, filter out the background.
-        :param image:
-        :param predictions:
-        :param frame:
-        :param transparent:
-        :param resize:
-        :param output_path:
-        :param desired_size:
-        :return:
-        """
-
-        masks = predictions.get_field("mask").numpy()
-        height, width, _ = image.shape
-
-        for mask_id, mask in enumerate(masks):
-
-            name = '{0}.png'.format(str(mask_id) + str(frame))
-            name_t = '{0}_transparent.png'.format(str(mask_id) + str(frame))
-            name = os.path.join(output_path, name)
-            name_t = os.path.join(output_path, name_t)
-
-            thresh = mask[0, :, :, None]
-            object_points = cv2.findNonZero(thresh)
-            x, y, w, h = cv2.boundingRect(object_points)
-
-            # Filter out the background
-            masked_img = cv2.bitwise_and(image, image, mask=thresh)[y:y + h, x:x + w]
-
-            if transparent:
-                # Divides a multi-channel array into several single-channel arrays.
-                b, g, r = cv2.split(masked_img)
-                alpha = cv2.split(thresh)[0][y:y + h, x:x + w] * 255
-                bgra = [b, g, r, alpha]
-                # Creates one multichannel array out of several single-channel ones.
-                masked_img_with_alpha = cv2.merge(bgra, 4)
-                if resize:
-                    masked_img_with_alpha = self.resize_and_pad_image(masked_img_with_alpha, desired_size)
-                cv2.imwrite(name_t, masked_img_with_alpha)
-            else:
-                if resize:
-                    masked_img = self.resize_and_pad(masked_img, desired_size)
-                cv2.imwrite(name, masked_img)
-
     def overlay_keypoints(self, image, predictions):
         keypoints = predictions.get_field("keypoints")
         kps = keypoints.keypoints
@@ -440,11 +292,6 @@ class COCODemo(object):
             )
 
         return image
-
-
-import numpy as np
-import matplotlib.pyplot as plt
-from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
 
 
 def vis_keypoints(img, kps, kp_thresh=2, alpha=0.7):
