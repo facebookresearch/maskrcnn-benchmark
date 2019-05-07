@@ -6,67 +6,13 @@
 #include <THC/THCAtomics.cuh>
 #include <THC/THCDeviceUtils.cuh>
 
+#include "rotate_rect_ops.h"
 
 // TODO make it in a common file
 #define CUDA_1D_KERNEL_LOOP(i, n)                            \
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; \
        i += blockDim.x * gridDim.x)
 
-template <typename T>
-__device__ inline T deg2rad(const T deg)
-{
-    return deg / 180.0 * 3.1415926535;
-}
-
-template <typename T>
-__device__ void compute_roi_pool_pts(const T* roi, T* out_pts, const float spatial_scale,
-    const int pooled_height, const int pooled_width, const int pooled_height_idx, const int pooled_width_idx)
-{
-  int ph = pooled_height_idx;
-  int pw = pooled_width_idx;
-
-  // int roi_batch_ind = roi[0];
-  T cx = round(roi[1] * spatial_scale);
-  T cy = round(roi[2] * spatial_scale);
-  T w = round(roi[3] * spatial_scale);
-  T h = round(roi[4] * spatial_scale);
-  T angle = deg2rad(roi[5]);
-
-  // Force malformed ROIs to be 1x1
-  w = max(w, 1.0);
-  h = max(h, 1.0);
-
-  //TransformPrepare
-  T dx = -pooled_width/2.0;
-  T dy = -pooled_height/2.0;
-  T Sx = w / pooled_width;
-  T Sy = h / pooled_height;
-  T Alpha = cos(angle);
-  T Beta = -sin(angle);
-  T Dx = cx;
-  T Dy = cy;
-
-  T M[2][3]; 
-  M[0][0] = Alpha*Sx;
-  M[0][1] = Beta*Sy;
-  M[0][2] = Alpha*Sx*dx+Beta*Sy*dy+Dx;
-  M[1][0] = -Beta*Sx;
-  M[1][1] = Alpha*Sy;
-  M[1][2] = -Beta*Sx*dx+Alpha*Sy*dy+Dy;
-
-  // ORDER IN CLOCKWISE OR ANTI-CLOCKWISE
-  // (0,1),(0,0),(1,0),(1,1)
-  out_pts[0] = M[0][0]*pw+M[0][1]*(ph+1)+M[0][2];
-  out_pts[1] = M[1][0]*pw+M[1][1]*(ph+1)+M[1][2];
-  out_pts[2] = M[0][0]*pw+M[0][1]*ph+M[0][2];
-  out_pts[3] = M[1][0]*pw+M[1][1]*ph+M[1][2];
-  out_pts[4] = M[0][0]*(pw+1)+M[0][1]*ph+M[0][2];
-  out_pts[5] = M[1][0]*(pw+1)+M[1][1]*ph+M[1][2];
-  out_pts[6] = M[0][0]*(pw+1)+M[0][1]*(ph+1)+M[0][2];
-  out_pts[7] = M[1][0]*(pw+1)+M[1][1]*(ph+1)+M[1][2];
-
-
-}
 
 template <typename T>
 __device__ inline void get_rotated_rect_bounding_box(const T* pts, int& leftMost, int& topMost,
