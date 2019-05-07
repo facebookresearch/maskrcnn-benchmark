@@ -82,25 +82,24 @@ def main():
         print("height {0:f}:".format(height))
         print("fps {0:f}:".format(fps))
 
-    frame = 0
+    current_frame = 0
     success = True
 
     while success:
 
-        print("frame: ", frame)
+        print("current_frame: ", current_frame)
 
         # Read next image
         success, img = cam.read()
 
         if success:
             start_time = time.time()
-            composite = coco_demo.run_on_opencv_image(img, frame, transparent=True, resize=True,
-                                                      output_path="/home/umberto/Output", desired_size=640)
+            composite = coco_demo.run_on_opencv_image(img, current_frame)
             print("Time: {:.2f} s / img".format(time.time() - start_time))
             cv2.imshow("Detections", composite)
             if cv2.waitKey(1) == 27:
                 break  # esc to quit
-            frame += 1
+            current_frame += 1
 
     cv2.destroyAllWindows()
 

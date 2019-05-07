@@ -161,8 +161,7 @@ class COCODemo(object):
         )
         return transform
 
-    def run_on_opencv_image(self, image, frame=0, transparent=False, resize=False,
-                            output_path="/home/umberto/Output", desired_size=640):
+    def run_on_opencv_image(self, image, current_frame=0):
         """
         Arguments:
             image (np.ndarray): an image as returned by OpenCV
@@ -179,10 +178,8 @@ class COCODemo(object):
         if self.show_mask_heatmaps:
             return self.create_mask_montage(result, top_predictions)
         if self.cfg.MODEL.MASK_ON:
-            if self.cfg.MODEL.EXTRACT_MASK:
-                self.extract_object_image_from_mask(result, top_predictions, frame, transparent=transparent,
-                                                    resize=resize,
-                                                    output_path=output_path, desired_size=desired_size)
+            if self.cfg.EXTRACT_MASK.ENABLE:
+                self.extract_object_image_from_mask(result, top_predictions, current_frame)
             result = self.overlay_mask(result, top_predictions)
         if self.cfg.MODEL.KEYPOINT_ON:
             result = self.overlay_keypoints(result, top_predictions)
@@ -325,29 +322,23 @@ class COCODemo(object):
 
         return padded_image
 
-    def extract_object_image_from_mask(self, image, predictions, frame, transparent=False, resize=False,
-                                       output_path="/home/umberto/Output", desired_size=640):
+    def extract_object_image_from_mask(self, image, predictions, current_frame):
         """
         Get the object relative to a mask, filter out the background.
-        :param image:
-        :param predictions:
-        :param frame:
-        :param transparent:
-        :param resize:
-        :param output_path:
-        :param desired_size:
-        :return:
+        Arguments:
+            image (np.ndarray): an image as returned by OpenCV
+            predictions (BoxList): the result of the computation by the model.
+                It should contain the field `mask`.
+            param current_frame (int): id of the current frame.
         """
+        extracted_object_path = os.path.join(self.cfg.OUTPUT_DIR, "extracted_object")
+        if not os.path.exists(extracted_object_path):
+            os.makedirs(extracted_object_path)
 
         masks = predictions.get_field("mask").numpy()
         height, width, _ = image.shape
 
         for mask_id, mask in enumerate(masks):
-
-            name = '{0}.png'.format(str(mask_id) + str(frame))
-            name_t = '{0}_transparent.png'.format(str(mask_id) + str(frame))
-            name = os.path.join(output_path, name)
-            name_t = os.path.join(output_path, name_t)
 
             thresh = mask[0, :, :, None]
             object_points = cv2.findNonZero(thresh)
@@ -356,19 +347,24 @@ class COCODemo(object):
             # Filter out the background
             masked_img = cv2.bitwise_and(image, image, mask=thresh)[y:y + h, x:x + w]
 
-            if transparent:
+            if self.cfg.EXTRACT_MASK.TRANSPARENT:
+                name_t = '{0}_transparent.png'.format(str(mask_id) + str(current_frame))
+                name_t = os.path.join(extracted_object_path, name_t)
                 # Divides a multi-channel array into several single-channel arrays.
                 b, g, r = cv2.split(masked_img)
                 alpha = cv2.split(thresh)[0][y:y + h, x:x + w] * 255
                 bgra = [b, g, r, alpha]
                 # Creates one multichannel array out of several single-channel ones.
                 masked_img_with_alpha = cv2.merge(bgra, 4)
-                if resize:
-                    masked_img_with_alpha = self.resize_and_pad_image(masked_img_with_alpha, desired_size)
+                if self.cfg.EXTRACT_MASK.RESIZE:
+                    masked_img_with_alpha = self.resize_and_pad_image(masked_img_with_alpha,
+                                                                      self.cfg.EXTRACT_MASK.DSIZE)
                 cv2.imwrite(name_t, masked_img_with_alpha)
             else:
-                if resize:
-                    masked_img = self.resize_and_pad(masked_img, desired_size)
+                name = '{0}.png'.format(str(mask_id) + str(current_frame))
+                name = os.path.join(extracted_object_path, name)
+                if self.cfg.EXTRACT_MASK.RESIZE:
+                    masked_img = self.resize_and_pad(masked_img, self.cfg.EXTRACT_MASK.DSIZE)
                 cv2.imwrite(name, masked_img)
 
     def overlay_keypoints(self, image, predictions):
