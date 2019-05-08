@@ -5,6 +5,9 @@ import cv2
 import torch
 from torchvision import transforms as T
 
+from demo.deep_sort import nn_matching
+from demo.deep_sort.detection import Detection
+from demo.deep_sort.tracker import Tracker
 from maskrcnn_benchmark import layers as L
 from maskrcnn_benchmark.modeling.detector import build_detection_model
 from maskrcnn_benchmark.modeling.roi_heads.mask_head.inference import Masker
@@ -113,6 +116,11 @@ class COCODemo(object):
         self.device = torch.device(cfg.MODEL.DEVICE)
         self.model.to(self.device)
         self.min_image_size = min_image_size
+        # Initialize the tracking metric
+        metric = nn_matching.NearestNeighborDistanceMetric(
+            "cosine", 0.2, None)
+        # create instance of Tracker
+        self.tracker = Tracker(metric, max_age=30)
 
         save_dir = cfg.OUTPUT_DIR
         checkpointer = DetectronCheckpointer(cfg, self.model, save_dir=save_dir)
@@ -179,7 +187,7 @@ class COCODemo(object):
             return self.create_mask_montage(result, top_predictions)
         if self.cfg.MODEL.MASK_ON:
             if self.cfg.EXTRACT_MASK.ENABLE:
-                self.extract_object_image_from_mask(result, top_predictions, current_frame)
+                self.extract_objects_from_video(result, top_predictions, current_frame)
             result = self.overlay_mask(result, top_predictions)
         if self.cfg.MODEL.KEYPOINT_ON:
             result = self.overlay_keypoints(result, top_predictions)
@@ -322,34 +330,58 @@ class COCODemo(object):
 
         return padded_image
 
-    def extract_object_image_from_mask(self, image, predictions, current_frame):
+    def extract_objects_from_video(self, image, predictions, current_frame):
         """
-        Get the object relative to a mask, filter out the background.
+        Extract objects from relative masks filter out the background.
         Arguments:
             image (np.ndarray): an image as returned by OpenCV
             predictions (BoxList): the result of the computation by the model.
                 It should contain the field `mask`.
             param current_frame (int): id of the current frame.
         """
-        extracted_object_path = os.path.join(self.cfg.OUTPUT_DIR, "extracted_object")
-        if not os.path.exists(extracted_object_path):
-            os.makedirs(extracted_object_path)
+
+        detections = []
+
+        extracted_objects_path = os.path.join(self.cfg.OUTPUT_DIR, "extracted_object")
+        if not os.path.exists(extracted_objects_path):
+            os.makedirs(extracted_objects_path)
 
         masks = predictions.get_field("mask").numpy()
+        bboxs = predictions.convert("xywh").bbox.numpy()
+        scores = predictions.get_field("scores").numpy()
         height, width, _ = image.shape
 
-        for mask_id, mask in enumerate(masks):
+        # Append detections
+        for i, (mask, bbox, score) in enumerate(zip(masks, bboxs, scores)):
+            x1, y1, w, h = bbox[0:4]
+            detections.append(Detection((x1, y1, w, h), score, [], mask[0, :, :, None], current_frame))
 
-            thresh = mask[0, :, :, None]
+        # Update Tracker
+        self.tracker.predict()
+        self.tracker.update(detections)
+
+        # Get the tracks
+        tracks = self.tracker.tracks
+        for id, track_bbox in enumerate(tracks):
+
+            if len(track_bbox.tlwh) == 0:
+                continue
+
+            object_path = os.path.join(extracted_objects_path, str(track_bbox.track_id))
+            if not os.path.exists(object_path):
+                os.makedirs(object_path)
+
+            # get the mask
+            thresh = track_bbox.mask
             object_points = cv2.findNonZero(thresh)
             x, y, w, h = cv2.boundingRect(object_points)
 
-            # Filter out the background
+            # filter out the background
             masked_img = cv2.bitwise_and(image, image, mask=thresh)[y:y + h, x:x + w]
 
             if self.cfg.EXTRACT_MASK.TRANSPARENT:
-                name_t = '{0}_transparent.png'.format(str(mask_id) + str(current_frame))
-                name_t = os.path.join(extracted_object_path, name_t)
+                name_t = '{0}_transparent.png'.format(str(id) + str(current_frame))
+                name_t = os.path.join(object_path, name_t)
                 # Divides a multi-channel array into several single-channel arrays.
                 b, g, r = cv2.split(masked_img)
                 alpha = cv2.split(thresh)[0][y:y + h, x:x + w] * 255
@@ -361,11 +393,18 @@ class COCODemo(object):
                                                                       self.cfg.EXTRACT_MASK.DSIZE)
                 cv2.imwrite(name_t, masked_img_with_alpha)
             else:
-                name = '{0}.png'.format(str(mask_id) + str(current_frame))
-                name = os.path.join(extracted_object_path, name)
+                name = '{0}.png'.format(str(id) + str(current_frame))
+                name = os.path.join(object_path, name)
                 if self.cfg.EXTRACT_MASK.RESIZE:
                     masked_img = self.resize_and_pad(masked_img, self.cfg.EXTRACT_MASK.DSIZE)
                 cv2.imwrite(name, masked_img)
+
+            # draw track on the frame
+            min_x, min_y, max_x, max_y = track_bbox.to_tlbr().astype(int)
+            cv2.rectangle(image, (min_x, min_y), (max_x, max_y), (255, 0, 0), 1)
+            cv2.putText(image, "Track:{}".format(str(track_bbox.track_id)), (max_x, min_y), cv2.FONT_HERSHEY_SIMPLEX,
+                        .5,
+                        (255, 255, 255), 1)
 
     def overlay_keypoints(self, image, predictions):
         keypoints = predictions.get_field("keypoints")

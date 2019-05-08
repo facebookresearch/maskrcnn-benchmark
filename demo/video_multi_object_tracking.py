@@ -9,7 +9,7 @@ from maskrcnn_benchmark.config import cfg
 
 
 def main():
-    parser = argparse.ArgumentParser(description="PyTorch Object Detection Video Demo")
+    parser = argparse.ArgumentParser(description="Multi Object Tracking Video Demo")
     parser.add_argument(
         "--video-file",
         metavar="FILE",
@@ -58,8 +58,6 @@ def main():
     # load config from file and command-line arguments
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
-    # cfg.merge_from_list(["MODEL.DEVICE", "cuda"])
-    # cfg.merge_from_list(["MODEL.MASK_ON", False])
     cfg.freeze()
 
     # prepare object that handles inference plus adds predictions on top of image
