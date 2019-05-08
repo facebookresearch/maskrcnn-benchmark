@@ -66,19 +66,19 @@ Official Deep Sort Github repo: https://github.com/nwojke/deep_sort
 You can start it by running it from this folder, using one of the following commands:
 
 ```bash
-# by default, it doesn't save the tracked objects's images into a folder
+# by default, it doesn't save the tracked objects's images to a folder
 # for best results, use min-image-size 800
 python video_multi_object_tracking.py --video-file "<path_to_video>" --config-file "../configs/caffe2/e2e_mask_rcnn_R_101_FPN_1x_caffe2.yaml"
 --confidence-threshold 0.7 --min-image-size 800 MODEL.DEVICE cuda MODEL.MASK_ON True 
 # can also run it on the CPU
 python video_multi_object_tracking.py --video-file "<path_to_video>" --config-file "../configs/caffe2/e2e_mask_rcnn_R_101_FPN_1x_caffe2.yaml"
 --confidence-threshold 0.7 --min-image-size 800 MODEL.DEVICE cpu MODEL.MASK_ON True 
-# or save tracked objects's images into a folder
+# or save tracked objects's images to a folder
 python video_multi_object_tracking.py --video-file "<path_to_video>" --config-file "../configs/caffe2/e2e_mask_rcnn_R_101_FPN_1x_caffe2.yaml"
 --confidence-threshold 0.7 --min-image-size 800 MODEL.DEVICE cpu MODEL.MASK_ON True EXTRACT_MASK.ENABLE True EXTRACT_MASK.TRANSPARENT True 
-# or save tracked objects's images into a folder with transparent background
+# or save tracked objects's images to a folder with transparent background
 python video_multi_object_tracking.py --video-file "<path_to_video>" --config-file "../configs/caffe2/e2e_mask_rcnn_R_101_FPN_1x_caffe2.yaml"
 --confidence-threshold 0.7 --min-image-size 800 MODEL.DEVICE cpu MODEL.MASK_ON True EXTRACT_MASK.ENABLE True EXTRACT_MASK.TRANSPARENT True EXTRACT_MASK.RESIZE True 
-# or save tracked objects's resized images into a folder
+# or save tracked objects's resized images to a folder
 python video_multi_object_tracking.py --video-file "<path_to_video>" --config-file "../configs/caffe2/e2e_mask_rcnn_R_101_FPN_1x_caffe2.yaml"
 --confidence-threshold 0.7 --min-image-size 800 MODEL.DEVICE cpu MODEL.MASK_ON True EXTRACT_MASK.ENABLE True EXTRACT_MASK.TRANSPARENT True EXTRACT_MASK.RESIZE True EXTRACT_MASK.DSIZE 800
