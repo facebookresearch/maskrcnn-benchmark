@@ -47,7 +47,7 @@ the volume mapping may vary depending on your platform*
 
 ## Tracking multiple objects across video frames demo
 
-This folder contains a simple video demo that illustrates how you can use `maskrcnn_benchmark` for tracking by detections.
+This folder contains a simple demo that illustrates how you can use `maskrcnn_benchmark` for tracking by detections.
 Object tracker uses multiple detections to identify a specific object over time.
 There are several algorithms that do it and I decided to use Deep SORT, which is very easy to use and pretty fast. 
 [Deep SORT (Simple Online and Realtime Tracking with a Deep Association Metric)](https://arxiv.org/abs/1703.07402) is a 
@@ -59,7 +59,12 @@ objects, and match them with new detections.
 conda activate maskrcnn_benchmark
 conda install scikit-learn
 ```
-Official Deep Sort Github repo: https://github.com/nwojke/deep_sort
+Make sure you download the Deep Sort version from my [Github repo](https://github.com/umbertogriffo/deep_sort) since I 
+had to make a few small changes to integrate it in this demo.
+```
+git clone https://github.com/umbertogriffo/deep_sort
+```
+copy the package **deep_sort/deep_sort** to **maskrcnn-benchmark/demo**
 
 #### Usage
 
