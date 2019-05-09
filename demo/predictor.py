@@ -120,7 +120,7 @@ class COCODemo(object):
         metric = nn_matching.NearestNeighborDistanceMetric(
             "cosine", 0.2, None)
         # create instance of Tracker
-        self.tracker = Tracker(metric, max_age=30)
+        self.tracker = Tracker(metric, max_age=10)
 
         save_dir = cfg.OUTPUT_DIR
         checkpointer = DetectronCheckpointer(cfg, self.model, save_dir=save_dir)
@@ -186,8 +186,8 @@ class COCODemo(object):
         if self.show_mask_heatmaps:
             return self.create_mask_montage(result, top_predictions)
         if self.cfg.MODEL.MASK_ON:
-            if self.cfg.EXTRACT_MASK.ENABLE:
-                self.extract_objects_from_video(result, top_predictions, current_frame)
+            if self.cfg.TRACKER.ENABLE:
+                self.track_objects_from_video(result, top_predictions, current_frame)
             result = self.overlay_mask(result, top_predictions)
         if self.cfg.MODEL.KEYPOINT_ON:
             result = self.overlay_keypoints(result, top_predictions)
@@ -330,9 +330,9 @@ class COCODemo(object):
 
         return padded_image
 
-    def extract_objects_from_video(self, image, predictions, current_frame):
+    def track_objects_from_video(self, image, predictions, current_frame):
         """
-        Extract objects from relative masks filter out the background.
+        Track objects and extract them from relative masks filter out the background.
         Arguments:
             image (np.ndarray): an image as returned by OpenCV
             predictions (BoxList): the result of the computation by the model.
@@ -379,30 +379,31 @@ class COCODemo(object):
             # filter out the background
             masked_img = cv2.bitwise_and(image, image, mask=thresh)[y:y + h, x:x + w]
 
-            if self.cfg.EXTRACT_MASK.TRANSPARENT:
-                name_t = '{0}_transparent.png'.format(str(id) + str(current_frame))
-                name_t = os.path.join(object_path, name_t)
-                # Divides a multi-channel array into several single-channel arrays.
-                b, g, r = cv2.split(masked_img)
-                alpha = cv2.split(thresh)[0][y:y + h, x:x + w] * 255
-                bgra = [b, g, r, alpha]
-                # Creates one multichannel array out of several single-channel ones.
-                masked_img_with_alpha = cv2.merge(bgra, 4)
-                if self.cfg.EXTRACT_MASK.RESIZE:
-                    masked_img_with_alpha = self.resize_and_pad_image(masked_img_with_alpha,
-                                                                      self.cfg.EXTRACT_MASK.DSIZE)
-                cv2.imwrite(name_t, masked_img_with_alpha)
-            else:
-                name = '{0}.png'.format(str(id) + str(current_frame))
-                name = os.path.join(object_path, name)
-                if self.cfg.EXTRACT_MASK.RESIZE:
-                    masked_img = self.resize_and_pad(masked_img, self.cfg.EXTRACT_MASK.DSIZE)
-                cv2.imwrite(name, masked_img)
+            if self.cfg.TRACKER.EXTRACT_FROM_MASK and len(masked_img) != 0:
+                if self.cfg.TRACKER.EXTRACT_FROM_MASK.TRANSPARENT:
+                    name_t = '{0}_transparent.png'.format(str(id) + str(current_frame))
+                    name_t = os.path.join(object_path, name_t)
+                    # Divides a multi-channel array into several single-channel arrays.
+                    b, g, r = cv2.split(masked_img)
+                    alpha = cv2.split(thresh)[0][y:y + h, x:x + w] * 255
+                    bgra = [b, g, r, alpha]
+                    # Creates one multichannel array out of several single-channel ones.
+                    masked_img_with_alpha = cv2.merge(bgra, 4)
+                    if self.cfg.TRACKER.EXTRACT_FROM_MASK.RESIZE:
+                        masked_img_with_alpha = self.resize_and_pad_image(masked_img_with_alpha,
+                                                                          self.cfg.TRACKER.EXTRACT_FROM_MASK.DSIZE)
+                    cv2.imwrite(name_t, masked_img_with_alpha)
+                else:
+                    name = '{0}.png'.format(str(id) + str(current_frame))
+                    name = os.path.join(object_path, name)
+                    if self.cfg.TRACKER.EXTRACT_FROM_MASK.RESIZE:
+                        masked_img = self.resize_and_pad(masked_img, self.cfg.TRACKER.EXTRACT_FROM_MASK.DSIZE)
+                    cv2.imwrite(name, masked_img)
 
             # draw track on the frame
             min_x, min_y, max_x, max_y = track_bbox.to_tlbr().astype(int)
             cv2.rectangle(image, (min_x, min_y), (max_x, max_y), (255, 0, 0), 1)
-            cv2.putText(image, "Track:{}".format(str(track_bbox.track_id)), (max_x, min_y), cv2.FONT_HERSHEY_SIMPLEX,
+            cv2.putText(image, "Track:{}".format(str(track_bbox.track_id)), (min_x, max_y+10), cv2.FONT_HERSHEY_SIMPLEX,
                         .5,
                         (255, 255, 255), 1)
 

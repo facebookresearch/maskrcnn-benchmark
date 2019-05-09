@@ -435,11 +435,16 @@ _C.OUTPUT_DIR = "."
 
 _C.PATHS_CATALOG = os.path.join(os.path.dirname(__file__), "paths_catalog.py")
 
-_C.EXTRACT_MASK = CN()
-_C.EXTRACT_MASK.ENABLE = False
-_C.EXTRACT_MASK.TRANSPARENT = False
-_C.EXTRACT_MASK.RESIZE = False
-_C.EXTRACT_MASK.DSIZE = 800
+# ---------------------------------------------------------------------------- #
+# Tracker options
+# ---------------------------------------------------------------------------- #
+_C.TRACKER = CN()
+_C.TRACKER.ENABLE = False
+_C.TRACKER.EXTRACT_FROM_MASK = CN()
+_C.TRACKER.EXTRACT_FROM_MASK.ENABLE = False
+_C.TRACKER.EXTRACT_FROM_MASK.TRANSPARENT = False
+_C.TRACKER.EXTRACT_FROM_MASK.RESIZE = False
+_C.TRACKER.EXTRACT_FROM_MASK.DSIZE = 800
 
 # ---------------------------------------------------------------------------- #
 # Precision options
