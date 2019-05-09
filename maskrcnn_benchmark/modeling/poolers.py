@@ -131,22 +131,22 @@ class RotatedPooler(Pooler):
     which is available thanks to the BoxList.
     """
 
-    def __init__(self, output_size, scales):
+    def __init__(self, output_size, scales, sampling_ratio=0):
         """
         Arguments:
             output_size (list[tuple[int]] or list[int]): output size for the pooled region
             scales (list[float]): scales for each Pooler
             sampling_ratio (int): sampling ratio for ROIAlign
         """
-        from maskrcnn_benchmark.layers.rotate_roi_pool import RROIPool as RPool
-        # from maskrcnn_benchmark.layers.rotate_roi_align import RROIAlign as RPool
+        # from maskrcnn_benchmark.layers.rotate_roi_pool import RROIPool as RPool
+        from maskrcnn_benchmark.layers.rotate_roi_align import RROIAlign as RPool
  
         super(Pooler, self).__init__()
         poolers = []
         for scale in scales:
             poolers.append(
                 RPool(
-                    output_size, spatial_scale=scale
+                    output_size, spatial_scale=scale, sampling_ratio=sampling_ratio
                 )
             )
         self.poolers = nn.ModuleList(poolers)
@@ -185,6 +185,7 @@ def make_pooler(cfg, head_name):
     else:
         pooler = RotatedPooler(
             output_size=(resolution, resolution),
-            scales=scales
+            scales=scales,
+            sampling_ratio=sampling_ratio,
         )
     return pooler

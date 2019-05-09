@@ -35,6 +35,7 @@ def get_extensions(extensions_dir, extension_name):
             "-D__CUDA_NO_HALF_CONVERSIONS__",
             "-D__CUDA_NO_HALF2_OPERATORS__",
             "-O3",
+            "-DNDEBUG",
             "--use_fast_math"
         ]
 
