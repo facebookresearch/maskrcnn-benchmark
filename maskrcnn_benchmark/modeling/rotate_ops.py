@@ -138,6 +138,47 @@ def rotate_iou(boxes1, boxes2):
     iou_matrix = _C.rotate_iou_matrix(boxes1, boxes2)
     return iou_matrix
 
+
+def crop_min_area_rect(image, rect):
+
+    '''
+    Rotates OpenCV image around center with angle theta (in deg)
+    then crops the image according to width and height.
+    '''
+
+    # Uncomment for theta in radians
+    #theta *= 180/np.pi
+
+    center = (rect[0], rect[1])
+    width = rect[2]
+    height = rect[3]
+    theta = rect[4]
+
+    current_height, current_width = image.shape[:2]
+    shape = ( current_width, current_height ) # cv2.warpAffine expects shape in (length, height)
+
+    matrix = cv2.getRotationMatrix2D( center=center, angle=theta, scale=1 )
+    image = cv2.warpAffine( src=image, M=matrix, dsize=shape )
+
+    x = int( np.round(center[0] - width/2  ))
+    y = int( np.round(center[1] - height/2 ))
+    h = int(np.round(height))
+    w = int(np.round(width))
+
+    xmin = min(max(x, 0), current_width - 1)
+    ymin = min(max(y, 0), current_height - 1)
+
+    xmax = min(max(x+w, 0), current_width)
+    ymax = min(max(y+h, 0), current_height)
+
+    xmax = max(xmax, xmin + 1)
+    ymax = max(ymax, ymin + 1)
+
+    image = image[ ymin:ymax, xmin:xmax ]
+
+    return image
+
+
 if __name__ == '__main__':
     import time
 

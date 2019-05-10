@@ -4,9 +4,11 @@ from torch.nn import functional as F
 
 from ..box_head.roi_box_feature_extractors import ResNet50Conv5ROIFeatureExtractor
 from maskrcnn_benchmark.modeling import registry
-from maskrcnn_benchmark.modeling.poolers import Pooler
+from maskrcnn_benchmark.modeling.poolers import make_pooler# Pooler
 from maskrcnn_benchmark.modeling.make_layers import make_conv3x3
 
+
+MASK_HEAD_KEY = "ROI_MASK_HEAD"
 
 registry.ROI_MASK_FEATURE_EXTRACTORS.register(
     "ResNet50Conv5ROIFeatureExtractor", ResNet50Conv5ROIFeatureExtractor
@@ -28,14 +30,8 @@ class MaskRCNNFPNFeatureExtractor(nn.Module):
         """
         super(MaskRCNNFPNFeatureExtractor, self).__init__()
 
-        resolution = cfg.MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION
-        scales = cfg.MODEL.ROI_MASK_HEAD.POOLER_SCALES
-        sampling_ratio = cfg.MODEL.ROI_MASK_HEAD.POOLER_SAMPLING_RATIO
-        pooler = Pooler(
-            output_size=(resolution, resolution),
-            scales=scales,
-            sampling_ratio=sampling_ratio,
-        )
+        pooler = make_pooler(cfg, MASK_HEAD_KEY)
+
         input_size = in_channels
         self.pooler = pooler
 
