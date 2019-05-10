@@ -54,6 +54,7 @@ def do_train(
     start_training_time = time.time()
     end = time.time()
     for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
+        print("what pairs of images id that I am using", _ )
         data_time = time.time() - end
         iteration = iteration + 1
         arguments["iteration"] = iteration
