@@ -52,14 +52,15 @@ def project_masks_on_boxes(segmentation_masks, proposals, discretization_size):
         bin_mask = segmentation_mask.get_mask_tensor().numpy()
         # vis_mask(bin_mask * 255, proposal.numpy())
         cropped_mask = crop_min_area_rect(bin_mask, proposal.numpy())
-        try:
-            scaled_mask = cv2.resize(cropped_mask.astype('float'), (M, M))  # bilinear by default
-        except Exception:
-            print(bin_mask.shape)
-            print(cropped_mask.shape)
-            print(proposal)
-            # crop_min_area_rect(bin_mask, proposal)
-            raise Exception
+        scaled_mask = cv2.resize(cropped_mask.astype('float'), (M, M))  # bilinear by default
+        # try:
+        #     pass
+        # except Exception:
+        #     print(bin_mask.shape)
+        #     print(cropped_mask.shape)
+        #     print(proposal)
+        #     # crop_min_area_rect(bin_mask, proposal)
+        #     raise Exception
 
         scaled_mask[scaled_mask < 0.5] = 0
         scaled_mask[scaled_mask >= 0.5] = 1

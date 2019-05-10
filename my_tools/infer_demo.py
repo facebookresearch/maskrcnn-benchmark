@@ -79,7 +79,8 @@ def select_top_predictions(predictions, confidence_threshold=0.7, score_field="s
     _, idx = scores.sort(0, descending=True)
     return predictions[idx]
 
-def paste_mask_on_image(mask, box, im_h, im_w, thresh=None, interp=cv2.INTER_LINEAR):
+def paste_mask_on_image(mask, box, im_h, im_w, thresh=None, interp=cv2.INTER_LINEAR, rotated=False):
+    # TODO: ROTATED
     w = box[2] - box[0] + 1
     h = box[3] - box[1] + 1
     w = max(w, 1)
@@ -304,7 +305,7 @@ if __name__ == '__main__':
          '051_large_clamp', '052_extra_large_clamp', '061_foam_brick'
     ]
 
-    confidence_threshold = 0.95
+    confidence_threshold = 0.92
     device = "cuda"
     cpu_device = torch.device("cpu")
 
@@ -326,13 +327,13 @@ if __name__ == '__main__':
 
     CLASSES = ["__background__", "class_x"]
     # config_file = "./configs/rebin.yaml"
-    # config_file = "./configs/coco_rotated_rpn_only_fpn.yaml"
-    # model_file = "./checkpoints/coco_rotated_rpn_only_fpn/model_final.pth"
+    config_file = "./configs/coco_rotated_rpn_only.yaml"
+    model_file = "./checkpoints/coco_rotated_rpn_only/model_final.pth"
 
-    config_file = "./configs/coco_rotated_faster_rcnn.yaml"
-    model_file = "./checkpoints/coco_rotated_faster_rcnn/model_final.pth"
-    # config_file = "./configs/coco_faster_rcnn.yaml"
-    # model_file = "./checkpoints/coco_faster_rcnn/model_final.pth"
+    # config_file = "./configs/coco_rotated_faster_rcnn.yaml"
+    # model_file = "./checkpoints/coco_rotated_faster_rcnn_debug/model_final.pth"
+    config_file = "./configs/coco_rotated_mask_rcnn.yaml"
+    model_file = "./checkpoints/coco_rotated_mask_rcnn/model_final.pth"
 
     image_dir = "/data/MSCOCO/val2014"
     # image_files = ["mixed/temple_0/000885.left","mixed/temple_0/001774.left"]
@@ -341,7 +342,7 @@ if __name__ == '__main__':
     image_files = ['COCO_val2014_000000415360.jpg',
          'COCO_val2014_000000438915.jpg',
          'COCO_val2014_000000209028.jpg',
-         'COCO_val2014_000000500100.jpg']
+         'COCO_val2014_000000500100.jpg']#[1:]
     # image_files = [
     #     u'COCO_train2014_000000417793.jpg',
     #     u'COCO_train2014_000000147459.jpg',
@@ -375,6 +376,10 @@ if __name__ == '__main__':
     #     u'COCO_train2014_000000019134.jpg'
     # ][::-1]
     image_files = [osp.join(image_dir, f) for f in image_files]
+
+    # model_file = "./checkpoints/coco_rotated_loading/model_final.pth"
+    # image_dir = "/home/bot/LabelMe/Images/loading_test"
+    # image_files = glob.glob("%s/*.jpg"%(image_dir))
 
     cfg.merge_from_file(config_file)
     img_transformer = ImageTransformer(cfg)
@@ -461,21 +466,20 @@ if __name__ == '__main__':
         if cfg.MODEL.ROTATED:
             from maskrcnn_benchmark.modeling.rrpn.anchor_generator import draw_anchors
             rrects = predictions.get_field("rrects").cpu().numpy()
+            # TODO: RRECTS RESIZE
+            w_ratio = float(width) / pred_size[0]
+            h_ratio = float(height) / pred_size[1]
+            rrects[:, 0] *= w_ratio
+            rrects[:, 2] *= w_ratio
+            rrects[:, 1] *= h_ratio
+            rrects[:, 3] *= h_ratio
 
         for ix, (bbox, score) in enumerate(zip(bboxes, scores)):
 
             if cfg.MODEL.ROTATED:
 
-                # TODO: RRECTS RESIZE
-                w_ratio = float(width) / pred_size[0]
-                h_ratio = float(height) / pred_size[1]
-                rr = rrects[ix].copy()
-                rr[0] *= w_ratio
-                rr[2] *= w_ratio
-                rr[1] *= h_ratio
-                rr[3] *= h_ratio
-                print(rr)
-                img_copy = draw_anchors(img_copy, [rr])
+                rr = rrects[ix]
+                img_copy = draw_anchors(img_copy, [rr], [[0,0,255]])
             else:
                 img_copy = cv2.rectangle(img_copy, tuple(bbox[:2]), tuple(bbox[2:]), (0, 0, 255), 2)
 
@@ -483,7 +487,9 @@ if __name__ == '__main__':
                 label = labels[ix]
 
             if cfg.MODEL.MASK_ON:
-                mask = paste_mask_on_image(masks[ix], bbox, height, width, thresh=0.5)
+                rotated = cfg.MODEL.ROTATED
+                rbox = bbox if not rotated else rrects[ix]
+                mask = paste_mask_on_image(masks[ix], rbox, height, width, thresh=0.5, rotated=rotated)
 
                 label_mask[ix] = mask
 
@@ -492,7 +498,7 @@ if __name__ == '__main__':
                 )
                 color = get_random_color()
                 img_copy = cv2.drawContours(img_copy, contours, -1, color, 3)
-                img_copy = cv2.putText(img_copy, "%s (%.3f)"%(CLASSES[label],score), tuple(bbox[:2]), cv2.FONT_HERSHEY_COMPLEX, 0.5, color)
+                # img_copy = cv2.putText(img_copy, "%s (%.3f)"%(CLASSES[label],score), tuple(bbox[:2]), cv2.FONT_HERSHEY_COMPLEX, 0.5, color)
 
             if cfg.MODEL.VERTEX_ON:
                 vert = verts[ix]
