@@ -52,7 +52,9 @@ class BinaryMaskList(object):
             # The raw data representation is passed as argument
             masks = masks.clone()
         elif isinstance(masks, (list, tuple)):
-            if isinstance(masks[0], torch.Tensor):
+            if len(masks) == 0:
+                masks = torch.zeros([size[1], size[0]]).clone()
+            elif isinstance(masks[0], torch.Tensor):
                 masks = torch.stack(masks, dim=2).clone()
             elif isinstance(masks[0], dict) and "counts" in masks[0]:
                 # RLE interpretation
@@ -161,7 +163,9 @@ class BinaryMaskList(object):
     def __getitem__(self, index):
         # Probably it can cause some overhead
         # but preserves consistency
-        masks = self.masks[index].clone()
+        masks = []
+        if len(torch.nonzero(self.masks)) > 0:
+            masks = self.masks[index].clone()
         return BinaryMaskList(masks, self.size)
 
     def __iter__(self):
