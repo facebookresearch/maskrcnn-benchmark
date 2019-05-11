@@ -81,23 +81,53 @@ def select_top_predictions(predictions, confidence_threshold=0.7, score_field="s
 
 def paste_mask_on_image(mask, box, im_h, im_w, thresh=None, interp=cv2.INTER_LINEAR, rotated=False):
     # TODO: ROTATED
-    w = box[2] - box[0] + 1
-    h = box[3] - box[1] + 1
+    if rotated:
+        assert len(box) == 5  # xc,yc,w,h,angle
+        w = box[2]
+        h = box[3]
+        h = int(np.round(h))
+        w = int(np.round(w))
+    else:
+        assert len(box) == 4  # x1,y1,x2,y2
+        w = box[2] - box[0] + 1
+        h = box[3] - box[1] + 1
+
     w = max(w, 1)
     h = max(h, 1)
 
-    resized = cv2.resize(mask, (w,h), interpolation=interp)
+    resized = cv2.resize(mask, (w, h), interpolation=interp)
 
     if thresh is not None:#thresh >= 0:
         resized = resized > thresh
 
-    x_0 = max(box[0], 0)
-    x_1 = min(box[2] + 1, im_w)
-    y_0 = max(box[1], 0)
-    y_1 = min(box[3] + 1, im_h)
+    if rotated:
+        center = tuple(box[:2])
 
-    canvas = np.zeros((im_h, im_w), dtype=np.float32)
-    canvas[y_0:y_1, x_0:x_1] = resized[(y_0 - box[1]) : (y_1 - box[1]), (x_0 - box[0]) : (x_1 - box[0])]
+        x = int(np.round(center[0] - w / 2))
+        y = int(np.round(center[1] - h / 2))
+
+        xmin = min(max(x, 0), im_w - 1)
+        ymin = min(max(y, 0), im_h - 1)
+
+        xmax = min(max(x + w, 0), im_w)
+        ymax = min(max(y + h, 0), im_h)
+
+        xmax = max(xmax, xmin + 1)
+        ymax = max(ymax, ymin + 1)
+
+        canvas = np.zeros((im_h, im_w), dtype=np.float32)
+        canvas[ymin:ymax, xmin:xmax] = resized[:ymax - ymin, :xmax - xmin]
+        matrix = cv2.getRotationMatrix2D(center=center, angle=-box[-1], scale=1)
+        canvas = cv2.warpAffine(src=canvas, M=matrix, dsize=(im_w, im_h))
+
+    else:
+        x_0 = max(box[0], 0)
+        x_1 = min(box[2] + 1, im_w)
+        y_0 = max(box[1], 0)
+        y_1 = min(box[3] + 1, im_h)
+
+        canvas = np.zeros((im_h, im_w), dtype=np.float32)
+        canvas[y_0:y_1, x_0:x_1] = resized[(y_0 - box[1]) : (y_1 - box[1]), (x_0 - box[0]) : (x_1 - box[0])]
     return canvas
 
 def normalize(x, xmin=None, xmax=None):
@@ -305,7 +335,7 @@ if __name__ == '__main__':
          '051_large_clamp', '052_extra_large_clamp', '061_foam_brick'
     ]
 
-    confidence_threshold = 0.92
+    confidence_threshold = 0.95
     device = "cuda"
     cpu_device = torch.device("cpu")
 
@@ -342,7 +372,7 @@ if __name__ == '__main__':
     image_files = ['COCO_val2014_000000415360.jpg',
          'COCO_val2014_000000438915.jpg',
          'COCO_val2014_000000209028.jpg',
-         'COCO_val2014_000000500100.jpg']#[1:]
+         'COCO_val2014_000000372874.jpg']#[1:]
     # image_files = [
     #     u'COCO_train2014_000000417793.jpg',
     #     u'COCO_train2014_000000147459.jpg',
