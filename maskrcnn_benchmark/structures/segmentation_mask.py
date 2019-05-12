@@ -165,7 +165,7 @@ class BinaryMaskList(object):
 
     def __getitem__(self, index):
         if self.masks.numel() == 0:
-            return BinaryMaskList([], self.size)
+            raise RuntimeError("Indexing empty BinaryMaskList")
         return BinaryMaskList(self.masks[index], self.size)
 
     def __iter__(self):
