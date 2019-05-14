@@ -86,7 +86,7 @@ git clone https://github.com/cocodataset/cocoapi.git
     #using file explorer  naviagate to cocoapi\PythonAPI\setup.py and change line 14 from:
     #extra_compile_args=['-Wno-cpp', '-Wno-unused-function', '-std=c99'],
     #to
-    #extra_compile_args={'gcc': ['/Qstd=c99']}
+    #extra_compile_args={'gcc': ['/Qstd=c99']},
     #Based on  https://github.com/cocodataset/cocoapi/issues/51
 
 cd cocoapi/PythonAPI
