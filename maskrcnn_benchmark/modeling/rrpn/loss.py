@@ -112,10 +112,10 @@ class RPNLossComputation(object):
         # out of bounds
         matched_idxs_clamped = matched_idxs.clamp(min=0)
         matched_targets = target[matched_idxs_clamped]
-        matched_ious = match_quality_matrix[matched_idxs_clamped,
-                        torch.arange(len(anchor_tensor), device=anchor_tensor.device)]
+        # matched_ious = match_quality_matrix[matched_idxs_clamped,
+        #                 torch.arange(len(anchor_tensor), device=anchor_tensor.device)]
         matched_targets.add_field("matched_idxs", matched_idxs)
-        matched_targets.add_field("matched_ious", matched_ious)
+        # matched_targets.add_field("matched_ious", matched_ious)
         return matched_targets
 
     def prepare_targets(self, anchors, targets):
@@ -155,8 +155,8 @@ class RPNLossComputation(object):
 
             labels.append(labels_per_image)
             regression_targets.append(regression_targets_per_image)
-            matched_gt_ids_per_image.append(matched_idxs)
-            matched_gt_ious_per_image.append(matched_targets.get_field("matched_ious"))
+            # matched_gt_ids_per_image.append(matched_idxs)
+            # matched_gt_ious_per_image.append(matched_targets.get_field("matched_ious"))
 
         return labels, regression_targets, matched_gt_ids_per_image, matched_gt_ious_per_image
 
@@ -266,7 +266,7 @@ class RPNLossComputation(object):
             regression_targets[sampled_pos_inds],
             beta=1.0 / 9,
             # size_average=False,
-        ).sum() / (sampled_inds.numel())
+        ).sum() / (total_samples)
 
         objectness_loss = F.binary_cross_entropy_with_logits(
             objectness[sampled_inds], labels[sampled_inds]

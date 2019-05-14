@@ -67,7 +67,7 @@ class FastRCNNLossComputation(object):
         matched_idxs = self.proposal_matcher(match_quality_matrix)
         # Fast RCNN only need "labels" field for selecting the targets
         target = target.copy_with_fields(["labels", rrects_field])
-        target.add_field(rrects_field, target_tensor)
+        # target.add_field(rrects_field, target_tensor)
         # get the targets corresponding GT for each proposal
         # NB: need to clamp the indices because we can have a single
         # GT in the image, and matched_idxs can be -2, which goes
@@ -130,9 +130,9 @@ class FastRCNNLossComputation(object):
             proposals_per_image.add_field(
                 "regression_targets", regression_targets_per_image
             )
-            proposals_per_image.add_field(
-                "matched_idxs", m_gt_pi
-            )
+            # proposals_per_image.add_field(
+            #     "matched_idxs", m_gt_pi
+            # )
 
         # distributed sampled proposals, that were obtained on all feature maps
         # concatenated via the fg_bg_sampler, into individual feature map levels
@@ -144,7 +144,7 @@ class FastRCNNLossComputation(object):
             proposals[img_idx] = proposals_per_image
 
         self._proposals = proposals
-        self._targets = targets
+        # self._targets = targets
         return proposals
 
     def __call__(self, class_logits, box_regression):
@@ -180,7 +180,7 @@ class FastRCNNLossComputation(object):
         labels_pos = labels[sampled_pos_inds]
         total_pos = labels_pos.numel()
         total_samples = labels.numel()
-        total_neg = total_samples - total_pos
+        # total_neg = total_samples - total_pos
 
         if total_pos == 0:
             return labels_pos.sum(), labels_pos.sum()  # all 0, sum is convenient to get torch tensor
@@ -250,7 +250,7 @@ class FastRCNNLossComputation(object):
             # size_average=False,
             beta=1,
         ).sum()
-        box_loss = box_loss / labels.numel()
+        box_loss = box_loss / total_samples
 
         classification_loss = F.cross_entropy(class_logits, labels)
 
