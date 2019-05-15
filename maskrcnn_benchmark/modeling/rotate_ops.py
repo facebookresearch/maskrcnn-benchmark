@@ -165,10 +165,13 @@ def crop_min_area_rect(image, rect):
     then crops the image according to width and height.
     Taken from https://stackoverflow.com/questions/11627362/how-to-straighten-a-rotated-rectangle-area-of-an-image-using-opencv-in-python/48553593#48553593
     '''
-    mapping = get_rotated_roi_pixel_mapping(rect)
-
     width = rect[2]
     height = rect[3]
+
+    if np.any(np.isnan(rect)) or np.any(np.isinf(rect)) or width <= 0 or height <= 0:
+        return np.zeros((0, 0), dtype=image.dtype)
+
+    mapping = get_rotated_roi_pixel_mapping(rect)
 
     w = int(np.round(width))
     h = int(np.round(height))

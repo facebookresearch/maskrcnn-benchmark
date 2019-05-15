@@ -1,6 +1,7 @@
 import torch
 from torch.nn import functional as F
 
+import numpy as np
 import cv2
 
 from maskrcnn_benchmark.modeling.matcher import Matcher
@@ -51,20 +52,16 @@ def project_masks_on_boxes(segmentation_masks, proposals, discretization_size):
         # then convert them to the tensor representation.
         bin_mask = segmentation_mask.get_mask_tensor().numpy()
         # vis_mask(bin_mask * 255, proposal.numpy())
-        cropped_mask = crop_min_area_rect(bin_mask, proposal.numpy())
-        scaled_mask = cv2.resize(cropped_mask.astype('float'), (M, M))  # bilinear by default
-        # try:
-        #     pass
-        # except Exception:
-        #     print(bin_mask.shape)
-        #     print(cropped_mask.shape)
-        #     print(proposal)
-        #     # crop_min_area_rect(bin_mask, proposal)
-        #     raise Exception
 
-        scaled_mask[scaled_mask < 0.5] = 0
-        scaled_mask[scaled_mask >= 0.5] = 1
+        roi = proposal.numpy()
+        if np.any(np.isnan(roi)) or np.any(np.isinf(roi)) or roi[2] <= 0 or roi[3] <= 0:
+            scaled_mask = np.zeros((M, M), dtype=np.float32)
+        else:
+            cropped_mask = crop_min_area_rect(bin_mask, roi)
+            scaled_mask = cv2.resize(cropped_mask.astype(np.float32), (M, M))  # bilinear by default
 
+            scaled_mask[scaled_mask < 0.5] = 0
+            scaled_mask[scaled_mask >= 0.5] = 1
         mask = torch.from_numpy(scaled_mask)
         masks.append(mask)
     if len(masks) == 0:

@@ -236,11 +236,16 @@ def convert_pts_to_rect(pts, make_width_larger=True):
 
 def convert_rects_to_bboxes(rects, lib=np):
     rect_pts = convert_rect_to_pts2(rects, lib)
+
     if lib == np:
+        if len(rect_pts) == 0:
+            return lib.zeros((0, 4), dtype=rects.dtype)
         pts_min = lib.min(rect_pts, axis=1)
         pts_max = lib.max(rect_pts, axis=1)
         bboxes = lib.stack((pts_min, pts_max), 1)
     elif lib == torch:
+        if len(rect_pts) == 0:
+            return lib.zeros((0, 4), dtype=rects.dtype, device=rects.device)
         pts_min = lib.min(rect_pts, dim=1)[0]
         pts_max = lib.max(rect_pts, dim=1)[0]
         bboxes = lib.cat((pts_min, pts_max), 1)
