@@ -17,6 +17,7 @@ import glob
 import cv2
 import open3d
 
+
 def load_model(model, f):
     checkpoint = torch.load(f, map_location=torch.device("cpu"))
     model.load_state_dict(checkpoint.pop("model"))
@@ -81,7 +82,6 @@ def select_top_predictions(predictions, confidence_threshold=0.7, score_field="s
 
 def paste_mask_on_image(mask, box, im_h, im_w, thresh=None, interp=cv2.INTER_LINEAR, rotated=False):
 
-    # TODO: ROTATED
     if rotated:
         assert len(box) == 5  # xc,yc,w,h,angle
         w = box[2]
@@ -100,38 +100,14 @@ def paste_mask_on_image(mask, box, im_h, im_w, thresh=None, interp=cv2.INTER_LIN
     resized = cv2.resize(mask, (w, h), interpolation=interp)
 
     if thresh is not None:#thresh >= 0:
-        resized = resized > thresh
+        resized = (resized > thresh).astype(np.float32)
 
     canvas = np.zeros((im_h, im_w), dtype=np.float32)
 
     if rotated:
-        center = (box[0], box[1])
-        theta = np.deg2rad(box[-1])
+        from maskrcnn_benchmark.modeling.rotate_ops import paste_rotated_roi_in_image
 
-        v_x = (np.cos(theta), np.sin(theta))
-        v_y = (-np.sin(theta), np.cos(theta))
-        s_x = center[0] - v_x[0] * ((w-1) / 2) - v_y[0] * ((h-1) / 2)
-        s_y = center[1] - v_x[1] * ((w-1) / 2) - v_y[1] * ((h-1) / 2)
-
-        M = np.array([[v_x[0],v_y[0], s_x],
-                        [v_x[1],v_y[1], s_y]])
-
-        #  TODO: OPTIMIZE!
-        x_grid, y_grid = np.meshgrid(np.arange(w), np.arange(h))
-        x_grid = x_grid.reshape(-1)
-        y_grid = y_grid.reshape(-1)
-        map_pts_x = x_grid * M[0, 0] + y_grid * M[0, 1] + M[0, 2]
-        map_pts_y = x_grid * M[1, 0] + y_grid * M[1, 1] + M[1, 2]
-        map_pts_x = np.round(map_pts_x).astype(np.int32)
-        map_pts_y = np.round(map_pts_y).astype(np.int32)
-
-        valid_x = np.logical_and(map_pts_x >= 0, map_pts_x < im_w)
-        valid_y = np.logical_and(map_pts_y >= 0, map_pts_y < im_h)
-        valid = np.logical_and(valid_x, valid_y)
-        canvas[map_pts_y[valid], map_pts_x[valid]] = resized[y_grid[valid], x_grid[valid]]
-
-        kernel = np.ones((5, 5), np.uint8)
-        canvas = cv2.morphologyEx(canvas, cv2.MORPH_CLOSE, kernel)
+        canvas = paste_rotated_roi_in_image(canvas, resized, box)
 
     else:
         x_0 = max(box[0], 0)
@@ -379,49 +355,52 @@ if __name__ == '__main__':
     config_file = "./configs/coco_rotated_mask_rcnn.yaml"
     model_file = "./checkpoints/coco_rotated_mask_rcnn/model_final.pth"
 
-    image_dir = "/data/MSCOCO/train2014"
+    image_dir = "/data/MSCOCO/val2014"
     # image_files = ["mixed/temple_0/000885.left","mixed/temple_0/001774.left"]
     image_ext = ".jpg"
     # image_files = [u'COCO_val2014_000000001000.jpg', u'COCO_val2014_000000010012.jpg']
-    # image_files = ['COCO_val2014_000000415360.jpg',
-    #      'COCO_val2014_000000438915.jpg',
-    #      'COCO_val2014_000000209028.jpg',
-    #      'COCO_val2014_000000372874.jpg']#[1:]
-    image_files = [
-        u'COCO_train2014_000000417793.jpg',
-        u'COCO_train2014_000000147459.jpg',
-        u'COCO_train2014_000000417797.jpg',
-        u'COCO_train2014_000000032778.jpg',
-        u'COCO_train2014_000000393227.jpg',
-        u'COCO_train2014_000000139276.jpg',
-        u'COCO_train2014_000000114703.jpg',
-        u'COCO_train2014_000000229398.jpg',
-        u'COCO_train2014_000000401435.jpg',
-        u'COCO_train2014_000000581667.jpg',
-        u'COCO_train2014_000000213034.jpg',
-        u'COCO_train2014_000000024621.jpg',
-        u'COCO_train2014_000000294962.jpg',
-        u'COCO_train2014_000000548926.jpg',
-        u'COCO_train2014_000000188482.jpg',
-        u'COCO_train2014_000000337707.jpg',
-        u'COCO_train2014_000000458827.jpg',
-        u'COCO_train2014_000000000077.jpg',
-        u'COCO_train2014_000000417870.jpg',
-        u'COCO_train2014_000000163921.jpg',
-        u'COCO_train2014_000000516184.jpg',
-        u'COCO_train2014_000000237658.jpg',
-        u'COCO_train2014_000000204891.jpg',
-        u'COCO_train2014_000000467038.jpg',
-        u'COCO_train2014_000000270440.jpg',
-        u'COCO_train2014_000000311401.jpg',
-        u'COCO_train2014_000000221293.jpg',
-        u'COCO_train2014_000000565361.jpg',
-        u'COCO_train2014_000000139380.jpg',
-        u'COCO_train2014_000000019134.jpg'
-    ][::-1]
+    image_files = ['COCO_val2014_000000415360.jpg',
+         'COCO_val2014_000000438915.jpg',
+         'COCO_val2014_000000209028.jpg',
+         'COCO_val2014_000000500100.jpg']#[1:]
+    # image_files = [
+    #     u'COCO_train2014_000000417793.jpg',
+    #     u'COCO_train2014_000000147459.jpg',
+    #     u'COCO_train2014_000000417797.jpg',
+    #     u'COCO_train2014_000000032778.jpg',
+    #     u'COCO_train2014_000000393227.jpg',
+    #     u'COCO_train2014_000000139276.jpg',
+    #     u'COCO_train2014_000000114703.jpg',
+    #     u'COCO_train2014_000000229398.jpg',
+    #     u'COCO_train2014_000000401435.jpg',
+    #     u'COCO_train2014_000000581667.jpg',
+    #     u'COCO_train2014_000000213034.jpg',
+    #     u'COCO_train2014_000000024621.jpg',
+    #     u'COCO_train2014_000000294962.jpg',
+    #     u'COCO_train2014_000000548926.jpg',
+    #     u'COCO_train2014_000000188482.jpg',
+    #     u'COCO_train2014_000000337707.jpg',
+    #     u'COCO_train2014_000000458827.jpg',
+    #     u'COCO_train2014_000000000077.jpg',
+    #     u'COCO_train2014_000000417870.jpg',
+    #     u'COCO_train2014_000000163921.jpg',
+    #     u'COCO_train2014_000000516184.jpg',
+    #     u'COCO_train2014_000000237658.jpg',
+    #     u'COCO_train2014_000000204891.jpg',
+    #     u'COCO_train2014_000000467038.jpg',
+    #     u'COCO_train2014_000000270440.jpg',
+    #     u'COCO_train2014_000000311401.jpg',
+    #     u'COCO_train2014_000000221293.jpg',
+    #     u'COCO_train2014_000000565361.jpg',
+    #     u'COCO_train2014_000000139380.jpg',
+    #     u'COCO_train2014_000000019134.jpg'
+    # ][::-1]
     image_files = [osp.join(image_dir, f) for f in image_files]
 
-    # model_file = "./checkpoints/coco_rotated_loading/model_final.pth"
+    # config_file = "./configs/coco_rotated_mask_rcnn.yaml"
+    # model_file = "./checkpoints/coco_rotated_loading_mask/model_final.pth"
+    # # config_file = "./configs/coco_mask_rcnn.yaml"
+    # # model_file = "./checkpoints/coco_loading_mask/model_final.pth"
     # image_dir = "/home/bot/LabelMe/Images/loading_test"
     # image_files = glob.glob("%s/*.jpg"%(image_dir))
 
@@ -520,20 +499,23 @@ if __name__ == '__main__':
 
         for ix, (bbox, score) in enumerate(zip(bboxes, scores)):
 
-            if cfg.MODEL.ROTATED:
-
-                rr = rrects[ix]
-                img_copy = draw_anchors(img_copy, [rr], [[0,0,255]])
-            else:
-                img_copy = cv2.rectangle(img_copy, tuple(bbox[:2]), tuple(bbox[2:]), (0, 0, 255), 2)
-
             if not cfg.MODEL.RPN_ONLY:
                 label = labels[ix]
 
-            if cfg.MODEL.MASK_ON:
+            if 1:#not cfg.MODEL.MASK_ON:  # if no masks, draw bboxes
+                if cfg.MODEL.ROTATED:
+
+                    rr = rrects[ix]
+                    img_copy = draw_anchors(img_copy, [rr], [[0,0,255]])
+                else:
+                    img_copy = cv2.rectangle(img_copy, tuple(bbox[:2]), tuple(bbox[2:]), (0, 0, 255), 2)
+            if cfg.MODEL.MASK_ON:  # if no masks, draw bboxes
                 rotated = cfg.MODEL.ROTATED
                 rbox = bbox if not rotated else rrects[ix]
-                mask = paste_mask_on_image(masks[ix], rbox, height, width, thresh=0.5, rotated=rotated)
+                if not cfg.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS:
+                    mask = paste_mask_on_image(masks[ix], rbox, height, width, thresh=0.5, rotated=rotated)
+                else:
+                    mask = cv2.resize(masks[ix], (width, height))
 
                 label_mask[ix] = mask
 
