@@ -693,32 +693,32 @@ at::Tensor RROIAlign_backward_cuda(const at::Tensor& grad,
   }
 
   AT_DISPATCH_FLOATING_TYPES(grad.type(), "RROIAlign_backward", [&] {
-    bp_rroi_align_backward(
-      batch_size,
-      num_rois,
-      channels,
-      height,
-      width,
-      pooled_height,
-      pooled_width,
-      spatial_scale,
-      grad.contiguous().data<float>(),
-      rois.contiguous().data<float>(),
-      grad_input.data<float>(),
-      stream);
-  //   RRoIAlignBackwardFeature<scalar_t><<<grid, block, 0, stream>>>(
-  //       grad.numel(),
-  //       grad.contiguous().data<scalar_t>(),
-  //       num_rois,
-  //       spatial_scale,
-  //       channels,
-  //       height,
-  //       width,
-  //       pooled_height,
-  //       pooled_width,
-  //       sampling_ratio,
-  //       grad_input.data<scalar_t>(),
-  //       rois.contiguous().data<scalar_t>());
+//    bp_rroi_align_backward(
+//      batch_size,
+//      num_rois,
+//      channels,
+//      height,
+//      width,
+//      pooled_height,
+//      pooled_width,
+//      spatial_scale,
+//      grad.contiguous().data<float>(),
+//      rois.contiguous().data<float>(),
+//      grad_input.data<float>(),
+//      stream);
+     RRoIAlignBackwardFeature<scalar_t><<<grid, block, 0, stream>>>(
+         grad.numel(),
+         grad.contiguous().data<scalar_t>(),
+         num_rois,
+         spatial_scale,
+         channels,
+         height,
+         width,
+         pooled_height,
+         pooled_width,
+         sampling_ratio,
+         grad_input.data<scalar_t>(),
+         rois.contiguous().data<scalar_t>());
   });
   THCudaCheck(cudaGetLastError());
   return grad_input;
