@@ -91,11 +91,7 @@ class AnchorGenerator(torch.nn.Module):
             for anchors_per_feature_map in anchors_over_all_feature_maps:
                 # anchors_in_image.append(anchors_per_feature_map)
 
-                # TODO: Make this a util function?
-                rect_pts = convert_rect_to_pts2(anchors_per_feature_map, torch)
-                pts_min = torch.min(rect_pts, dim=1)[0]
-                pts_max = torch.max(rect_pts, dim=1)[0]
-                bboxes = torch.cat((pts_min, pts_max),1)
+                bboxes = convert_rects_to_bboxes(anchors_per_feature_map, torch)
 
                 boxlist = BoxList(
                     bboxes, (image_width, image_height), mode="xyxy"
@@ -236,6 +232,21 @@ def convert_pts_to_rect(pts, make_width_larger=True):
         elif theta > 90.0:
             theta = theta - 180
     return (x, y, w, h, theta)
+
+
+def convert_rects_to_bboxes(rects, lib=np):
+    rect_pts = convert_rect_to_pts2(rects, lib)
+    if lib == np:
+        pts_min = lib.min(rect_pts, axis=1)
+        pts_max = lib.max(rect_pts, axis=1)
+        bboxes = lib.stack((pts_min, pts_max), 1)
+    elif lib == torch:
+        pts_min = lib.min(rect_pts, dim=1)[0]
+        pts_max = lib.max(rect_pts, dim=1)[0]
+        bboxes = lib.cat((pts_min, pts_max), 1)
+    else:
+        raise NotImplementedError
+    return bboxes
 
 
 def convert_rect_to_pts2(anchors, lib=np):

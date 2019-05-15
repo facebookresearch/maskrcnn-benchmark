@@ -6,7 +6,7 @@ from torch import nn
 from maskrcnn_benchmark.modeling.rotated_box_coder import BoxCoder
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
-from maskrcnn_benchmark.modeling.rrpn.anchor_generator import convert_rect_to_pts2
+from maskrcnn_benchmark.modeling.rrpn.anchor_generator import convert_rects_to_bboxes
 # from maskrcnn_benchmark.structures.boxlist_ops import boxlist_nms
 from maskrcnn_benchmark.modeling.rotate_ops import RotateNMS
 
@@ -107,12 +107,8 @@ class PostProcessor(nn.Module):
         proposals = proposals.reshape(-1, REGRESSION_CN)
         scores = scores.reshape(-1)
 
-        # TODO: Make this a util function?
         # convert anchor rects to bboxes
-        rect_pts = convert_rect_to_pts2(proposals, torch)
-        pts_min = torch.min(rect_pts, dim=1)[0]
-        pts_max = torch.max(rect_pts, dim=1)[0]
-        bboxes = torch.cat((pts_min, pts_max), 1)
+        bboxes = convert_rects_to_bboxes(proposals, torch)
 
         boxlist = BoxList(bboxes, image_shape, mode="xyxy")
 
