@@ -32,8 +32,6 @@ from maskrcnn_benchmark.utils.miscellaneous import mkdir
 # except ImportError:
 #     raise ImportError('Use APEX for multi-precision via apex.amp')
 
-torch.backends.cudnn.benchmark = True
-
 
 def train(cfg, local_rank, distributed):
     model = build_detection_model(cfg)
