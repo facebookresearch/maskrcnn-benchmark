@@ -5,8 +5,16 @@ import os
 
 
 class DatasetCatalog(object):
-    DATA_DIR = "datasets"
+    DATA_DIR = "../datasets"
     DATASETS = {
+        "tencent_auto_drive_2019_train_cocostyle": {
+            "img_dir": "tencent/train2019",
+            "ann_file": "tencent/annotations/instances_train2019.json"
+        },
+        "tencent_auto_drive_2019_val_cocostyle": {
+            "img_dir": "tencent/val2019",
+            "ann_file": "tencent/annotations/instances_val2019.json"
+        },
         "coco_2017_train": {
             "img_dir": "coco/train2017",
             "ann_file": "coco/annotations/instances_train2017.json"

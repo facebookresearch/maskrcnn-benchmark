@@ -81,6 +81,11 @@ We use `minival` and `valminusminival` sets from [Detectron](https://github.com/
 # symlink the coco dataset
 cd ~/github/maskrcnn-benchmark
 mkdir -p datasets/coco
+# for tencent auto drive dataset
+ln -s ~/Documents/Tencent_auto_drive_demo/annotations datasets/tencent/annotations
+ln -s ~/Documents/Tencent_auto_drive_demo/2018-12-21-1598 datasets/tencent/train2019
+ln -s ~/Documents/Tencent_auto_drive_demo/2018-12-21-1598 datasets/tencent/val2019
+# use coco 2014 version
 ln -s /path_to_coco_dataset/annotations datasets/coco/annotations
 ln -s /path_to_coco_dataset/train2014 datasets/coco/train2014
 ln -s /path_to_coco_dataset/test2014 datasets/coco/test2014
