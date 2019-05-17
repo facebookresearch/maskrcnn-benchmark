@@ -126,18 +126,6 @@ def prepare_for_coco_segmentation(predictions, dataset):
         image_width = img_info["width"]
         image_height = img_info["height"]
 
-        #TODO Make rrects resize into some util
-        if rotated:
-            pred_size = prediction.size
-            rrects = prediction.get_field("rrects")
-
-            w_ratio = float(image_width) / pred_size[0]
-            h_ratio = float(image_height) / pred_size[1]
-            rrects[:, 0] *= w_ratio
-            rrects[:, 2] *= w_ratio
-            rrects[:, 1] *= h_ratio
-            rrects[:, 3] *= h_ratio
-
         prediction = prediction.resize((image_width, image_height))
 
         masks = prediction.get_field("mask")

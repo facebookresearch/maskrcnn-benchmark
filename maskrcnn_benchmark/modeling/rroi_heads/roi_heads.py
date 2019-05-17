@@ -3,6 +3,7 @@ import torch
 
 from .box_head.box_head import build_roi_box_head
 from .mask_head.mask_head import build_roi_mask_head
+from maskrcnn_benchmark.structures.rotated_box import RotatedBox
 
 class CombinedROIHeads(torch.nn.ModuleDict):
     """
@@ -36,6 +37,11 @@ class CombinedROIHeads(torch.nn.ModuleDict):
             x, mask_logits, detections, loss_mask = self.mask(mask_features, detections, targets)
             losses.update(loss_mask)
 
+        # Convert all rrects field to RotatedBox structure
+        for ix, det in enumerate(detections):
+            proposal = proposals[ix]
+            rrects = RotatedBox(det.get_field("rrects"), proposal.size)
+            det.add_field("rrects", rrects)
         return x, detections, losses
 
 

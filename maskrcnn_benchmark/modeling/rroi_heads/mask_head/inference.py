@@ -7,6 +7,7 @@ from maskrcnn_benchmark.layers.misc import interpolate
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.modeling.roi_heads.mask_head.inference import MaskPostProcessor, expand_masks
 from maskrcnn_benchmark.modeling.rotate_ops import paste_rotated_roi_in_image
+from maskrcnn_benchmark.structures.rotated_box import RotatedBox
 
 
 def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
@@ -46,6 +47,7 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
 def paste_masks_in_image(masks, box, im_h, im_w, thresh=0.5, padding=1):
     N = len(masks)
     canvas = torch.zeros((N, im_h, im_w), dtype=torch.float32)
+    box = box.rbox if isinstance(box, RotatedBox) else box
     box = box.cpu()
     for ix,mask in enumerate(masks.cpu()):
         canvas[ix] = paste_mask_in_image(mask, box, im_h, im_w, thresh, padding)

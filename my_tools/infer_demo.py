@@ -19,8 +19,10 @@ import open3d
 
 
 def load_model(model, f):
+    from maskrcnn_benchmark.utils.model_serialization import load_state_dict
+
     checkpoint = torch.load(f, map_location=torch.device("cpu"))
-    model.load_state_dict(checkpoint.pop("model"))
+    load_state_dict(model, checkpoint.pop("model"))
     print("Loaded %s"%(f))
 
 
@@ -397,12 +399,12 @@ if __name__ == '__main__':
     # ][::-1]
     image_files = [osp.join(image_dir, f) for f in image_files]
 
-    # config_file = "./configs/coco_rotated_mask_rcnn.yaml"
-    # model_file = "./checkpoints/coco_rotated_loading_mask/model_final.pth"
-    # # config_file = "./configs/coco_mask_rcnn.yaml"
-    # # model_file = "./checkpoints/coco_loading_mask/model_final.pth"
-    # image_dir = "/home/bot/LabelMe/Images/loading_test"
-    # image_files = glob.glob("%s/*.jpg"%(image_dir))
+    config_file = "./configs/coco_rotated_mask_rcnn_fpn.yaml"
+    model_file = "./checkpoints/coco_rotated_loading_mask_fpn2/model_final.pth"
+    # config_file = "./configs/coco_mask_rcnn.yaml"
+    # model_file = "./checkpoints/coco_loading_mask/model_final.pth"
+    image_dir = "/home/bot/LabelMe/Images/loading_test"
+    image_files = glob.glob("%s/*.jpg"%(image_dir))[::-1]
 
     cfg.merge_from_file(config_file)
     img_transformer = ImageTransformer(cfg)
@@ -488,14 +490,7 @@ if __name__ == '__main__':
             poses = predictions.get_field("pose").numpy()
         if cfg.MODEL.ROTATED:
             from maskrcnn_benchmark.modeling.rrpn.anchor_generator import draw_anchors
-            rrects = predictions.get_field("rrects").cpu().numpy()
-            # TODO: RRECTS RESIZE
-            w_ratio = float(width) / pred_size[0]
-            h_ratio = float(height) / pred_size[1]
-            rrects[:, 0] *= w_ratio
-            rrects[:, 2] *= w_ratio
-            rrects[:, 1] *= h_ratio
-            rrects[:, 3] *= h_ratio
+            rrects = predictions.get_field("rrects").rbox.cpu().numpy()
 
         for ix, (bbox, score) in enumerate(zip(bboxes, scores)):
 
