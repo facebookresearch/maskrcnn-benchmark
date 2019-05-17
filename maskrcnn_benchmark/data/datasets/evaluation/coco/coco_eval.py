@@ -104,10 +104,19 @@ def prepare_for_coco_detection(predictions, dataset):
 def prepare_for_coco_segmentation(predictions, dataset):
     import pycocotools.mask as mask_util
     import numpy as np
+    # import cv2 # DEBUGGING
 
-    masker = Masker(threshold=0.5, padding=1)
     # assert isinstance(dataset, COCODataset)
     coco_results = []
+    if len(predictions) == 0:
+        return coco_results
+
+    rotated = predictions[0].has_field("rrects")  # TODO Is there a better way?
+    if rotated:
+        from maskrcnn_benchmark.modeling.rroi_heads.mask_head.inference import Masker as RotatedMasker
+        masker = RotatedMasker(threshold=0.5, padding=1)
+    else:
+        masker = Masker(threshold=0.5, padding=1)
     for image_id, prediction in tqdm(enumerate(predictions)):
         original_id = dataset.id_to_img_map[image_id]
         if len(prediction) == 0:
@@ -116,7 +125,21 @@ def prepare_for_coco_segmentation(predictions, dataset):
         img_info = dataset.get_img_info(image_id)
         image_width = img_info["width"]
         image_height = img_info["height"]
+
+        #TODO Make rrects resize into some util
+        if rotated:
+            pred_size = prediction.size
+            rrects = prediction.get_field("rrects")
+
+            w_ratio = float(image_width) / pred_size[0]
+            h_ratio = float(image_height) / pred_size[1]
+            rrects[:, 0] *= w_ratio
+            rrects[:, 2] *= w_ratio
+            rrects[:, 1] *= h_ratio
+            rrects[:, 3] *= h_ratio
+
         prediction = prediction.resize((image_width, image_height))
+
         masks = prediction.get_field("mask")
         # t = time.time()
         # Masker is necessary only if masks haven't been already resized.
@@ -132,10 +155,13 @@ def prepare_for_coco_segmentation(predictions, dataset):
 
         # rles = prediction.get_field('mask')
 
-        rles = [
-            mask_util.encode(np.array(mask[0, :, :, np.newaxis], order="F"))[0]
-            for mask in masks
-        ]
+        rles = []
+        for mask in masks:
+            # cv2.imshow("mask", mask[0].cpu().numpy())
+            # cv2.waitKey(0)
+            if mask.dtype != torch.uint8:
+                mask = mask.to(dtype=torch.uint8)
+            rles.append(mask_util.encode(np.array(mask[0, :, :, np.newaxis], order="F"))[0])
         for rle in rles:
             rle["counts"] = rle["counts"].decode("utf-8")
 
