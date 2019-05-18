@@ -5,6 +5,7 @@ from .box_head.box_head import build_roi_box_head
 from .mask_head.mask_head import build_roi_mask_head
 from .keypoint_head.keypoint_head import build_roi_keypoint_head
 
+
 class CombinedROIHeads(torch.nn.ModuleDict):
     """
     Combines a set of individual heads (for box prediction or masks) into a single
@@ -16,13 +17,6 @@ class CombinedROIHeads(torch.nn.ModuleDict):
         self.cfg = cfg.clone()
         if cfg.MODEL.MASK_ON and cfg.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             self.mask.feature_extractor = self.box.feature_extractor
-
-        if cfg.MODEL.VERTEX_ON and cfg.MODEL.ROI_VERTEX_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
-            self.vertex.feature_extractor = self.box.feature_extractor
-        if cfg.MODEL.POSE_ON and cfg.MODEL.ROI_POSE_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
-            self.pose.feature_extractor = self.box.feature_extractor
-        if cfg.MODEL.DEPTH_ON and cfg.MODEL.ROI_DEPTH_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
-            self.depth.feature_extractor = self.box.feature_extractor
         if cfg.MODEL.KEYPOINT_ON and cfg.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             self.keypoint.feature_extractor = self.box.feature_extractor
 
@@ -31,8 +25,6 @@ class CombinedROIHeads(torch.nn.ModuleDict):
         # TODO rename x to roi_box_features, if it doesn't increase memory consumption
         x, bbox_pred, detections, loss_box = self.box(features, proposals, targets)
         losses.update(loss_box)
-
-        # detections_list = [detections]
         if self.cfg.MODEL.MASK_ON:
             mask_features = features
             # optimization: during training, if we share the feature extractor between
@@ -46,49 +38,6 @@ class CombinedROIHeads(torch.nn.ModuleDict):
             # this makes the API consistent during training and testing
             x, mask_logits, detections, loss_mask = self.mask(mask_features, detections, targets)
             losses.update(loss_mask)
-
-            # if not self.training:
-            #     detections = mask_detections
-
-        if self.cfg.MODEL.DEPTH_ON:
-            depth_features = features
-            if (
-                self.training
-                and self.cfg.MODEL.ROI_DEPTH_HEAD.SHARE_BOX_FEATURE_EXTRACTOR
-            ):
-                depth_features = x
-            x, depth_pred, detections, loss_depth = self.depth(depth_features, detections, targets)
-            losses.update(loss_depth)
-
-        if self.cfg.MODEL.VERTEX_ON:
-            vertex_features = features
-            if (
-                self.training
-                and self.cfg.MODEL.ROI_VERTEX_HEAD.SHARE_BOX_FEATURE_EXTRACTOR
-            ):
-                vertex_features = x
-            # use
-            x, vertex_pred, detections, loss_vertex = self.vertex(vertex_features, detections, targets)
-            losses.update(loss_vertex)
-
-            # if not self.training:
-            #     detections = vertex_detections
-
-        if self.cfg.MODEL.POSE_ON:
-            # resize mask and vertexes to original resolution (resolution size can be found in
-            # detections/proposals var). mask out all values of the vertexes where mask value < 0.5
-            # possibly filter out masks where score < 0.9
-            # these will be our inputs to hough vote layer
-            pose_features = features
-
-            if (
-                self.training
-                and self.cfg.MODEL.ROI_POSE_HEAD.SHARE_BOX_FEATURE_EXTRACTOR
-            ):
-                pose_features = x
-            # use
-            x, pose_pred, detections, loss_pose = self.pose(pose_features, detections, targets)
-            losses.update(loss_pose)
 
         if self.cfg.MODEL.KEYPOINT_ON:
             keypoint_features = features
@@ -119,16 +68,6 @@ def build_roi_heads(cfg, in_channels):
         roi_heads.append(("mask", build_roi_mask_head(cfg, in_channels)))
     if cfg.MODEL.KEYPOINT_ON:
         roi_heads.append(("keypoint", build_roi_keypoint_head(cfg, in_channels)))
-
-    if cfg.MODEL.DEPTH_ON:
-        from .depth_head.depth_head import build_roi_depth_head
-        roi_heads.append(("depth", build_roi_depth_head(cfg)))
-    if cfg.MODEL.VERTEX_ON:
-        from .vertex_head.vertex_head import build_roi_vertex_head
-        roi_heads.append(("vertex", build_roi_vertex_head(cfg)))
-    if cfg.MODEL.POSE_ON:
-        from .pose_head.pose_head import build_roi_pose_head
-        roi_heads.append(("pose", build_roi_pose_head(cfg)))
 
     # combine individual heads in a single module
     if roi_heads:
