@@ -181,8 +181,6 @@ class RPNLossComputation(object):
 
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
         labels = torch.cat(labels, dim=0)
-        if labels.numel() == 0:
-            return labels.sum(), labels.sum()  # all 0, sum is convenient to get torch tensor
 
         sampled_pos_inds = torch.nonzero(torch.cat(sampled_pos_inds, dim=0)).squeeze(1)
         sampled_neg_inds = torch.nonzero(torch.cat(sampled_neg_inds, dim=0)).squeeze(1)

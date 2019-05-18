@@ -182,9 +182,6 @@ class FastRCNNLossComputation(object):
         total_samples = labels.numel()
         # total_neg = total_samples - total_pos
 
-        if total_pos == 0:
-            return labels_pos.sum(), labels_pos.sum()  # all 0, sum is convenient to get torch tensor
-
         # get indices that correspond to the regression targets for
         # the corresponding ground truth labels, to be used with
         # advanced indexing
