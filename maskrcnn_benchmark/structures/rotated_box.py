@@ -92,6 +92,12 @@ class RotatedBox(object):
 
         return area
 
+    def cpu(self):
+        return self.rbox.cpu()
+
+    def numpy(self):
+        return self.rbox.numpy()
+
     def __len__(self):
         return self.rbox.shape[0]
 

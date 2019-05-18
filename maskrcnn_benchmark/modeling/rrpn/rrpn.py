@@ -9,6 +9,7 @@ from .loss import make_rpn_loss_evaluator
 from .anchor_generator import make_anchor_generator
 from .inference import make_rpn_postprocessor
 from .utils import REGRESSION_CN
+from maskrcnn_benchmark.structures.rotated_box import RotatedBox
 
 
 class RRPNModule(torch.nn.Module):
@@ -63,7 +64,15 @@ class RRPNModule(torch.nn.Module):
         if self.training:
             return self._forward_train(anchors, objectness, rpn_box_regression, targets)
         else:
-            return self._forward_test(anchors, objectness, rpn_box_regression)
+            boxes, _ = self._forward_test(anchors, objectness, rpn_box_regression)
+            if self.cfg.MODEL.RPN_ONLY:
+                # If RPN only, store the rrects tensor as RotatedBox structure for
+                # easy resizing, transforms, etc
+                for ix, box in enumerate(boxes):
+                    rrects = box.get_field("rrects")
+                    if isinstance(rrects, torch.Tensor):
+                        box.add_field("rrects", RotatedBox(rrects, tuple(images.image_sizes[ix])))
+            return boxes, _
 
     def _forward_train(self, anchors, objectness, rpn_box_regression, targets):
         if self.cfg.MODEL.RPN_ONLY:
