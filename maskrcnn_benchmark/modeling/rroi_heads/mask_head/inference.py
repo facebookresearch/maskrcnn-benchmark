@@ -47,7 +47,6 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
 def paste_masks_in_image(masks, box, im_h, im_w, thresh=0.5, padding=1):
     N = len(masks)
     canvas = torch.zeros((N, im_h, im_w), dtype=torch.float32)
-    box = box.rbox if isinstance(box, RotatedBox) else box
     box = box.cpu()
     for ix,mask in enumerate(masks.cpu()):
         canvas[ix] = paste_mask_in_image(mask, box, im_h, im_w, thresh, padding)
@@ -67,9 +66,11 @@ class Masker(object):
     def forward_single_image(self, masks, boxes):
         # boxes = boxes.convert("xyxy")
         im_w, im_h = boxes.size
+        rr = boxes.get_field('rrects')
+        rrects = rr.rbox if isinstance(rr, RotatedBox) else rr
         res = [
             paste_masks_in_image(mask, box, im_h, im_w, self.threshold, self.padding)
-            for mask, box in zip(masks, boxes.get_field("rrects"))
+            for mask, box in zip(masks, rrects)
         ]
         if len(res) > 0:
             res = torch.stack(res, dim=0)#[:, None]
