@@ -11,6 +11,7 @@ from ..utils.comm import is_main_process, get_world_size
 from ..utils.comm import all_gather
 from ..utils.comm import synchronize
 from ..utils.timer import Timer, get_time_str
+from .bbox_aug import im_detect_bbox_aug
 
 
 def compute_on_dataset(model, data_loader, device, timer=None):
@@ -19,11 +20,13 @@ def compute_on_dataset(model, data_loader, device, timer=None):
     cpu_device = torch.device("cpu")
     for _, batch in enumerate(tqdm(data_loader)):
         images, targets, image_ids = batch
-        images = images.to(device)
         with torch.no_grad():
             if timer:
                 timer.tic()
-            output = model(images)
+            if cfg.TEST.BBOX_AUG.ENABLED:
+                output = im_detect_bbox_aug(model, images, device)
+            else:
+                output = model(images.to(device))
             if timer:
                 torch.cuda.synchronize()
                 timer.toc()
