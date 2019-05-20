@@ -1,5 +1,5 @@
 """
-Regress the cuboid xy vertices of an object given 2D bounding box
+Get the cuboid vertices of an object as per pixel sigmoid
 """
 
 import cv2
@@ -72,7 +72,7 @@ class FATDataLoader4(FATDataLoader):
             cuboid_2d = cuboid_2d.squeeze()
 
             # # perform random crop centered on the object 
-            bbox = np.array(ann['bbox'])
+            # bbox = np.array(ann['bbox'])
             # get min max of proj cuboid
             cuboid_2d = np.round(cuboid_2d).astype(np.int32)
             x1,y1 = np.min(cuboid_2d, axis=0)
@@ -204,8 +204,8 @@ class ConvNet(nn.Module):
         self.conv_t1 = conv_transpose2d_by_factor(conv3_filters, conv_t_filters, factor=2)
         self.conv_t2 = conv_transpose2d_by_factor(conv_t_filters, conv_t_filters, factor=2)
         self.conv_t3 = conv_transpose2d_by_factor(conv_t_filters, conv_t_filters, factor=2)
-        self.depth_reg = nn.Conv2d(conv_t_filters, 64, kernel_size=5, stride=1, padding=5 // 2)
-        self.depth_reg2 = nn.Conv2d(64, out_channels, kernel_size=5, stride=1, padding=5 // 2)
+        self.reg = nn.Conv2d(conv_t_filters, 64, kernel_size=5, stride=1, padding=5 // 2)
+        self.reg2 = nn.Conv2d(64, out_channels, kernel_size=5, stride=1, padding=5 // 2)
 
     def forward(self, x):
         # batch_sz = len(x)
@@ -218,8 +218,8 @@ class ConvNet(nn.Module):
         ct1 = F.relu(self.conv_t1(c3))
         ct2 = F.relu(self.conv_t2(ct1))
         ct3 = F.relu(self.conv_t3(ct2))
-        out = F.relu(self.depth_reg(ct3))
-        out = self.depth_reg2(out)
+        out = F.relu(self.reg(ct3))
+        out = self.reg2(out)
         return out
 
 

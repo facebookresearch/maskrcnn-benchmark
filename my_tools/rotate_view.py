@@ -74,47 +74,22 @@ draw_cuboid_2d(m, imgpts.squeeze()[:-1], (0,0,255))
 # cv2.imshow("m2", m)
 # cv2.waitKey(0)
 
-aa = {
-    (1,2,3): [get_rotate_mat(0,0)], # default
-    (1,-2,-3): [get_rotate_mat(180,0)],  # rotated 180 around x
-    (1,-3,2): [get_rotate_mat(90,0)],   # rotated 90 clockwise around x
-    (1,3,-2): [get_rotate_mat(270,0)],  # rotated 270 clockwise around x
+from pnp_test import order_4corner_points
+image_points = np.array([[371, 388],
+     [441, 384],
+     [379, 355],
+     [451, 352],
+     [379, 427],
+     [452, 422],
+     [388, 394],
+     [463, 390]])
 
-    # start with -1 (rotate 180 around y from default)
-    (-1,2,-3): [get_rotate_mat(180,1)],   # 
-    (-1,-2,3): [get_rotate_mat(180,1), get_rotate_mat(180,0)],   # then rotate 180 around x
-    (-1,3,2): [get_rotate_mat(180,1), get_rotate_mat(90,0)],   # then rotate 90 clockwise around x
-    (-1,-3,-2): [get_rotate_mat(180,1), get_rotate_mat(270,0)],   # then rotate 270 clockwise around x
+opts, opts_idx = order_4corner_points(image_points[:4])
+m = np.zeros((500,500,3), dtype=np.uint8)
+for ix,pt in enumerate(opts):
+    pt = tuple(pt)
+    cv2.putText(m, "%d"%(ix), pt, cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,0,255))
+    cv2.circle(m, pt, 3, (0,255,0), -1)
 
-    # start with 2 (rotate 270 clockwise around z from default)
-    (2,-1,3): [get_rotate_mat(270,2)],   # 
-    (2,1,-3): [get_rotate_mat(270,2),get_rotate_mat(180,1)],   # then rotate 180 around y
-    (2,3,1): [get_rotate_mat(270,2),get_rotate_mat(90,1)],   # then rotate 90 clockwise around y
-    (2,-3,-1): [get_rotate_mat(270,2),get_rotate_mat(270,1)],   # then rotate 270 clockwise around y
-
-    # start with -2 (rotate 90 clockwise around z from default)
-    (-2,1,3): [get_rotate_mat(90,2)],   # 
-    (-2,-1,-3): [get_rotate_mat(90,2),get_rotate_mat(180,1)],   # then rotate 180 around y
-    (-2,-3,1): [get_rotate_mat(90,2),get_rotate_mat(90,1)],   # then rotate 90 clockwise around y
-    (-2,3,-1): [get_rotate_mat(90,2),get_rotate_mat(270,1)],   # then rotate 270 clockwise around y
-
-    # start with 3 (rotate 270 clockwise around y from default)
-    (3,2,-1): [get_rotate_mat(270,1)],   # 
-    (3,-2,1): [get_rotate_mat(270,1),get_rotate_mat(180,2)],   # then rotate 180 around z
-    (3,-1,-2): [get_rotate_mat(270,1),get_rotate_mat(90,2)],   # then rotate 90 clockwise around z
-    (3,1,2): [get_rotate_mat(270,1),get_rotate_mat(270,2)],   # then rotate 270 clockwise around z
-
-    # start with -3 (rotate 90 clockwise around y from default)
-    (-3,2,1): [get_rotate_mat(90,1)],   # 
-    (-3,-2,-1): [get_rotate_mat(90,1),get_rotate_mat(180,2)],   # then rotate 180 around z
-    (-3,-1,2): [get_rotate_mat(90,1),get_rotate_mat(90,2)],   # then rotate 90 clockwise around z
-    (-3,1,-2): [get_rotate_mat(90,1),get_rotate_mat(270,2)],   # then rotate 270 clockwise around z
-}
-
-
-hashx = dict((tuple(v), ix) for ix, v in enumerate(theeight))
-aa_order = {}
-for k in aa:
-    x = np.dot(get_rotate(aa[k]), theeight.T).T 
-    x = np.round(x)[:-1]
-    aa_order[k] = [hashx[tuple(v)] for v in x]
+cv2.imshow("m2", m)
+cv2.waitKey(0)

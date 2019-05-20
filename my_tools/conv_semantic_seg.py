@@ -288,7 +288,7 @@ def inference(model, img_dir, use_cuda=False):
         pred = model(image_tensor)
         if pred.numel() == 0:
             print("MODEL RETURNED EMPTY TENSOR")
-            return
+            continue
 
         prob = torch.sigmoid(pred)
         # topk = torch.topk(prob)

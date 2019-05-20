@@ -237,6 +237,29 @@ def get_data():
          [ 0.27259567,  0.25763264,  0.2924442 ],
          [-0.49865618,  0.6232472,   0.16834177]]
 
+    im_file = "./datasets/FAT/data/mixed/temple_0/000791.left.jpg"
+    model_points = [[-0.08231957, -0.06044089, -0.01820691],
+         [-0.08231957,  0.06045884, -0.01820691],
+         [-0.08231957, -0.06044089,  0.01794124],
+         [-0.08231957,  0.06045884,  0.01794124],
+         [ 0.08240555, -0.06044089, -0.01820691],
+         [ 0.08240555,  0.06045884, -0.01820691],
+         [ 0.08240555, -0.06044089,  0.01794124],
+         [ 0.08240555,  0.06045884,  0.01794124]]
+    image_points = [[611, 282],
+         [580, 325],
+         [619, 282],
+         [589, 324],
+         [668, 334],
+         [634, 377],
+         [675, 333],
+         [641, 375]]
+    cls = 19
+    pred_R = [[ 0.46487328, -0.05374174, -0.29223543],
+     [ 0.2890648,  -0.03443554,  0.02286138],
+     [-0.5969335,   0.02835514, -0.58279467]]
+
+
 
     pred_R = np.array(pred_R)
     image_points = np.array(image_points, dtype=np.float32)
@@ -488,10 +511,10 @@ if __name__ == '__main__':
             order_exists = True
             break
     if not order_exists:
-        # ordering = np.hstack((ordering, ordering + 4))
-        print("Order does not exist! %s"%(ordering))
-        import sys
-        sys.exit(1)
+        ordering = np.hstack((ordering, ordering + 4))
+        # print("Order does not exist! %s"%(ordering))
+        # import sys
+        # sys.exit(1)
     print(ordering)
     image_points = image_points[ordering]
 

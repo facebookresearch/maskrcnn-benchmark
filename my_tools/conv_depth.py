@@ -100,10 +100,16 @@ def show_depth_cloud2(depth, img, intrinsics, factor_depth=1):
 
 def get_seg_mask_from_coco_annot(annot, img_h, img_w):
     mask = np.zeros((img_h, img_w), dtype=np.uint8)
-    segs = np.array(annot['segmentation'])[0]  # [xyxy]
-    segs = segs.reshape((int(len(segs)/2), 2)) # [[x,y],[x,y]]
-    segs = segs.astype(np.int32)
-    cv2.fillPoly(mask, [segs], 255)
+    segs = annot['segmentation']  # (N, [xyxy])
+    # try:
+    #     segs = segs.reshape((int(len(segs)/2), 2)) # [[x,y],[x,y]]
+    # except Exception:
+    #     print(segs)
+    #     raise Exception
+    for s in segs:
+        seg = np.array(s).astype(np.int32)
+        seg = seg.reshape((int(len(seg)/2), 2))
+        cv2.fillPoly(mask, [seg], 255)
     return mask
 
 def get_cropped_img(img, bbox):

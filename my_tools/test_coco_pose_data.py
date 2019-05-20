@@ -130,9 +130,9 @@ if __name__ == '__main__':
     cfg.INPUT.MIN_SIZE_TRAIN = 240 * 2
     cfg.INPUT.MAX_SIZE_TRAIN = 320 * 2
     cfg.INPUT.FLIP_PROB_TRAIN = 0
-    cfg.MODEL.VERTEX_ON = True
-    cfg.MODEL.POSE_ON = True
-    cfg.MODEL.DEPTH_ON = True
+    cfg.MODEL.VERTEX_ON = False
+    cfg.MODEL.POSE_ON = False
+    cfg.MODEL.DEPTH_ON = False
 
     # transforms = T.Compose([T.ToTensor()]) # T.build_transforms(cfg, is_train)
     transforms = T.build_transforms(cfg, is_train, normalize=False)
@@ -146,8 +146,8 @@ if __name__ == '__main__':
     ann_file = "./datasets/FAT/coco_fat_debug.json"
     # ann_file = "./datasets/FAT/coco_fat_mixed_temple_0.json"
 
-    # root = "/home/bot/LabelMe/Images/loading"
-    # ann_file = "/home/bot/LabelMe/scripts/loading.json"
+    root = "/home/bot/LabelMe/Images/loading"
+    ann_file = "/home/bot/LabelMe/scripts/loading.json"
     dataset = coco_pose.COCOPoseDataset(ann_file, root, remove_images_without_annotations, transforms, cfg)
 
     sampler = make_data_sampler(dataset, shuffle, is_distributed)
@@ -168,7 +168,7 @@ if __name__ == '__main__':
         # intrinsics = np.array([[1066.778, 0, 312.9869], [0, 1067.487, 241.3109], [0.0, 0.0, 1.0]])
         intrinsics = np.array([[768.16,0,480],[0,768.16,270],[0,0,1]])
 
-        points_file = "./datasets/FAT/points_all_orig.npy"  
+        points_file = "./datasets/FAT/points_all_orig.npy"
         points = np.load(points_file)
         # points = [[]]
         # for cls in CLASSES[1:]:
