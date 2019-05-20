@@ -7,6 +7,7 @@ from torch.nn.modules.utils import _pair
 
 from maskrcnn_benchmark import _Custom as _C
 
+from apex import amp
 
 class _RROIPool(Function):
     @staticmethod
@@ -55,6 +56,7 @@ class RROIPool(nn.Module):
         self.output_size = output_size
         self.spatial_scale = spatial_scale
 
+    @amp.float_function
     def forward(self, input, rois):
         return rroi_pool(input, rois, self.output_size, self.spatial_scale)
 
