@@ -54,6 +54,7 @@ def main():
 
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
+    cfg.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS = False
     cfg.freeze()
 
     save_dir = ""

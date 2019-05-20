@@ -158,6 +158,33 @@ def get_rotated_roi_pixel_mapping(roi):
 
     return M
 
+def merge_rrects_by_iou(rrects, iou_thresh):
+    N = len(rrects)
+
+    trr = rrects if isinstance(rrects, torch.Tensor) else torch.from_numpy(rrects)
+    iou_matrix = rotate_iou(trr, trr)
+
+    iou_matrix = iou_matrix.cpu().numpy()
+
+    good_inds = {}
+
+    used_inds = np.zeros((0), dtype=np.int32)
+    for i in range(N):
+        iou_row = iou_matrix[i]
+        iou_row[used_inds] = 0
+        inds = np.nonzero( iou_row > iou_thresh )[0]
+
+        if len(inds) == 0:
+            continue
+
+        good_inds[i] = inds
+
+        used_inds = np.concatenate((used_inds, inds))
+        if len(used_inds) == N:
+            break
+
+    return good_inds
+
 def crop_min_area_rect(image, rect):
 
     '''
