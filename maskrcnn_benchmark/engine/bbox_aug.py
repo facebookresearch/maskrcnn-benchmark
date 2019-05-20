@@ -50,6 +50,7 @@ def im_detect_bbox_aug(model, images, device):
             )
             add_preds_t(boxlists_scl_hf)
 
+    # Merge boxlists detected by different bbox aug params
     boxlists = []
     for i, boxlist_ts in enumerate(boxlists_ts):
         bbox = torch.cat([boxlist_t.bbox for boxlist_t in boxlist_ts])
@@ -58,6 +59,7 @@ def im_detect_bbox_aug(model, images, device):
         boxlist.add_field('scores', scores)
         boxlists.append(boxlist)
 
+    # Apply NMS and limit the final detections
     results = []
     post_processor = make_roi_box_post_processor(cfg)
     for boxlist in boxlists:
@@ -67,6 +69,9 @@ def im_detect_bbox_aug(model, images, device):
 
 
 def im_detect_bbox(model, images, target_scale, target_max_size, device):
+    """
+    Performs bbox detection on the original image.
+    """
     transform = TT.Compose([
         T.Resize(target_scale, target_max_size),
         TT.ToTensor(),
@@ -104,7 +109,7 @@ def im_detect_bbox_hflip(model, images, target_scale, target_max_size, device):
 def im_detect_bbox_scale(model, images, target_scale, target_max_size, device, hflip=False):
     """
     Computes bbox detections at the given scale.
-    Returns predictions in the original image space.
+    Returns predictions in the scaled image space.
     """
     if hflip:
         boxlists_scl = im_detect_bbox_hflip(model, images, target_scale, target_max_size, device)
