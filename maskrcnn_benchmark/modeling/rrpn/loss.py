@@ -155,7 +155,7 @@ class RPNLossComputation(object):
 
             labels.append(labels_per_image)
             regression_targets.append(regression_targets_per_image)
-            # matched_gt_ids_per_image.append(matched_idxs)
+            matched_gt_ids_per_image.append(matched_idxs)
             # matched_gt_ious_per_image.append(matched_targets.get_field("matched_ious"))
 
         return labels, regression_targets, matched_gt_ids_per_image, matched_gt_ious_per_image
@@ -194,28 +194,31 @@ class RPNLossComputation(object):
         objectness, box_regression = concat_box_prediction_layers(objectness, box_regression)
         objectness = objectness.squeeze()
 
+        if total_pos == 0:
+            return objectness.sum() * 0, objectness.sum() * 0
+
         regression_targets = torch.cat(regression_targets, dim=0)
 
-        # with torch.no_grad():
-        #     start_gt_idx = 0
-        #     for ix, t in enumerate(targets):
-        #         matched_gt_ids[ix] += start_gt_idx
-        #         start_gt_idx += len(t)
-        #
-        #     matched_gt_ids = torch.cat(matched_gt_ids)
-        #     pos_matched_gt_ids = matched_gt_ids[sampled_pos_inds]
-        #
-        #     pos_label_weights = torch.zeros_like(pos_matched_gt_ids, dtype=torch.float32)
-        #
-        #     label_idxs = [torch.nonzero(pos_matched_gt_ids == x).squeeze() for x in range(start_gt_idx)]
-        #
-        #     # """OLD"""
-        #     label_cnts = [li.numel() for li in label_idxs]
-        #     # label_weights = total_pos / label_cnts.to(dtype=torch.float32)
-        #     # label_weights /= start_gt_idx  # equal class weighting
-        #     for x in range(start_gt_idx):
-        #         if label_cnts[x] > 0:
-        #             pos_label_weights[label_idxs[x]] = total_pos / label_cnts[x] / start_gt_idx  # equal class weighting
+        with torch.no_grad():
+            start_gt_idx = 0
+            for ix, t in enumerate(targets):
+                matched_gt_ids[ix] += start_gt_idx
+                start_gt_idx += len(t)
+
+            matched_gt_ids = torch.cat(matched_gt_ids)
+            pos_matched_gt_ids = matched_gt_ids[sampled_pos_inds]
+
+            pos_label_weights = torch.zeros_like(pos_matched_gt_ids, dtype=torch.float32)
+
+            label_idxs = [torch.nonzero(pos_matched_gt_ids == x).squeeze() for x in range(start_gt_idx)]
+
+            # """OLD"""
+            label_cnts = [li.numel() for li in label_idxs]
+            # label_weights = total_pos / label_cnts.to(dtype=torch.float32)
+            # label_weights /= start_gt_idx  # equal class weighting
+            for x in range(start_gt_idx):
+                if label_cnts[x] > 0:
+                    pos_label_weights[label_idxs[x]] = total_pos / label_cnts[x] / start_gt_idx  # equal class weighting
         #
         #     # # """NEW"""
         #     # MAX_GT_NUM = 6  # TODO: CONFIG
@@ -250,18 +253,18 @@ class RPNLossComputation(object):
         # # angle_loss = 0 #torch.abs(torch.sin(pos_regression[:, -1] - pos_regression_targets[:, -1])).mean()
         #
         # # balance negative and positive weights
-        # sampled_labels = labels[sampled_inds]
-        # objectness_weights = torch.ones_like(sampled_labels)
-        # objectness_weights[sampled_labels == 1] = 0.5 * pos_label_weights / total_pos
-        # objectness_weights[sampled_labels != 1] = 0.5 * 1.0 / total_neg
-        #
+        sampled_labels = labels[sampled_inds]
+        objectness_weights = torch.ones_like(sampled_labels, dtype=torch.float32)
+        objectness_weights[sampled_labels == 1] = pos_label_weights
+        objectness_weights[sampled_labels != 1] = min(pos_label_weights.min(), 0.5)
+
         # criterion = torch.nn.BCELoss(reduce=False)
         # entropy_loss = criterion(objectness[sampled_inds].sigmoid(), sampled_labels)
         # objectness_loss = torch.mul(entropy_loss, objectness_weights).sum()
-        #
-        # # objectness_loss = F.binary_cross_entropy_with_logits(
-        # #     objectness[sampled_inds], sampled_labels, weight=objectness_weights
-        # # )
+
+        objectness_loss = F.binary_cross_entropy_with_logits(
+            objectness[sampled_inds], sampled_labels, weight=objectness_weights
+        )
         box_loss = smooth_l1_loss(
             box_regression[sampled_pos_inds],
             regression_targets[sampled_pos_inds],
@@ -269,9 +272,9 @@ class RPNLossComputation(object):
             # size_average=False,
         ).sum() / (total_samples)
 
-        objectness_loss = F.binary_cross_entropy_with_logits(
-            objectness[sampled_inds], labels[sampled_inds]
-        )
+        # objectness_loss = F.binary_cross_entropy_with_logits(
+        #     objectness[sampled_inds], labels[sampled_inds]
+        # )
         return objectness_loss, box_loss#, angle_loss
 
 

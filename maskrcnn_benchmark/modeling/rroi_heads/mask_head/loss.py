@@ -157,7 +157,7 @@ class MaskRCNNLossComputation(object):
 
         # torch.mean (in binary_cross_entropy_with_logits) doesn't
         # accept empty tensors, so handle it separately
-        if mask_targets.numel() == 0:
+        if positive_inds.numel() == 0 or mask_targets.numel() == 0:
             return mask_logits.sum() * 0
 
         mask_loss = F.binary_cross_entropy_with_logits(

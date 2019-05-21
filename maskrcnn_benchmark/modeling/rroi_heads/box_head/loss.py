@@ -180,7 +180,10 @@ class FastRCNNLossComputation(object):
         labels_pos = labels[sampled_pos_inds]
         total_pos = labels_pos.numel()
         total_samples = labels.numel()
-        # total_neg = total_samples - total_pos
+        total_neg = total_samples - total_pos
+
+        if total_pos == 0:
+            return class_logits.sum() * 0, class_logits.sum() * 0
 
         # get indices that correspond to the regression targets for
         # the corresponding ground truth labels, to be used with
@@ -226,12 +229,18 @@ class FastRCNNLossComputation(object):
         # #     label_cnts = torch.stack([(labels == x).sum() for x in range(num_classes)])
         # #     label_weights = 1.0 / label_cnts.to(dtype=torch.float32)
         # #     label_weights /= num_classes   # equal class weighting
-        # classification_loss = F.cross_entropy(class_logits, labels, reduce=False)#, weight=label_weights)
-        # cls_weights = torch.ones_like(labels, dtype=torch.float32)
-        # cls_weights[sampled_pos_inds] = 0.5 / total_pos #/ num_classes
-        # cls_weights[torch.nonzero(~labels_gt_0).squeeze(1)] = 0. 1.0 / total_neg# / num_classes
-        # classification_loss = torch.mul(classification_loss, cls_weights).sum()
-        #
+
+        pos_frac = self.fg_bg_sampler.positive_fraction
+        classification_loss = F.cross_entropy(class_logits, labels, reduce=False)#, weight=label_weights)
+        cls_weights = torch.ones_like(labels, dtype=torch.float32)
+        if total_pos > 0:
+            cls_weights[sampled_pos_inds] = pos_frac / total_pos #/ num_classes
+        if total_neg > 0:
+            cls_weights[torch.nonzero(~labels_gt_0).squeeze(1)] = (1.0 - pos_frac) / total_neg# / num_classes
+        classification_loss = torch.mul(classification_loss, cls_weights).sum()
+
+        # classification_loss = F.cross_entropy(class_logits, labels)
+
         # box_loss = smooth_l1_loss(
         #     pos_box_regression,
         #     pos_reg_targets,
@@ -248,8 +257,6 @@ class FastRCNNLossComputation(object):
             beta=1,
         ).sum()
         box_loss = box_loss / total_samples
-
-        classification_loss = F.cross_entropy(class_logits, labels)
 
         return classification_loss, box_loss
 
