@@ -6,6 +6,7 @@ import os
 import torch
 from tqdm import tqdm
 
+from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.data.datasets.evaluation import evaluate
 from ..utils.comm import is_main_process, get_world_size
 from ..utils.comm import all_gather
