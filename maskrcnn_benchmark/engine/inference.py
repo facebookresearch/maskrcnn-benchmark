@@ -72,6 +72,7 @@ def inference(
     num_devices = get_world_size()
     logger = logging.getLogger("maskrcnn_benchmark.inference")
     dataset = data_loader.dataset
+
     logger.info("Start evaluation on {} dataset({} images).".format(dataset_name, len(dataset)))
     total_timer = Timer()
     inference_timer = Timer()

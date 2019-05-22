@@ -33,6 +33,7 @@ DATASETS:
   TRAIN: ("tencent_auto_drive_2019_train_cocostyle",)
   TEST: ("tencent_auto_drive_2019_val_cocostyle",)
 DATALOADER:
+  NUM_WORKERS: 0
   SIZE_DIVISIBILITY: 32
 INPUT:
   MIN_SIZE_TRAIN: (600,)
@@ -41,9 +42,9 @@ INPUT:
   MAX_SIZE_TEST: 960
 SOLVER:
   IMS_PER_BATCH: 1
-  BASE_LR: 0.02
+  BASE_LR: 0.01
   WEIGHT_DECAY: 0.0001
-  STEPS: (60, 80)
-  MAX_ITER: 90
-  CHECKPOINT_PERIOD: 25
-OUTPUT_DIR: ../output
+  STEPS: (30000, 40000)
+  MAX_ITER: 45000
+  CHECKPOINT_PERIOD: 10000
+OUTPUT_DIR: ../output_noworker/
