@@ -397,7 +397,7 @@ class COCODemo(object):
                     name = '{0}.png'.format(str(id) + str(current_frame))
                     name = os.path.join(object_path, name)
                     if self.cfg.TRACKER.EXTRACT_FROM_MASK.RESIZE:
-                        masked_img = self.resize_and_pad(masked_img, self.cfg.TRACKER.EXTRACT_FROM_MASK.DSIZE)
+                        masked_img = self.resize_and_pad_image(masked_img, self.cfg.TRACKER.EXTRACT_FROM_MASK.DSIZE)
                     cv2.imwrite(name, masked_img)
 
             # draw track on the frame
