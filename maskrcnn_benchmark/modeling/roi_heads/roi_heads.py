@@ -3,6 +3,7 @@ import torch
 
 from .box_head.box_head import build_roi_box_head
 from .mask_head.mask_head import build_roi_mask_head
+from .maskiou_head.maskiou_head import build_roi_maskiou_head
 from .keypoint_head.keypoint_head import build_roi_keypoint_head
 
 
@@ -36,8 +37,17 @@ class CombinedROIHeads(torch.nn.ModuleDict):
                 mask_features = x
             # During training, self.box() will return the unaltered proposals as "detections"
             # this makes the API consistent during training and testing
-            x, detections, loss_mask = self.mask(mask_features, detections, targets)
-            losses.update(loss_mask)
+            if not self.cfg.MODEL.MASKIOU_ON:
+                x, detections, loss_mask = self.mask(mask_features, detections, targets)
+                losses.update(loss_mask)
+            else:
+                x, detections, loss_mask, roi_feature, selected_mask, labels, maskiou_targets = self.mask(mask_features,
+                                                                                                          detections,
+                                                                                                          targets)
+                losses.update(loss_mask)
+
+                loss_maskiou, detections = self.maskiou(roi_feature, detections, selected_mask, labels, maskiou_targets)
+                losses.update(loss_maskiou)
 
         if self.cfg.MODEL.KEYPOINT_ON:
             keypoint_features = features
@@ -66,6 +76,8 @@ def build_roi_heads(cfg, in_channels):
         roi_heads.append(("box", build_roi_box_head(cfg, in_channels)))
     if cfg.MODEL.MASK_ON:
         roi_heads.append(("mask", build_roi_mask_head(cfg, in_channels)))
+        if cfg.MODEL.MASKIOU_ON:
+            roi_heads.append(("maskiou", build_roi_maskiou_head(cfg)))
     if cfg.MODEL.KEYPOINT_ON:
         roi_heads.append(("keypoint", build_roi_keypoint_head(cfg, in_channels)))
 
