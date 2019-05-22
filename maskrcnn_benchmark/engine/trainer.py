@@ -134,7 +134,7 @@ def do_train(
                     ).format(
                         eta=eta_string,
                         iter=iteration,
-                        meters=str(meters),
+                        meters=str(meters_val),
                         lr=optimizer.param_groups[0]["lr"],
                         memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
                     )
