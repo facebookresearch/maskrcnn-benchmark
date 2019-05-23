@@ -46,12 +46,13 @@ def project_masks_on_boxes(segmentation_masks, proposals, discretization_size, m
             y1 = int(proposal[1])
             x2 = int(proposal[2]) + 1
             y2 = int(proposal[3]) + 1
-            for poly_ in segmentation_mask.polygons:
-                poly = np.array(poly_, dtype=np.float32)
-                x1 = np.minimum(x1, poly[0::2].min())
-                x2 = np.maximum(x2, poly[0::2].max())
-                y1 = np.minimum(y1, poly[1::2].min())
-                y2 = np.maximum(y2, poly[1::2].max())
+            for poly_list in segmentation_mask.instances.polygons:
+                for poly_ in poly_list.polygons:
+                    poly = np.array(poly_, dtype=np.float32)
+                    x1 = np.minimum(x1, poly[0::2].min())
+                    x2 = np.maximum(x2, poly[0::2].max())
+                    y1 = np.minimum(y1, poly[1::2].min())
+                    y2 = np.maximum(y2, poly[1::2].max())
             img_h = segmentation_mask.size[1]
             img_w = segmentation_mask.size[0]
             x1 = np.maximum(x1, 0)
@@ -60,10 +61,14 @@ def project_masks_on_boxes(segmentation_masks, proposals, discretization_size, m
             y2 = np.minimum(y2, img_h - 1)
             segmentation_mask_for_maskratio = segmentation_mask.crop([x1, y1, x2, y2])
             # type 2
-            rle_for_fullarea = mask_util.frPyObjects([p.numpy() for p in segmentation_mask_for_maskratio.polygons],
+            rle_for_fullarea = mask_util.frPyObjects([p.numpy()
+                                                      for p_list in segmentation_mask_for_maskratio.instances.polygons
+                                                      for p in p_list.polygons],
                                                      y2 - y1, x2 - x1)
             full_area = torch.tensor(mask_util.area(rle_for_fullarea).sum().astype(float))
-            rle_for_box_area = mask_util.frPyObjects([p.numpy() for p in cropped_mask.polygons],
+            rle_for_box_area = mask_util.frPyObjects([p.numpy()
+                                                      for p_list in cropped_mask.instances.polygons
+                                                      for p in p_list.polygons],
                                                      proposal[3] - proposal[1], proposal[2] - proposal[0])
             box_area = torch.tensor(mask_util.area(rle_for_box_area).sum().astype(float))
             mask_ratio = box_area / full_area

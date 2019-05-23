@@ -18,6 +18,7 @@ from .dcn.deform_conv_func import deform_conv, modulated_deform_conv
 from .dcn.deform_conv_module import DeformConv, ModulatedDeformConv, ModulatedDeformConvPack
 from .dcn.deform_pool_func import deform_roi_pooling
 from .dcn.deform_pool_module import DeformRoIPooling, DeformRoIPoolingPack, ModulatedDeformRoIPoolingPack
+from .l2_loss import l2_loss
 
 
 __all__ = [
@@ -43,5 +44,6 @@ __all__ = [
     'DeformRoIPooling',
     'DeformRoIPoolingPack',
     'ModulatedDeformRoIPoolingPack',
+    'l2_loss',
 ]
 
