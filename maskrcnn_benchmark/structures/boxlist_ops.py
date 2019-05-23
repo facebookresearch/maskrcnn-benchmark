@@ -26,6 +26,8 @@ def boxlist_nms(boxlist, nms_thresh, max_proposals=-1, score_field="scores"):
     score = boxlist.get_field(score_field)
     keep = _box_nms(boxes, score, nms_thresh)
     if max_proposals > 0:
+        #protect against not enough keep elements
+        max_proposals = min(max_proposals, len(keep))
         keep = keep[: max_proposals]
     boxlist = boxlist[keep]
     return boxlist.convert(mode)
@@ -67,7 +69,8 @@ def boxlist_iou(boxlist1, boxlist2):
     if boxlist1.size != boxlist2.size:
         raise RuntimeError(
                 "boxlists should have same image size, got {}, {}".format(boxlist1, boxlist2))
-
+    boxlist1 = boxlist1.convert("xyxy")
+    boxlist2 = boxlist2.convert("xyxy")
     N = len(boxlist1)
     M = len(boxlist2)
 
