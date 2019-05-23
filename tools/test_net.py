@@ -99,6 +99,7 @@ def main():
             expected_results=cfg.TEST.EXPECTED_RESULTS,
             expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
             output_folder=output_folder,
+            maskiou_on=cfg.MODEL.MASKIOU_ON
         )
         synchronize()
 

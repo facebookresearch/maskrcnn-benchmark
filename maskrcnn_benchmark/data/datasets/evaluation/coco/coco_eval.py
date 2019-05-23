@@ -18,6 +18,7 @@ def do_coco_evaluation(
     iou_types,
     expected_results,
     expected_results_sigma_tol,
+    maskiou_on,
 ):
     logger = logging.getLogger("maskrcnn_benchmark.inference")
 
@@ -44,7 +45,7 @@ def do_coco_evaluation(
         coco_results["bbox"] = prepare_for_coco_detection(predictions, dataset)
     if "segm" in iou_types:
         logger.info("Preparing segm results")
-        coco_results["segm"] = prepare_for_coco_segmentation(predictions, dataset)
+        coco_results["segm"] = prepare_for_coco_segmentation(predictions, dataset, maskiou_on)
     if 'keypoints' in iou_types:
         logger.info('Preparing keypoints results')
         coco_results['keypoints'] = prepare_for_coco_keypoint(predictions, dataset)
@@ -101,7 +102,7 @@ def prepare_for_coco_detection(predictions, dataset):
     return coco_results
 
 
-def prepare_for_coco_segmentation(predictions, dataset):
+def prepare_for_coco_segmentation(predictions, dataset, maskiou_on):
     import pycocotools.mask as mask_util
     import numpy as np
 
@@ -127,7 +128,10 @@ def prepare_for_coco_segmentation(predictions, dataset):
         # prediction = prediction.convert('xywh')
 
         # boxes = prediction.bbox.tolist()
-        scores = prediction.get_field("scores").tolist()
+        if maskiou_on:
+            scores = prediction.get_field("mask_scores").tolist()
+        else:
+            scores = prediction.get_field("scores").tolist()
         labels = prediction.get_field("labels").tolist()
 
         # rles = prediction.get_field('mask')
