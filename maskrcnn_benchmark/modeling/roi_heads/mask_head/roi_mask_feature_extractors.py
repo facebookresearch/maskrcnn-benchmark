@@ -58,11 +58,11 @@ class MaskRCNNFPNFeatureExtractor(nn.Module):
 
     def forward(self, x, proposals):
         x = self.pooler(x, proposals)
-
+        roi_feature = x
         for layer_name in self.blocks:
             x = F.relu(getattr(self, layer_name)(x))
 
-        return x
+        return x, roi_feature
 
 
 def make_roi_mask_feature_extractor(cfg, in_channels):

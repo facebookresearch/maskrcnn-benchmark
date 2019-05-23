@@ -15,7 +15,7 @@ config_file = "../configs/e2e_mask_rcnn_R_50_FPN_1x_Tencent.yaml"
 # update the config options with the config file
 cfg.merge_from_file(config_file)
 # manual override some options
-cfg.merge_from_list(["MODEL.DEVICE", "cuda", "OUTPUT_DIR", "../server_output/"])
+cfg.merge_from_list(["MODEL.DEVICE", "cuda", "OUTPUT_DIR", "../mask_server/"])
 
 coco_demo = COCODemo(
     cfg,
@@ -37,5 +37,5 @@ for name in names:
     image = np.array(pil_image)[:, :, [2, 1, 0]]
     # compute predictions
     predictions = coco_demo.run_on_opencv_image(image)
-    cv2.imwrite("/home/jim/Documents/server_test_vis/"+output_name, predictions[:,:,])
+    cv2.imwrite("/home/jim/Documents/mask_server_test_vis/"+output_name, predictions[:,:,])
     print(output_name)
