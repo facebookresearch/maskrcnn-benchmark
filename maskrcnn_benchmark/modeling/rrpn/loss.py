@@ -48,13 +48,13 @@ def compute_reg_targets(targets_ori, anchors, box_coder):
     lt_135 = ~gt_135
     gt_45_lt_135 = torch.mul(gt_45, lt_135)
 
-    targets[gt_45_lt_135, -1] -= reg_angles_sign[gt_45_lt_135] * 90
+    # targets[gt_45_lt_135, -1] -= reg_angles_sign[gt_45_lt_135] * 90
 
     xd = targets_ori[gt_45_lt_135, 2:4]
     targets[gt_45_lt_135, 2] = xd[:, 1]
     targets[gt_45_lt_135, 3] = xd[:, 0]
 
-    targets[gt_135, -1] -= reg_angles_sign[gt_135] * 180
+    # targets[gt_135, -1] -= reg_angles_sign[gt_135] * 180
 
     # compute regression targets
     reg_targets = box_coder.encode(

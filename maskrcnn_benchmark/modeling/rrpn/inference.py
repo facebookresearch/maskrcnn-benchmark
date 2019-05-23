@@ -82,11 +82,28 @@ class RPNPostProcessor(torch.nn.Module):
         # later cat of bbox requires all fields to be present for all bbox
         # so we need to add a dummy for objectness that's missing
         for ix,gt_box in enumerate(gt_boxes):
-            gt_box.add_field("objectness", torch.ones(len(gt_box), device=device))
 
             target = targets[ix]
             gt_rrect = get_boxlist_rotated_rect_tensor(target, masks_field, rrects_field)
-            gt_box.add_field(rrects_field, gt_rrect)
+
+            aug_rrect = gt_rrect.clone()
+            N = len(gt_rrect)
+
+            multiplier = int(4)
+            for m in range(multiplier-1):
+                aug_rrect[:, :2] += torch.randint(-7, 7, (N, 2), dtype=torch.float32, device=device)
+                aug_rrect[:, 2:4] *= torch.randint(94, 106, (N, 2), dtype=torch.float32, device=device) / 100
+                aug_rrect[:, -1] += torch.randint(-12, 12, (N,), dtype=torch.float32, device=device)
+                gt_rrect = torch.cat((gt_rrect, aug_rrect))
+
+            # convert anchor rects to bboxes
+            bboxes = convert_rects_to_bboxes(gt_rrect, torch)
+
+            boxlist = BoxList(bboxes, gt_box.size, mode="xyxy")
+
+            boxlist.add_field("rrects", gt_rrect)
+            boxlist.add_field("objectness", torch.ones(len(gt_rrect), device=device))
+            gt_boxes[ix] = boxlist
 
         proposals = [
             cat_boxlist((proposal, gt_box))

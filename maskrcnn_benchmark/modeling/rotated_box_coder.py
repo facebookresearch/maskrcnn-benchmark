@@ -92,7 +92,7 @@ class BoxCoder(object):
         # adj_squares_theta[adj_squares_theta > 45] -= 90
         # adj_theta[square_ids] = adj_squares_theta
 
-        t_theta = theta - reference_theta
+        t_theta = theta# - reference_theta
         # t_theta[t_theta > 90] -= 90
         # t_theta[t_theta > 45] -= 90
 
@@ -145,7 +145,7 @@ class BoxCoder(object):
         pred_ctr_y = dy * heights[:, None] + ctr_y[:, None]
         pred_w = lib.exp(dw) * widths[:, None]
         pred_h = lib.exp(dh) * heights[:, None]
-        pred_theta = dtheta * 180 / np.pi + reference_theta[:, None]  # radians to degrees
+        pred_theta = dtheta * 180 / np.pi #+ reference_theta[:, None]  # radians to degrees
 
         pred_boxes = lib.zeros_like(rel_codes)
         pred_boxes[:, 0::5] = pred_ctr_x

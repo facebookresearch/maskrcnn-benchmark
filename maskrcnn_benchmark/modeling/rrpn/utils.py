@@ -64,7 +64,13 @@ def get_segmentation_mask_rotated_rect_tensor(seg_mask):
     for ix,poly in enumerate(polygons):
         pp = torch.cat([p.view(-1, 2) for p in poly])  # merge all subpolygons into one polygon
         # TODO: MAKE CONFIGURABLE: make_width_larger?
-        rrects[ix] = convert_pts_to_rect(pp.cpu().numpy(), make_width_larger=False)  # convert the polygon into a rotated rect
+        rect = convert_pts_to_rect(pp.cpu().numpy(), make_width_larger=False)  # convert the polygon into a rotated rect
+        xc, yc, w, h, angle = rect
+        # normalize to -45 to 45 degrees
+        assert -90 <= angle <= 0
+        if angle < -45:
+            rect = (xc, yc, h, w, angle + 90)
+        rrects[ix] = rect
 
     rrect_tensor = torch.from_numpy(rrects).to(device)
 
