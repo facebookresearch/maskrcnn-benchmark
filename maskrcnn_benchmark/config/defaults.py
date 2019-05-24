@@ -60,6 +60,7 @@ _C.INPUT.CONTRAST = 0.0
 _C.INPUT.SATURATION = 0.0
 _C.INPUT.HUE = 0.0
 
+_C.INPUT.VERTICAL_FLIP_PROB_TRAIN = 0.0
 
 # -----------------------------------------------------------------------------
 # Dataset
