@@ -31,7 +31,7 @@ class BoxCoder(object):
     the representation used for training the regressors.
     """
 
-    def __init__(self, weights=None, bbox_xform_clip=np.log(1000. / 16), lib=torch):
+    def __init__(self, weights=None, bbox_xform_clip=np.log(1000. / 16), lib=torch, relative_angle=True):
         """
         Arguments:
             weights (5-element tuple)  # None or xc,yc,w,h,theta
@@ -50,6 +50,7 @@ class BoxCoder(object):
             raise NotImplementedError
 
         self.lib = lib
+        self.relative_angle = relative_angle
 
     def encode(self, unencode_boxes, reference_boxes):  # np.ones(5, dtype=np.float32)):
         '''
@@ -92,7 +93,7 @@ class BoxCoder(object):
         # adj_squares_theta[adj_squares_theta > 45] -= 90
         # adj_theta[square_ids] = adj_squares_theta
 
-        t_theta = theta# - reference_theta
+        t_theta = (theta - reference_theta) if self.relative_angle else theta
         # t_theta[t_theta > 90] -= 90
         # t_theta[t_theta > 45] -= 90
 
@@ -145,7 +146,9 @@ class BoxCoder(object):
         pred_ctr_y = dy * heights[:, None] + ctr_y[:, None]
         pred_w = lib.exp(dw) * widths[:, None]
         pred_h = lib.exp(dh) * heights[:, None]
-        pred_theta = dtheta * 180 / np.pi #+ reference_theta[:, None]  # radians to degrees
+        pred_theta = dtheta * 180 / np.pi
+        if self.relative_angle:
+             pred_theta += reference_theta[:, None]  # radians to degrees
 
         pred_boxes = lib.zeros_like(rel_codes)
         pred_boxes[:, 0::5] = pred_ctr_x

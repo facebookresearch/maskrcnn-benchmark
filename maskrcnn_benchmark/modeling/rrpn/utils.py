@@ -7,6 +7,7 @@ from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
 from maskrcnn_benchmark.modeling.rrpn.anchor_generator import convert_pts_to_rect
 
 REGRESSION_CN = 5  # box_regression channels: 4 for bbox, 5 for rotated box (xc,yc,w,h,theta)
+REL_ANGLE = False
 
 def permute_and_flatten(layer, N, A, C, H, W):
     layer = layer.view(N, -1, C, H, W)

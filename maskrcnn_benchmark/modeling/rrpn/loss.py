@@ -35,26 +35,46 @@ def compute_reg_targets(targets_ori, anchors, box_coder):
     dims = targets.shape
     assert len(dims) == 2 and dims[1] == 5 and anchors.shape == dims
 
-    reg_angles = targets[:, -1] - anchors[:, -1]
-    reg_angles_sign = (reg_angles > 0).to(torch.float32)
-    reg_angles_sign[reg_angles_sign == 0] = -1
-    reg_angles_abs = torch.abs(reg_angles)
+    with torch.no_grad():
+        if box_coder.relative_angle:
+            """
+            Get the diff (absolute value) between both angles
+            Normalize the diff to [0, 180]
+            if the angle diff is in range [45, 135]:
+                flip the target height-width
+                adjust the target angle -90 
+            else if angle diff is in range [135, 180]:
+                adjust the target angle -180
+            This normalizes the target angle diff to range [-45, 45]
+            """
+            reg_angles = targets[:, -1] - anchors[:, -1]
+            reg_angles_sign = (reg_angles > 0).to(torch.float32)
+            reg_angles_sign[reg_angles_sign == 0] = -1
+            reg_angles_abs = torch.abs(reg_angles)
 
-    # normalize angle diffs: 0 - 180
-    reg_angles_abs = reg_angles_abs % 180
+            # normalize angle diffs: 0 - 180
+            reg_angles_abs = reg_angles_abs % 180
 
-    gt_45 = reg_angles_abs > 45
-    gt_135 = reg_angles_abs > 135
-    lt_135 = ~gt_135
-    gt_45_lt_135 = torch.mul(gt_45, lt_135)
+            gt_45 = reg_angles_abs > 45
+            gt_135 = reg_angles_abs > 135
+            lt_135 = ~gt_135
+            gt_45_lt_135 = torch.mul(gt_45, lt_135)
 
-    # targets[gt_45_lt_135, -1] -= reg_angles_sign[gt_45_lt_135] * 90
+            # if angle diff is in range [45, 135]
+            xd = targets_ori[gt_45_lt_135, 2:4]
+            targets[gt_45_lt_135, 2] = xd[:, 1]
+            targets[gt_45_lt_135, 3] = xd[:, 0]
 
-    xd = targets_ori[gt_45_lt_135, 2:4]
-    targets[gt_45_lt_135, 2] = xd[:, 1]
-    targets[gt_45_lt_135, 3] = xd[:, 0]
+            targets[gt_45_lt_135, -1] -= reg_angles_sign[gt_45_lt_135] * 90
 
-    # targets[gt_135, -1] -= reg_angles_sign[gt_135] * 180
+            # if angle diff is in range [135, 180]
+            targets[gt_135, -1] -= reg_angles_sign[gt_135] * 180
+        else:
+            """
+            Normalize anchor angles to range [-45, 45] to match target angles range [-45, 45] 
+            """
+            pass  # THIS SHOULD BE DONE OUTSIDE AND NOT IN THIS REG TARGET FUNCTION
+            # anchors = normalize_anchor_angles(anchors)
 
     # compute regression targets
     reg_targets = box_coder.encode(

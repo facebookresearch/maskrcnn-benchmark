@@ -254,6 +254,38 @@ def convert_rects_to_bboxes(rects, lib=np):
     return bboxes
 
 
+def normalize_rrect_angles(anchors, lib=torch):
+    """
+    Normalize anchor angles to range [-45, 45] and flip height-width if necessary
+
+    anchors: (N, 5) array of type lib
+    """
+    a_angles = anchors[:, -1]
+    a_angles_sign = (a_angles > 0).to(lib.float32)
+    a_angles_sign[a_angles_sign == 0] = -1
+    a_angles_abs = lib.abs(a_angles)
+    a_angles_abs = a_angles_abs % 180
+
+    gt_45 = a_angles_abs > 45
+    lt_45 = ~gt_45
+    gt_135 = a_angles_abs > 135
+    lt_135 = ~gt_135
+    gt_45_lt_135 = gt_45 * lt_135
+
+    xd = anchors[gt_45_lt_135, 2:4]
+    anchors[gt_45_lt_135, 2] = xd[:, 1]
+    anchors[gt_45_lt_135, 3] = xd[:, 0]
+
+    # if abs angle diff is in range [45, 135]
+    anchors[gt_45_lt_135, -1] = (a_angles_abs[gt_45_lt_135] - 90) * a_angles_sign[gt_45_lt_135]
+    # if abs angle diff is in range [135, 180]
+    anchors[gt_135, -1] = (a_angles_abs[gt_135] - 180) * a_angles_sign[gt_135]
+    # if abs angle diff is in range [0, 45]
+    anchors[lt_45, -1] = a_angles_abs[lt_45] * a_angles_sign[lt_45]
+
+    return anchors
+
+
 def convert_rect_to_pts2(anchors, lib=np):
     N = len(anchors)
 

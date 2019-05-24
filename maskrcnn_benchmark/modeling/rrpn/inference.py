@@ -10,7 +10,7 @@ from maskrcnn_benchmark.modeling.rotate_ops import RotateNMS
 # from maskrcnn_benchmark.structures.boxlist_ops import boxlist_nms
 # from maskrcnn_benchmark.structures.boxlist_ops import remove_small_boxes
 
-from .utils import REGRESSION_CN, permute_and_flatten
+from .utils import REGRESSION_CN, permute_and_flatten, REL_ANGLE
 
 def remove_small_boxes(proposal, min_size):
     """
@@ -56,7 +56,7 @@ class RPNPostProcessor(torch.nn.Module):
         self.min_size = min_size
 
         if box_coder is None:
-            box_coder = BoxCoder(weights=None) #(1.0, 1.0, 1.0, 1.0, 1.0))
+            box_coder = BoxCoder(weights=None, relative_angle=REL_ANGLE) #(1.0, 1.0, 1.0, 1.0, 1.0))
         self.box_coder = box_coder
 
         if fpn_post_nms_top_n is None:
@@ -93,7 +93,7 @@ class RPNPostProcessor(torch.nn.Module):
             for m in range(multiplier-1):
                 aug_rrect[:, :2] += torch.randint(-7, 7, (N, 2), dtype=torch.float32, device=device)
                 aug_rrect[:, 2:4] *= torch.randint(94, 106, (N, 2), dtype=torch.float32, device=device) / 100
-                aug_rrect[:, -1] += torch.randint(-12, 12, (N,), dtype=torch.float32, device=device)
+                aug_rrect[:, -1] += torch.randint(-5, 5, (N,), dtype=torch.float32, device=device)
                 gt_rrect = torch.cat((gt_rrect, aug_rrect))
 
             # convert anchor rects to bboxes

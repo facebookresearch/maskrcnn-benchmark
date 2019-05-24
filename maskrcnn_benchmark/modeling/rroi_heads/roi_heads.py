@@ -4,6 +4,8 @@ import torch
 from .box_head.box_head import build_roi_box_head
 from .mask_head.mask_head import build_roi_mask_head
 from maskrcnn_benchmark.structures.rotated_box import RotatedBox
+from maskrcnn_benchmark.modeling.rrpn.anchor_generator import normalize_rrect_angles
+
 
 class CombinedROIHeads(torch.nn.ModuleDict):
     """
@@ -19,6 +21,12 @@ class CombinedROIHeads(torch.nn.ModuleDict):
 
     def forward(self, features, proposals, targets=None):
         losses = {}
+
+        # normalize proposal angles
+        for p in proposals:
+            rrects = normalize_rrect_angles(p.get_field("rrects"))
+            p.add_field("rrects", rrects)
+
         # TODO rename x to roi_box_features, if it doesn't increase memory consumption
         x, bbox_pred, detections, loss_box = self.box(features, proposals, targets)
         losses.update(loss_box)
@@ -32,6 +40,18 @@ class CombinedROIHeads(torch.nn.ModuleDict):
                 and self.cfg.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR
             ):
                 mask_features = x
+
+            if self.training:
+                for det in detections:
+                    rrects = det.get_field("rrects")
+                    rrects[:, 2:4] *= torch.randint(95, 105, (len(rrects), 2), dtype=torch.float32, device=rrects.device) / 100
+                    det.add_field("rrects", rrects)
+            else:
+                for det in detections:
+                    rrects = det.get_field("rrects")
+                    rrects[:, 2:4] *= 1.05
+                    det.add_field("rrects", rrects)
+
             # During training, self.box() will return the unaltered proposals as "detections"
             # this makes the API consistent during training and testing
             x, mask_logits, detections, loss_mask = self.mask(mask_features, detections, targets)
@@ -52,8 +72,8 @@ def build_roi_heads(cfg, in_channels):
 
     if not cfg.MODEL.RPN_ONLY:
         roi_heads.append(("box", build_roi_box_head(cfg, in_channels)))
-    if cfg.MODEL.MASK_ON:
-        roi_heads.append(("mask", build_roi_mask_head(cfg, in_channels)))
+        if cfg.MODEL.MASK_ON:
+            roi_heads.append(("mask", build_roi_mask_head(cfg, in_channels)))
 
     # combine individual heads in a single module
     if roi_heads:

@@ -6,9 +6,9 @@ from torch import nn
 from maskrcnn_benchmark.modeling import registry
 from maskrcnn_benchmark.modeling.rotated_box_coder import BoxCoder
 from .loss import make_rpn_loss_evaluator
-from .anchor_generator import make_anchor_generator
+from .anchor_generator import make_anchor_generator, normalize_rrect_angles
 from .inference import make_rpn_postprocessor
-from .utils import REGRESSION_CN
+from .utils import REGRESSION_CN, REL_ANGLE
 from maskrcnn_benchmark.structures.rotated_box import RotatedBox
 
 
@@ -30,7 +30,7 @@ class RRPNModule(torch.nn.Module):
             cfg, in_channels, anchor_generator.num_anchors_per_location()[0]
         )
 
-        rpn_box_coder = BoxCoder(weights=cfg.MODEL.RPN.BBOX_REG_WEIGHTS)# (1.0, 1.0, 1.0, 1.0, 1.0))
+        rpn_box_coder = BoxCoder(weights=cfg.MODEL.RPN.BBOX_REG_WEIGHTS, relative_angle=REL_ANGLE)# (1.0, 1.0, 1.0, 1.0, 1.0))
 
         box_selector_train = make_rpn_postprocessor(cfg, rpn_box_coder, is_train=True)
         box_selector_test = make_rpn_postprocessor(cfg, rpn_box_coder, is_train=False)
@@ -60,6 +60,12 @@ class RRPNModule(torch.nn.Module):
         """
         objectness, rpn_box_regression = self.head(features)
         anchors = self.anchor_generator(images, features)
+
+        # normalize anchor angles
+        for im_anchors in anchors:
+            for a in im_anchors:
+                rrects = normalize_rrect_angles(a.get_field("rrects"))
+                a.add_field("rrects", rrects)
 
         if self.training:
             return self._forward_train(anchors, objectness, rpn_box_regression, targets)

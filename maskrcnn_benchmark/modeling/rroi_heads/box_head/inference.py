@@ -11,6 +11,7 @@ from maskrcnn_benchmark.modeling.rrpn.anchor_generator import convert_rects_to_b
 from maskrcnn_benchmark.modeling.rotate_ops import RotateNMS
 
 REGRESSION_CN = 5
+REL_ANGLE = False
 
 class PostProcessor(nn.Module):
     """
@@ -39,7 +40,7 @@ class PostProcessor(nn.Module):
         self.nms = nms
         self.detections_per_img = detections_per_img
         if box_coder is None:
-            box_coder = BoxCoder(weights=(10., 10., 5., 5., 3.))
+            box_coder = BoxCoder(weights=(10., 10., 5., 5., 3.), relative_angle=REL_ANGLE)
         self.box_coder = box_coder
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
 
@@ -177,7 +178,7 @@ def make_roi_box_post_processor(cfg):
     # use_fpn = cfg.MODEL.ROI_HEADS.USE_FPN
 
     bbox_reg_weights = cfg.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS
-    box_coder = BoxCoder(weights=bbox_reg_weights)
+    box_coder = BoxCoder(weights=bbox_reg_weights, relative_angle=REL_ANGLE)
 
     score_thresh = cfg.MODEL.ROI_HEADS.SCORE_THRESH
     nms_thresh = cfg.MODEL.ROI_HEADS.NMS
