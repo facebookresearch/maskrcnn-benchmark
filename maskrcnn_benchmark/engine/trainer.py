@@ -1,13 +1,15 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import datetime
 import logging
+import os
 import time
 
 import torch
 import torch.distributed as dist
 
-from maskrcnn_benchmark.utils.comm import get_world_size
+from maskrcnn_benchmark.utils.comm import get_world_size, synchronize
 from maskrcnn_benchmark.utils.metric_logger import MetricLogger
+from maskrcnn_benchmark.engine.inference import inference
 
 from apex import amp
 
@@ -37,13 +39,16 @@ def reduce_loss_dict(loss_dict):
 
 
 def do_train(
+    cfg,
     model,
     data_loader,
+    data_loaders_val,
     optimizer,
     scheduler,
     checkpointer,
     device,
     checkpoint_period,
+    test_period,
     arguments,
 ):
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
@@ -54,6 +59,14 @@ def do_train(
     model.train()
     start_training_time = time.time()
     end = time.time()
+
+    iou_types = ("bbox",)
+    if cfg.MODEL.MASK_ON:
+        iou_types = iou_types + ("segm",)
+    if cfg.MODEL.KEYPOINT_ON:
+        iou_types = iou_types + ("keypoints",)
+    dataset_names = cfg.DATASETS.TEST
+
     for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
         data_time = time.time() - end
         iteration = iteration + 1
@@ -107,6 +120,22 @@ def do_train(
             )
         if iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
+        if data_loaders_val is not None and test_period > 0 and iteration % test_period == 0:
+            synchronize()
+            for dataset_name, data_loader_val in zip(dataset_names, data_loaders_val):
+                inference(
+                    model,
+                    data_loader_val,
+                    dataset_name=dataset_name,
+                    iou_types=iou_types,
+                    box_only=False if cfg.MODEL.RETINANET_ON else cfg.MODEL.RPN_ONLY,
+                    device=cfg.MODEL.DEVICE,
+                    expected_results=cfg.TEST.EXPECTED_RESULTS,
+                    expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
+                    output_folder=None,
+                )
+            synchronize()
+            model.train()
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)
 
