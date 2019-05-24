@@ -29,7 +29,8 @@ ENV PATH=$CONDA_PREFIX/bin:$PATH
 ENV CONDA_AUTO_UPDATE_CONDA=false
 
 RUN conda install -y ipython
-RUN pip install ninja yacs cython matplotlib opencv-python tqdm
+RUN pip install ninja yacs cython matplotlib opencv-python tqdm tensorboardX
+
 
 # Install PyTorch 1.0 Nightly
 ARG CUDA

@@ -7,7 +7,6 @@ import torch
 import torch.distributed as dist
 
 from maskrcnn_benchmark.utils.comm import get_world_size
-from maskrcnn_benchmark.utils.metric_logger import MetricLogger
 
 from apex import amp
 
@@ -45,10 +44,11 @@ def do_train(
     device,
     checkpoint_period,
     arguments,
+    meters
 ):
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
     logger.info("Start training")
-    meters = MetricLogger(delimiter="  ")
+
     max_iter = len(data_loader)
     start_iter = arguments["iteration"]
     model.train()
