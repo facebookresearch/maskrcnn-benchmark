@@ -9,12 +9,13 @@ from maskrcnn_benchmark.utils.imports import import_file
 
 from . import datasets as D
 from . import samplers
+from .dataset_mode import DatasetMode
 
 from .collate_batch import BatchCollator
 from .transforms import build_transforms
 
 
-def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
+def build_dataset(dataset_list, transforms, dataset_catalog, mode=DatasetMode.TRAIN):
     """
     Arguments:
         dataset_list (list[str]): Contains the names of the datasets, i.e.,
@@ -22,7 +23,7 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
         transforms (callable): transforms to apply to each (image, target) sample
         dataset_catalog (DatasetCatalog): contains the information on how to
             construct a dataset.
-        is_train (bool): whether to setup the dataset for training or testing
+        mode (DatasetMode): whether to setup the dataset for training, validation, or testing
     """
     if not isinstance(dataset_list, (list, tuple)):
         raise RuntimeError(
@@ -36,16 +37,16 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
         # for COCODataset, we want to remove images without annotations
         # during training
         if data["factory"] == "COCODataset":
-            args["remove_images_without_annotations"] = is_train
+            args["remove_images_without_annotations"] = mode != DatasetMode.TEST
         if data["factory"] == "PascalVOCDataset":
-            args["use_difficult"] = not is_train
+            args["use_difficult"] = mode == DatasetMode.TEST
         args["transforms"] = transforms
         # make dataset from factory
         dataset = factory(**args)
         datasets.append(dataset)
 
     # for testing, return a list of datasets
-    if not is_train:
+    if mode != DatasetMode.TEST:
         return datasets
 
     # for training, concatenate all datasets into a single one
@@ -104,9 +105,9 @@ def make_batch_data_sampler(
     return batch_sampler
 
 
-def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
+def make_data_loader(cfg, mode=DatasetMode.TRAIN, is_distributed=False, start_iter=0):
     num_gpus = get_world_size()
-    if is_train:
+    if mode == DatasetMode.TRAIN:
         images_per_batch = cfg.SOLVER.IMS_PER_BATCH
         assert (
             images_per_batch % num_gpus == 0
@@ -115,6 +116,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
         images_per_gpu = images_per_batch // num_gpus
         shuffle = True
         num_iters = cfg.SOLVER.MAX_ITER
+        dataset_list = cfg.DATASETS.TRAIN
     else:
         images_per_batch = cfg.TEST.IMS_PER_BATCH
         assert (
@@ -125,6 +127,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
         shuffle = False if not is_distributed else True
         num_iters = None
         start_iter = 0
+        dataset_list = cfg.DATASETS.TEST if mode == DatasetMode.TEST else cfg.DATASETS.VAL
 
     if images_per_gpu > 1:
         logger = logging.getLogger(__name__)
@@ -148,10 +151,9 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
         "maskrcnn_benchmark.config.paths_catalog", cfg.PATHS_CATALOG, True
     )
     DatasetCatalog = paths_catalog.DatasetCatalog
-    dataset_list = cfg.DATASETS.TRAIN if is_train else cfg.DATASETS.TEST
 
-    transforms = build_transforms(cfg, is_train)
-    datasets = build_dataset(dataset_list, transforms, DatasetCatalog, is_train)
+    transforms = build_transforms(cfg, mode)
+    datasets = build_dataset(dataset_list, transforms, DatasetCatalog, mode)
 
     data_loaders = []
     for dataset in datasets:
@@ -168,8 +170,8 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
             collate_fn=collator,
         )
         data_loaders.append(data_loader)
-    if is_train:
-        # during training, a single (possibly concatenated) data_loader is returned
+    if mode != DatasetMode.TEST:
+        # during training and validation, a single (possibly concatenated) data_loader is returned
         assert len(data_loaders) == 1
         return data_loaders[0]
     return data_loaders

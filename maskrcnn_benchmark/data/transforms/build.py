@@ -1,9 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 from . import transforms as T
+from maskrcnn_benchmark.data.dataset_mode import DatasetMode
 
 
-def build_transforms(cfg, is_train=True):
-    if is_train:
+def build_transforms(cfg, mode=DatasetMode.TRAIN):
+    if mode == DatasetMode.TRAIN:
         min_size = cfg.INPUT.MIN_SIZE_TRAIN
         max_size = cfg.INPUT.MAX_SIZE_TRAIN
         flip_prob = 0.5  # cfg.INPUT.FLIP_PROB_TRAIN
