@@ -57,9 +57,11 @@ class Resize(object):
 
         return (oh, ow), im_scale
 
-    def __call__(self, image, target):
+    def __call__(self, image, target=None):
         size, im_scale = self.get_size(image.size)
         image = F.resize(image, size)
+        if target is None:
+            return image
         target = target.resize(image.size)
         # target.im_scale = im_scale
         target.add_field("scale", im_scale)
@@ -117,8 +119,10 @@ class Normalize(object):
         self.std = std
         self.to_bgr255 = to_bgr255
 
-    def __call__(self, image, target):
+    def __call__(self, image, target=None):
         if self.to_bgr255:
             image = image[[2, 1, 0]] * 255
         image = F.normalize(image, mean=self.mean, std=self.std)
+        if target is None:
+            return image
         return image, target

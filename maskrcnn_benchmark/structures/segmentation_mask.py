@@ -54,7 +54,9 @@ class BinaryMaskList(object):
             # The raw data representation is passed as argument
             masks = masks.clone()
         elif isinstance(masks, (list, tuple)):
-            if isinstance(masks[0], torch.Tensor):
+            if len(masks) == 0:
+                masks = torch.empty([0, size[1], size[0]]) # num_instances = 0!
+            elif isinstance(masks[0], torch.Tensor):
                 masks = torch.stack(masks, dim=2).clone()
             elif isinstance(masks[0], dict) and "counts" in masks[0]:
                 # RLE interpretation
@@ -124,7 +126,7 @@ class BinaryMaskList(object):
         assert height > 0
 
         # Height comes first here!
-        resized_masks = torch.nn.functional.interpolate(
+        resized_masks = interpolate(
             input=self.masks[None].float(),
             size=(height, width),
             mode="bilinear",
@@ -134,6 +136,9 @@ class BinaryMaskList(object):
         return BinaryMaskList(resized_masks, resized_size)
 
     def convert_to_polygon(self):
+        if self.masks.numel() == 0:
+            return PolygonList([], self.size)
+
         contours = self._findContours()
         return PolygonList(contours, self.size)
 
@@ -163,10 +168,9 @@ class BinaryMaskList(object):
         return len(self.masks)
 
     def __getitem__(self, index):
-        # Probably it can cause some overhead
-        # but preserves consistency
-        masks = self.masks[index].clone()
-        return BinaryMaskList(masks, self.size)
+        if self.masks.numel() == 0:
+            raise RuntimeError("Indexing empty BinaryMaskList")
+        return BinaryMaskList(self.masks[index], self.size)
 
     def __iter__(self):
         return iter(self.masks)
@@ -326,7 +330,7 @@ class PolygonInstance(object):
         s = self.__class__.__name__ + "("
         s += "num_groups={}, ".format(len(self.polygons))
         s += "image_width={}, ".format(self.size[0])
-        s += "image_height={}, ".format(self.size[1])
+        s += "image_height={})".format(self.size[1])
         return s
 
 
