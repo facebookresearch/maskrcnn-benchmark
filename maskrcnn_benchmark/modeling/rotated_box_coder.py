@@ -51,6 +51,8 @@ class BoxCoder(object):
 
         self.lib = lib
         self.relative_angle = relative_angle
+        self.angle_multiplier = np.pi / 180  # deg to radians
+        # self.angle_multiplier = 1. / 45
 
     def encode(self, unencode_boxes, reference_boxes):  # np.ones(5, dtype=np.float32)):
         '''
@@ -97,7 +99,7 @@ class BoxCoder(object):
         # t_theta[t_theta > 90] -= 90
         # t_theta[t_theta > 45] -= 90
 
-        t_theta = t_theta * np.pi / 180  # convert to radians
+        t_theta = t_theta * self.angle_multiplier  
 
         if weights is not None:
             wx, wy, ww, wh, wa = weights
@@ -146,7 +148,7 @@ class BoxCoder(object):
         pred_ctr_y = dy * heights[:, None] + ctr_y[:, None]
         pred_w = lib.exp(dw) * widths[:, None]
         pred_h = lib.exp(dh) * heights[:, None]
-        pred_theta = dtheta * 180 / np.pi
+        pred_theta = dtheta / self.angle_multiplier
         if self.relative_angle:
              pred_theta += reference_theta[:, None]  # radians to degrees
 

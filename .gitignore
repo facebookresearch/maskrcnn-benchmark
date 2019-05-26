@@ -40,3 +40,6 @@ runs/*
 
 /output
 
+
+.vscode/*
+*.yaml

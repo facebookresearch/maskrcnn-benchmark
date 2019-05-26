@@ -210,14 +210,21 @@ _C.MODEL.ROI_HEADS.NMS = 0.5
 _C.MODEL.ROI_HEADS.DETECTIONS_PER_IMG = 100
 
 
+# Default weights on (dx, dy, dw, dh) for normalizing bbox regression targets
+_C.MODEL.RPN.BBOX_REG_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
+
 # ****************************ROTATED DETECTIONS****************************** #
 _C.MODEL.ROTATED = False
 
 # RRPN anchor angles (-90 to 0) to represent all possible anchor (rectangle) rotations
 _C.MODEL.RPN.ANCHOR_ANGLES = (-90, -60, -30)
 
-# Default weights on (dx, dy, dw, dh) for normalizing bbox regression targets
-_C.MODEL.RPN.BBOX_REG_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
+# Only works in Rotated mode. 
+# If True, angle parameter regresses relative to anchor/proposal angle (+/- 45)
+# If False, angle parameter directly regresses to gt angle (-45, 45)
+_C.MODEL.RPN.BBOX_REG_ANGLE_RELATIVE = False
+_C.MODEL.ROI_HEADS.BBOX_REG_ANGLE_RELATIVE = False
+
 
 if _C.MODEL.ROTATED:  # FOR REFERENCE ONLY
 

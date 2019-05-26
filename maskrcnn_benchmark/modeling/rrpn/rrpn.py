@@ -8,7 +8,7 @@ from maskrcnn_benchmark.modeling.rotated_box_coder import BoxCoder
 from .loss import make_rpn_loss_evaluator
 from .anchor_generator import make_anchor_generator, normalize_rrect_angles
 from .inference import make_rpn_postprocessor
-from .utils import REGRESSION_CN, REL_ANGLE
+from .utils import REGRESSION_CN
 from maskrcnn_benchmark.structures.rotated_box import RotatedBox
 
 
@@ -30,7 +30,8 @@ class RRPNModule(torch.nn.Module):
             cfg, in_channels, anchor_generator.num_anchors_per_location()[0]
         )
 
-        rpn_box_coder = BoxCoder(weights=cfg.MODEL.RPN.BBOX_REG_WEIGHTS, relative_angle=REL_ANGLE)# (1.0, 1.0, 1.0, 1.0, 1.0))
+        rpn_box_coder = BoxCoder(weights=cfg.MODEL.RPN.BBOX_REG_WEIGHTS, 
+                            relative_angle=cfg.MODEL.RPN.BBOX_REG_ANGLE_RELATIVE)
 
         box_selector_train = make_rpn_postprocessor(cfg, rpn_box_coder, is_train=True)
         box_selector_test = make_rpn_postprocessor(cfg, rpn_box_coder, is_train=False)

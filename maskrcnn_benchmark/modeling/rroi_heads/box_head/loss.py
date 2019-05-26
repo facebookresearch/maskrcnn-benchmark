@@ -14,7 +14,7 @@ from maskrcnn_benchmark.modeling.rrpn.utils import get_boxlist_rotated_rect_tens
 
 from maskrcnn_benchmark.modeling.utils import cat
 
-from .inference import REGRESSION_CN, REL_ANGLE
+from .inference import REGRESSION_CN
 
 
 def smooth_l1_loss(input, target, beta=1. / 9):
@@ -269,7 +269,8 @@ def make_roi_box_loss_evaluator(cfg):
     )
 
     bbox_reg_weights = cfg.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS
-    box_coder = BoxCoder(weights=bbox_reg_weights, relative_angle=REL_ANGLE)
+    reg_angle_relative = cfg.MODEL.ROI_HEADS.BBOX_REG_ANGLE_RELATIVE
+    box_coder = BoxCoder(weights=bbox_reg_weights, relative_angle=reg_angle_relative)
 
     fg_bg_sampler = BalancedPositiveNegativeSampler(
         cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE, cfg.MODEL.ROI_HEADS.POSITIVE_FRACTION

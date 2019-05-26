@@ -10,7 +10,7 @@ from maskrcnn_benchmark.modeling.rotate_ops import RotateNMS
 # from maskrcnn_benchmark.structures.boxlist_ops import boxlist_nms
 # from maskrcnn_benchmark.structures.boxlist_ops import remove_small_boxes
 
-from .utils import REGRESSION_CN, permute_and_flatten, REL_ANGLE
+from .utils import REGRESSION_CN, permute_and_flatten
 
 def remove_small_boxes(proposal, min_size):
     """
@@ -33,11 +33,11 @@ class RPNPostProcessor(torch.nn.Module):
 
     def __init__(
         self,
+        box_coder,
         pre_nms_top_n,
         post_nms_top_n,
         nms_thresh,
         min_size,
-        box_coder=None,
         fpn_post_nms_top_n=None,
     ):
         """
@@ -55,8 +55,6 @@ class RPNPostProcessor(torch.nn.Module):
         self.nms_thresh = nms_thresh
         self.min_size = min_size
 
-        if box_coder is None:
-            box_coder = BoxCoder(weights=None, relative_angle=REL_ANGLE) #(1.0, 1.0, 1.0, 1.0, 1.0))
         self.box_coder = box_coder
 
         if fpn_post_nms_top_n is None:
