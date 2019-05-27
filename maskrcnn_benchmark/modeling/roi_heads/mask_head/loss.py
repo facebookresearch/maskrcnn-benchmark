@@ -27,17 +27,15 @@ def project_masks_on_boxes(segmentation_masks, proposals, discretization_size):
     assert segmentation_masks.size == proposals.size, "{}, {}".format(
         segmentation_masks, proposals
     )
-    # TODO put the proposals on the CPU, as the representation for the
-    # masks is not efficient GPU-wise (possibly several small tensors for
-    # representing a single instance mask)
+
+    # FIXME: CPU computation bottleneck, this should be parallelized
     proposals = proposals.bbox.to(torch.device("cpu"))
     for segmentation_mask, proposal in zip(segmentation_masks, proposals):
         # crop the masks, resize them to the desired resolution and
-        # then convert them to the tensor representation,
-        # instead of the list representation that was used
+        # then convert them to the tensor representation.
         cropped_mask = segmentation_mask.crop(proposal)
         scaled_mask = cropped_mask.resize((M, M))
-        mask = scaled_mask.convert(mode="mask")
+        mask = scaled_mask.get_mask_tensor()
         masks.append(mask)
     if len(masks) == 0:
         return torch.empty(0, dtype=torch.float32, device=device)
