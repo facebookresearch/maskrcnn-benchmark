@@ -6,7 +6,9 @@ import time
 
 import torch
 import torch.distributed as dist
+from tqdm import tqdm
 
+from maskrcnn_benchmark.data import make_data_loader
 from maskrcnn_benchmark.utils.comm import get_world_size, synchronize
 from maskrcnn_benchmark.utils.metric_logger import MetricLogger
 from maskrcnn_benchmark.engine.inference import inference
@@ -42,7 +44,7 @@ def do_train(
     cfg,
     model,
     data_loader,
-    data_loaders_val,
+    data_loader_val,
     optimizer,
     scheduler,
     checkpointer,
@@ -120,25 +122,27 @@ def do_train(
             )
         if iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
-        if data_loaders_val is not None and test_period > 0 and iteration % test_period == 0:
-            synchronize()
-            for dataset_name, data_loader_val in zip(dataset_names, data_loaders_val):
-                _ = inference(  # The result can be used for additional loggin, e. g. to TensorBoard
-                    model,
-                    data_loader_val,
-                    dataset_name=dataset_name,
-                    iou_types=iou_types,
-                    box_only=False if cfg.MODEL.RETINANET_ON else cfg.MODEL.RPN_ONLY,
-                    device=cfg.MODEL.DEVICE,
-                    expected_results=cfg.TEST.EXPECTED_RESULTS,
-                    expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
-                    output_folder=None,
-                )
-                synchronize()
-            model.train()
+        if data_loader_val is not None and test_period > 0 and iteration % test_period == 0:
             meters_val = MetricLogger(delimiter="  ")
+            synchronize()
+            _ = inference(  # The result can be used for additional logging, e. g. for TensorBoard
+                model,
+                # The method changes the segmentation mask format in a data loader,
+                # so every time a new data loader is created:
+                make_data_loader(cfg, is_train=False, is_distributed=(get_world_size() > 1), is_for_period=True),
+                dataset_name="[Validation]",
+                iou_types=iou_types,
+                box_only=False if cfg.MODEL.RETINANET_ON else cfg.MODEL.RPN_ONLY,
+                device=cfg.MODEL.DEVICE,
+                expected_results=cfg.TEST.EXPECTED_RESULTS,
+                expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
+                output_folder=None,
+            )
+            synchronize()
+            model.train()
             with torch.no_grad():
-                for idx_val, (images_val, targets_val, _) in enumerate(data_loaders_val[0]):
+                # Should be one image for each GPU:
+                for iteration_val, (images_val, targets_val, _) in enumerate(tqdm(data_loader_val)):
                     images_val = images_val.to(device)
                     targets_val = [target.to(device) for target in targets_val]
                     loss_dict = model(images_val, targets_val)
@@ -148,7 +152,7 @@ def do_train(
                     meters_val.update(loss=losses_reduced, **loss_dict_reduced)
             synchronize()
             logger.info(
-                meters.delimiter.join(
+                meters_val.delimiter.join(
                     [
                         "[Validation]: ",
                         "eta: {eta}",

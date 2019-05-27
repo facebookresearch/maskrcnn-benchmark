@@ -74,9 +74,9 @@ def train(cfg, local_rank, distributed):
 
     test_period = cfg.SOLVER.TEST_PERIOD
     if test_period > 0:
-        data_loaders_val = make_data_loader(cfg, is_train=False, is_distributed=distributed, is_for_period=True)
+        data_loader_val = make_data_loader(cfg, is_train=False, is_distributed=distributed, is_for_period=True)
     else:
-        data_loaders_val = None
+        data_loader_val = None
 
     checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
 
@@ -84,7 +84,7 @@ def train(cfg, local_rank, distributed):
         cfg,
         model,
         data_loader,
-        data_loaders_val,
+        data_loader_val,
         optimizer,
         scheduler,
         checkpointer,
