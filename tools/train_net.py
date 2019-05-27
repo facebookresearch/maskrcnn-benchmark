@@ -74,7 +74,7 @@ def train(cfg, local_rank, distributed):
 
     test_period = cfg.SOLVER.TEST_PERIOD
     if test_period > 0:
-        data_loaders_val = make_data_loader(cfg, is_train=False, is_distributed=distributed)
+        data_loaders_val = make_data_loader(cfg, is_train=False, is_distributed=distributed, is_for_period=True)
     else:
         data_loaders_val = None
 
