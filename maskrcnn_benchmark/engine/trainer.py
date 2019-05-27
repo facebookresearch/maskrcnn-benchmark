@@ -123,7 +123,7 @@ def do_train(
         if data_loaders_val is not None and test_period > 0 and iteration % test_period == 0:
             synchronize()
             for dataset_name, data_loader_val in zip(dataset_names, data_loaders_val):
-                inference(
+                _ = inference(  # The result can be used for additional loggin, e. g. to TensorBoard
                     model,
                     data_loader_val,
                     dataset_name=dataset_name,
@@ -134,8 +134,37 @@ def do_train(
                     expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
                     output_folder=None,
                 )
-            synchronize()
+                synchronize()
             model.train()
+            meters_val = MetricLogger(delimiter="  ")
+            with torch.no_grad():
+                for idx_val, (images_val, targets_val, _) in enumerate(data_loaders_val[0]):
+                    images_val = images_val.to(device)
+                    targets_val = [target.to(device) for target in targets_val]
+                    loss_dict = model(images_val, targets_val)
+                    losses = sum(loss for loss in loss_dict.values())
+                    loss_dict_reduced = reduce_loss_dict(loss_dict)
+                    losses_reduced = sum(loss for loss in loss_dict_reduced.values())
+                    meters_val.update(loss=losses_reduced, **loss_dict_reduced)
+            synchronize()
+            logger.info(
+                meters.delimiter.join(
+                    [
+                        "[Validation]: ",
+                        "eta: {eta}",
+                        "iter: {iter}",
+                        "{meters}",
+                        "lr: {lr:.6f}",
+                        "max mem: {memory:.0f}",
+                    ]
+                ).format(
+                    eta=eta_string,
+                    iter=iteration,
+                    meters=str(meters_val),
+                    lr=optimizer.param_groups[0]["lr"],
+                    memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
+                )
+            )
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)
 
