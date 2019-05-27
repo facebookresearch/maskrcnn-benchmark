@@ -117,7 +117,8 @@ at::Tensor SigmoidFocalLoss_forward_cuda(
   auto losses_size = num_samples * logits.size(1);
   cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
-  dim3 grid(std::min(THCCeilDiv(losses_size, 512L), 4096L));
+  dim3 grid(std::min(THCCeilDiv((long)losses_size, 512L), 4096L));
+  
   dim3 block(512);
 
   if (losses.numel() == 0) {
@@ -125,7 +126,7 @@ at::Tensor SigmoidFocalLoss_forward_cuda(
     return losses;
   }
 
-  AT_DISPATCH_FLOATING_TYPES(logits.scalar_type(), "SigmoidFocalLoss_forward", [&] {
+  AT_DISPATCH_FLOATING_TYPES(logits.type(), "SigmoidFocalLoss_forward", [&] {
     SigmoidFocalLossForward<scalar_t><<<grid, block, 0, stream>>>(
          losses_size,
          logits.contiguous().data<scalar_t>(),
@@ -161,7 +162,7 @@ at::Tensor SigmoidFocalLoss_backward_cuda(
   auto d_logits_size = num_samples * logits.size(1);
   cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
-  dim3 grid(std::min(THCCeilDiv(d_logits_size, 512L), 4096L));
+  dim3 grid(std::min(THCCeilDiv((long)d_logits_size, 512L), 4096L));
   dim3 block(512);
 
   if (d_logits.numel() == 0) {
@@ -169,7 +170,7 @@ at::Tensor SigmoidFocalLoss_backward_cuda(
     return d_logits;
   }
 
-  AT_DISPATCH_FLOATING_TYPES(logits.scalar_type(), "SigmoidFocalLoss_backward", [&] {
+  AT_DISPATCH_FLOATING_TYPES(logits.type(), "SigmoidFocalLoss_backward", [&] {
     SigmoidFocalLossBackward<scalar_t><<<grid, block, 0, stream>>>(
          d_logits_size,
          logits.contiguous().data<scalar_t>(),
