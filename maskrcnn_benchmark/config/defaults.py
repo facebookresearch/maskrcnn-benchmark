@@ -98,8 +98,6 @@ _C.MODEL.BACKBONE.CONV_BODY = "R-50-C4"
 
 # Add StopGrad at a specified stage so the bottom layers are frozen
 _C.MODEL.BACKBONE.FREEZE_CONV_BODY_AT = 2
-# GN for backbone
-_C.MODEL.BACKBONE.USE_GN = False
 
 
 # ---------------------------------------------------------------------------- #
@@ -426,6 +424,27 @@ _C.TEST.EXPECTED_RESULTS_SIGMA_TOL = 4
 _C.TEST.IMS_PER_BATCH = 8
 # Number of detections per image
 _C.TEST.DETECTIONS_PER_IMG = 100
+
+# ---------------------------------------------------------------------------- #
+# Test-time augmentations for bounding box detection
+# See configs/test_time_aug/e2e_mask_rcnn_R-50-FPN_1x.yaml for an example
+# ---------------------------------------------------------------------------- #
+_C.TEST.BBOX_AUG = CN()
+
+# Enable test-time augmentation for bounding box detection if True
+_C.TEST.BBOX_AUG.ENABLED = False
+
+# Horizontal flip at the original scale (id transform)
+_C.TEST.BBOX_AUG.H_FLIP = False
+
+# Each scale is the pixel size of an image's shortest side
+_C.TEST.BBOX_AUG.SCALES = ()
+
+# Max pixel size of the longer side
+_C.TEST.BBOX_AUG.MAX_SIZE = 4000
+
+# Horizontal flip at each scale
+_C.TEST.BBOX_AUG.SCALE_H_FLIP = False
 
 
 # ---------------------------------------------------------------------------- #
