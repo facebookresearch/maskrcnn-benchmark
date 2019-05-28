@@ -48,11 +48,16 @@ class MaskPostProcessor(nn.Module):
         index = arange_like(x)
         mask_prob = mask_prob[index, labels][:, None]
 
-        boxes_per_image = [len(box) for box in boxes]
-        mask_prob = mask_prob.split(boxes_per_image, dim=0)
+        # boxes_per_image = [len(box) for box in boxes]
+        # mask_prob = mask_prob.split(boxes_per_image, dim=0)
 
         if self.masker:
             mask_prob = self.masker(mask_prob, boxes)
+        if len(boxes) != 1:  # we cannot have split in tracing...
+            boxes_per_image = [len(box) for box in boxes]
+            mask_prob = mask_prob.split(boxes_per_image, dim=0)
+        else:
+            mask_prob = [mask_prob]
 
         results = []
         for prob, box in zip(mask_prob, boxes):

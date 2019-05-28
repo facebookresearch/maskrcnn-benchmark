@@ -50,9 +50,9 @@ class PostProcessor(torch.jit.ScriptModule):
                 scores, number_of_detections - self.detections_per_img + 1
             )
             keep = scores >= image_thresh  # remove for jit compat... .item()
-            keep = torch.nonzero(keep).squeeze(1)
+            # keep = torch.nonzero(keep).squeeze(1)
         else:
-            keep = torch.ones_like(scores, dtype=torch.uint8)
+            keep = torch.ones(scores.shape, device=scores.device, dtype=torch.uint8)
         return keep
 
     def forward(self, x, boxes):

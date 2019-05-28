@@ -159,8 +159,9 @@ if __name__ == "__main__":
         assert (image.size(0) % coco_demo.cfg.DATALOADER.SIZE_DIVISIBILITY == 0
                 and image.size(1) % coco_demo.cfg.DATALOADER.SIZE_DIVISIBILITY == 0)
 
-    with torch.no_grad():
-        traced_model = torch.jit.trace(single_image_to_top_predictions, (image,))
+    for p in coco_demo.model.parameters():
+        p.requires_grad_(False)
+    traced_model = torch.jit.trace(single_image_to_top_predictions, (image,))
 
     @torch.jit.script
     def end_to_end_model(image):

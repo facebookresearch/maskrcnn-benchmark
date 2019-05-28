@@ -131,7 +131,7 @@ class Pooler(nn.Module):
         for level, (per_level_feature, pooler) in enumerate(zip(x, self.poolers)):
             idx_in_level = torch.nonzero(levels == level).squeeze(1)
             rois_per_level = rois[idx_in_level]
-            unmerged_results.append(pooler(per_level_feature, rois_per_level)).to(dtype)
+            unmerged_results.append(pooler(per_level_feature, rois_per_level).to(dtype))
 
         result = merge_levels(levels, unmerged_results)
         return result
