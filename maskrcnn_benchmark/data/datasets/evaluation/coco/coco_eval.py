@@ -114,6 +114,8 @@ def prepare_for_coco_segmentation(predictions, dataset):
     rotated = predictions[0].has_field("rrects")  # TODO Is there a better way?
     if rotated:
         from maskrcnn_benchmark.modeling.rroi_heads.mask_head.inference import Masker as RotatedMasker
+        from maskrcnn_benchmark.modeling.rotate_ops import merge_rrects_by_iou
+
         masker = RotatedMasker(threshold=0.5, padding=1)
     else:
         masker = Masker(threshold=0.5, padding=1)
@@ -139,14 +141,49 @@ def prepare_for_coco_segmentation(predictions, dataset):
 
         # boxes = prediction.bbox.tolist()
         scores = prediction.get_field("scores").tolist()
-        labels = prediction.get_field("labels").tolist()
+        labels = prediction.get_field("labels").numpy() #.tolist()
 
-        # rles = prediction.get_field('mask')
+        # # # # # rles = prediction.get_field('mask')
+        if rotated:
+            unique_labels = np.unique(labels)
+            rrects = prediction.get_field("rrects").rbox
+        
+            new_scores = []
+            new_labels = []
+            new_masks = []
+        
+            for cls in unique_labels:
+                cinds = np.where(labels==cls)[0]
+                if len(cinds) == 0:
+                    continue
+                elif len(cinds) == 1:
+                    idx = cinds[0]
+                    new_masks.append(masks[idx])
+                    new_scores.append(scores[idx])
+                    new_labels.append(labels[idx])
+                    continue
+                match_inds = merge_rrects_by_iou(rrects[cinds], iou_thresh=0.5)
+                match_inds = {cinds[k]: cinds[v] for k, v in match_inds.items()}
+        
+                # new_masks = torch.zeros_like(masks)[:len(match_inds)]
+                cnt = 0
+                for idx, inds in match_inds.items():
+                    assert len(inds) > 0
+                    mask = masks[inds[0]]
+                    for ix in inds[1:]:
+                        mask = np.logical_or(mask, masks[ix])
+                    new_masks.append(mask)
+                    new_scores.append(scores[idx])
+                    new_labels.append(labels[idx])
+        
+                    cnt += 1
+        
+            scores = new_scores
+            labels = new_labels
+            masks = new_masks
 
         rles = []
         for mask in masks:
-            # cv2.imshow("mask", mask[0].cpu().numpy())
-            # cv2.waitKey(0)
             if mask.dtype != torch.uint8:
                 mask = mask.to(dtype=torch.uint8)
             rles.append(mask_util.encode(np.array(mask[0, :, :, np.newaxis], order="F"))[0])
