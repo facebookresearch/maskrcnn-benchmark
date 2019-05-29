@@ -95,11 +95,39 @@ class Masker(object):
         return results
 
 
+class MaskPostProcessor2(MaskPostProcessor):
+    """
+    MaskPostProcessor with extra classifier handling
+    """
+
+    def __init__(self, masker=None):
+        super(MaskPostProcessor2, self).__init__(masker)
+
+    def forward(self, x, boxes, cls_logits=None):
+        """
+        Arguments:
+            x (Tensor): the mask logits
+            boxes (list[BoxList]): bounding boxes that are used as
+                reference, one for ech image
+            cls_logits (Tensor): the mask branch classification logits
+
+        Returns:
+            results (list[BoxList]): one BoxList for each image, containing
+                the extra field mask
+        """
+        if cls_logits is not None:
+            cls_prob = cls_logits.sigmoid()
+            # filter cls_prob below 0.5
+
+        results = super(MaskPostProcessor2, self).forward(x, boxes)
+        return results
+
+
 def make_roi_mask_post_processor(cfg):
     if cfg.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS:
         mask_threshold = cfg.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS_THRESHOLD
         masker = Masker(threshold=mask_threshold, padding=1)
     else:
         masker = None
-    mask_post_processor = MaskPostProcessor(masker)
+    mask_post_processor = MaskPostProcessor2(masker)
     return mask_post_processor

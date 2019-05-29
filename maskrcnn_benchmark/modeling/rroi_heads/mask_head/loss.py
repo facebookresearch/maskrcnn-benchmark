@@ -137,7 +137,7 @@ class MaskRCNNLossComputation(object):
 
         return labels, masks
 
-    def __call__(self, proposals, mask_logits, targets):
+    def __call__(self, proposals, mask_logits, targets, cls_logits=None):
         """
         Arguments:
             proposals (list[BoxList])
@@ -158,12 +158,19 @@ class MaskRCNNLossComputation(object):
         # torch.mean (in binary_cross_entropy_with_logits) doesn't
         # accept empty tensors, so handle it separately
         if positive_inds.numel() == 0 or mask_targets.numel() == 0:
-            return mask_logits.sum() * 0
+            return mask_logits.sum() * 0, mask_logits.sum() * 0
 
         mask_loss = F.binary_cross_entropy_with_logits(
             mask_logits[positive_inds, labels_pos], mask_targets
         )
-        return mask_loss
+
+        # classification loss
+        cls_loss = None
+        if cls_logits is not None:
+            cls_loss = F.binary_cross_entropy_with_logits(
+                cls_logits.squeeze(1), (labels > 0).to(dtype=torch.float32)
+            )
+        return mask_loss, cls_loss
 
 
 def make_roi_mask_loss_evaluator(cfg):
