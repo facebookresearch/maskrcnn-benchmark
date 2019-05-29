@@ -68,27 +68,6 @@ image = ...
 predictions = coco_demo.run_on_opencv_image(image)
 ```
 
-### Use it on an arbitrary GPU device
-For some cases, while multi-GPU devices are installed in a machine, a possible situation is that 
-we only have accesse to a specified GPU device (e.g. CUDA:1 or CUDA:2) for inference, testing or training. 
-Here, the repository currently supports two methods to control devices.
-
-#### 1. using CUDA_VISIBLE_DEVICES environment variable (Recommend)
-Here is an example for Mask R-CNN R-50 FPN quick on the second device (CUDA:1):
-```bash
-export CUDA_VISIBLE_DEVICES=1
-python tools/train_net.py --config-file=configs/quick_schedules/e2e_mask_rcnn_R_50_FPN_quick.yaml
-```
-Now, the session will be totally loaded on the second GPU device (CUDA:1).
-
-#### 2. using MODEL.DEVICE flag
-In addition, the program could run on a sepcific GPU device by setting `MODEL.DEVICE` flag.
-```bash
-python tools/train_net.py --config-file=configs/quick_schedules/e2e_mask_rcnn_R_50_FPN_quick.yaml MODEL.DEVICE cuda:1
-```
-Where, we add a `MODEL.DEVICE cuda:1` flag to configure the target device. 
-*Pay attention, there is still a small part of memory stored in `cuda:0` for some reasons.*
-
 ## Perform training on COCO dataset
 
 For the following examples to work, you need to first install `maskrcnn_benchmark`.
@@ -150,7 +129,7 @@ you'll also need to change the learning rate, the number of iterations and the l
 
 Here is an example for Mask R-CNN R-50 FPN with the 1x schedule:
 ```bash
-python tools/train_net.py --config-file "configs/e2e_mask_rcnn_R_50_FPN_1x.yaml" SOLVER.IMS_PER_BATCH 2 SOLVER.BASE_LR 0.0025 SOLVER.MAX_ITER 720000 SOLVER.STEPS "(480000, 640000)" TEST.IMS_PER_BATCH 1
+python tools/train_net.py --config-file "configs/e2e_mask_rcnn_R_50_FPN_1x.yaml" SOLVER.IMS_PER_BATCH 2 SOLVER.BASE_LR 0.0025 SOLVER.MAX_ITER 720000 SOLVER.STEPS "(480000, 640000)" TEST.IMS_PER_BATCH 1 MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN 2000
 ```
 This follows the [scheduling rules from Detectron.](https://github.com/facebookresearch/Detectron/blob/master/configs/getting_started/tutorial_1gpu_e2e_faster_rcnn_R-50-FPN.yaml#L14-L30)
 Note that we have multiplied the number of iterations by 8x (as well as the learning rate schedules),
@@ -159,6 +138,7 @@ and we have divided the learning rate by 8x.
 We also changed the batch size during testing, but that is generally not necessary because testing
 requires much less memory than training.
 
+Furthermore, we set `MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN 2000` as the proposals are selected for per the batch rather than per image in the default training. The value is calculated by **1000 x images-per-gpu**. Here we have 2 images per GPU, therefore we set the number as 1000 x 2 = 2000. If we have 8 images per GPU, the value should be set as 8000. Note that this does not apply if `MODEL.RPN.FPN_POST_NMS_PER_BATCH` is set to `False` during training. See [#672](https://github.com/facebookresearch/maskrcnn-benchmark/issues/672) for more details.
 
 ### Multi-GPU training
 We use internally `torch.distributed.launch` in order to launch
@@ -168,8 +148,17 @@ process will only use a single GPU.
 
 ```bash
 export NGPUS=8
-python -m torch.distributed.launch --nproc_per_node=$NGPUS /path_to_maskrcnn_benchmark/tools/train_net.py --config-file "path/to/config/file.yaml"
+python -m torch.distributed.launch --nproc_per_node=$NGPUS /path_to_maskrcnn_benchmark/tools/train_net.py --config-file "path/to/config/file.yaml" MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN images_per_gpu x 1000
 ```
+Note we should set `MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN` follow the rule in Single-GPU training.
+
+## Evaluation
+You can test your model directly on single or multiple gpus. Here is an example for Mask R-CNN R-50 FPN with the 1x schedule on 8 GPUS:
+```bash
+export NGPUS=8
+python -m torch.distributed.launch --nproc_per_node=$NGPUS /path_to_maskrcnn_benchmark/tools/test_net.py --config-file "configs/e2e_mask_rcnn_R_50_FPN_1x.yaml" TEST.IMS_PER_BATCH 16
+```
+To calculate mAP for each class, you can simply modify a few lines in [coco_eval.py](https://github.com/facebookresearch/maskrcnn-benchmark/blob/master/maskrcnn_benchmark/data/datasets/evaluation/coco/coco_eval.py). See [#524](https://github.com/facebookresearch/maskrcnn-benchmark/issues/524#issuecomment-475118810) for more details.
 
 ## Abstractions
 For more information on some of the main abstractions in our implementation, see [ABSTRACTIONS.md](ABSTRACTIONS.md).
@@ -264,8 +253,9 @@ note = {Accessed: [Insert date here]}
 - [RetinaMask: Learning to predict masks improves state-of-the-art single-shot detection for free](https://arxiv.org/abs/1901.03353). 
   Cheng-Yang Fu, Mykhailo Shvets, and Alexander C. Berg.
   Tech report, arXiv,1901.03353.
-
-
+- [FCOS: Fully Convolutional One-Stage Object Detection](https://arxiv.org/abs/1904.01355).
+  Zhi Tian, Chunhua Shen, Hao Chen and Tong He.
+  Tech report, arXiv,1904.01355. [[code](https://github.com/tianzhi0549/FCOS)]
 
 ## License
 

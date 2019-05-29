@@ -17,6 +17,13 @@ class FrozenBatchNorm2d(nn.Module):
         self.register_buffer("running_var", torch.ones(n))
 
     def forward(self, x):
+        # Cast all fixed parameters to half() if necessary
+        if x.dtype == torch.float16:
+            self.weight = self.weight.half()
+            self.bias = self.bias.half()
+            self.running_mean = self.running_mean.half()
+            self.running_var = self.running_var.half()
+
         scale = self.weight * self.running_var.rsqrt()
         bias = self.bias - self.running_mean * scale
         scale = scale.reshape(1, -1, 1, 1)
