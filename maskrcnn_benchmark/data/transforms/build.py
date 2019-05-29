@@ -6,8 +6,8 @@ def build_transforms(cfg, is_train=True, normalize=True):
     if is_train:
         min_size = cfg.INPUT.MIN_SIZE_TRAIN
         max_size = cfg.INPUT.MAX_SIZE_TRAIN
-        h_flip_prob = cfg.INPUT.H_FLIP_PROB_TRAIN  # 0.5
-        v_flip_prob = cfg.INPUT.V_FLIP_PROB_TRAIN
+        flip_horizontal_prob = cfg.INPUT.HORIZONTAL_FLIP_PROB_TRAIN
+        flip_vertical_prob = cfg.INPUT.VERTICAL_FLIP_PROB_TRAIN
         brightness = cfg.INPUT.BRIGHTNESS
         contrast = cfg.INPUT.CONTRAST
         saturation = cfg.INPUT.SATURATION
@@ -15,8 +15,8 @@ def build_transforms(cfg, is_train=True, normalize=True):
     else:
         min_size = cfg.INPUT.MIN_SIZE_TEST
         max_size = cfg.INPUT.MAX_SIZE_TEST
-        h_flip_prob = 0.0
-        v_flip_prob = 0.0
+        flip_horizontal_prob = 0.0
+        flip_vertical_prob = 0.0
         brightness = 0.0
         contrast = 0.0
         saturation = 0.0
@@ -32,8 +32,8 @@ def build_transforms(cfg, is_train=True, normalize=True):
     transform_ops = [
         color_jitter,
         T.Resize(min_size, max_size),
-        T.RandomHorizontalFlip(h_flip_prob),
-        T.RandomVerticalFlip(v_flip_prob),
+        T.RandomHorizontalFlip(flip_horizontal_prob),
+        T.RandomVerticalFlip(flip_vertical_prob),
         T.ToTensor()
     ]
     if normalize:
