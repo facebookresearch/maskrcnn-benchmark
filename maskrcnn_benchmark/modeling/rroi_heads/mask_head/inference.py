@@ -129,5 +129,5 @@ def make_roi_mask_post_processor(cfg):
         masker = Masker(threshold=mask_threshold, padding=1)
     else:
         masker = None
-    mask_post_processor = MaskPostProcessor2(masker)
+    mask_post_processor = MaskPostProcessor(masker)
     return mask_post_processor

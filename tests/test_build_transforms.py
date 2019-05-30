@@ -2,21 +2,22 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import cv2
+import pycocotools.mask as mask_util
 
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.data import make_data_loader
-from maskrcnn_benchmark.modeling.rrpn.utils import get_boxlist_rotated_rect_tensor
-from maskrcnn_benchmark.modeling.rrpn.anchor_generator import draw_anchors
+from maskrcnn_benchmark.modeling.roi_heads.mask_head.loss import compute_proposal_gt_iou
+from maskrcnn_benchmark.modeling.rroi_heads.mask_head.loss import compute_rotated_proposal_gt_iou
 
 if __name__ == '__main__':
-    config_file = "./configs/dog_skate_4.yaml"
+    config_file = "./configs/mscoco/surfboard_2.yaml"
     try:
         cfg.merge_from_file(config_file)
     except KeyError as e:
         print(e)
     cfg.INPUT.PIXEL_MEAN = [0,0,0]
-    cfg.INPUT.H_FLIP_PROB_TRAIN = 1.0
-    cfg.INPUT.V_FLIP_PROB_TRAIN = 1.0
+    cfg.INPUT.HORIZONTAL_FLIP_PROB_TRAIN = 0.0
+    cfg.INPUT.VERTICAL_FLIP_PROB_TRAIN = 0.0
     cfg.freeze()
 
     data_loader = make_data_loader(
@@ -27,6 +28,11 @@ if __name__ == '__main__':
     )
 
     device = 'cpu'
+
+    is_rotated = 1 #cfg.MODEL.ROTATED
+    if is_rotated:
+        from maskrcnn_benchmark.modeling.rrpn.utils import get_boxlist_rotated_rect_tensor
+        from maskrcnn_benchmark.modeling.rrpn.anchor_generator import draw_anchors
 
     start_iter = 0
     for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
@@ -68,10 +74,13 @@ if __name__ == '__main__':
 
             m_field = t1.get_field("masks")
             labels = t1.get_field('labels')
+            bboxes = t1.bbox
 
-            rrects = get_boxlist_rotated_rect_tensor(t1, "masks", "rrects")
+            if is_rotated:
+                rrects = get_boxlist_rotated_rect_tensor(t1, "masks", "rrects")
 
             for ix, label in enumerate(labels):
+                seg_mask = m_field[ix]
                 p = m_field.instances.polygons[ix]
                 m = p.convert_to_binarymask()
                 # visualize_mask(m.numpy())
@@ -79,10 +88,29 @@ if __name__ == '__main__':
                 m *= 255
                 m = cv2.cvtColor(m, cv2.COLOR_GRAY2BGR)
 
-                rr = rrects[ix]
-                m = draw_anchors(m, [rr], [[0, 0, 255]])
+                if is_rotated:
+                    rr = rrects[ix]
+                    proposal = rr.numpy().copy()
+                    proposal[:2] += 15
+                    m = draw_anchors(m, [rr], [[0, 0, 255]])
+                    m = draw_anchors(m, [proposal], [[255, 0, 0]])
 
-                print(rr)
+                    import time
+                    t = time.time()
+                    print(compute_rotated_proposal_gt_iou(seg_mask, proposal))
+                    # print((time.time() - t))
+                else:
+                    bbox = bboxes[ix]
+                    proposal = bbox + 10
+                    cv2.rectangle(m, tuple(bbox[:2]), tuple(bbox[2:]), (0,0,255), 2)
+                    cv2.rectangle(m, tuple(proposal[:2]), tuple(proposal[2:]), (255,0,0), 2)
 
+                    cropped_mask = seg_mask.crop(proposal)
+
+                    import time
+                    t = time.time()
+
+                    print(compute_proposal_gt_iou(seg_mask, proposal, cropped_mask))
+                    print((time.time() - t))
                 cv2.imshow("mask", m)
                 cv2.waitKey(0)

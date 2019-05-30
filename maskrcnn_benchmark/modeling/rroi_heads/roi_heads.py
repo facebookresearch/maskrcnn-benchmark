@@ -41,12 +41,8 @@ class CombinedROIHeads(torch.nn.ModuleDict):
             ):
                 mask_features = x
 
-            if self.training:
-                for det in detections:
-                    rrects = det.get_field("rrects")
-                    rrects[:, 2:4] *= torch.randint(95, 105, (len(rrects), 2), dtype=torch.float32, device=rrects.device) / 100
-                    det.add_field("rrects", rrects)
-            else:
+            if not self.training:
+                # during test/inference, enlarge the rotated bbox detections by 5% on both sides
                 for det in detections:
                     rrects = det.get_field("rrects")
                     rrects[:, 2:4] *= 1.05
@@ -54,14 +50,22 @@ class CombinedROIHeads(torch.nn.ModuleDict):
 
             # During training, self.box() will return the unaltered proposals as "detections"
             # this makes the API consistent during training and testing
-            x, mask_logits, detections, loss_mask = self.mask(mask_features, detections, targets)
-            losses.update(loss_mask)
+            if not self.cfg.MODEL.MASKIOU_ON:
+                x, detections, loss_mask = self.mask(mask_features, detections, targets)
+                losses.update(loss_mask)
+            else:
+                x, detections, loss_mask, roi_feature, selected_mask, labels, maskiou_targets = self.mask(mask_features, detections, targets)
+                losses.update(loss_mask)
 
-        # Convert all rrects field to RotatedBox structure
-        for ix, det in enumerate(detections):
-            proposal = proposals[ix]
-            rrects = RotatedBox(det.get_field("rrects"), proposal.size)
-            det.add_field("rrects", rrects)
+                loss_maskiou, detections = self.maskiou(roi_feature, detections, selected_mask, labels, maskiou_targets)
+                losses.update(loss_maskiou)
+
+        if not self.training:
+            # Convert all rrects field to RotatedBox structure
+            for ix, det in enumerate(detections):
+                proposal = proposals[ix]
+                rrects = RotatedBox(det.get_field("rrects"), proposal.size)
+                det.add_field("rrects", rrects)
         return x, detections, losses
 
 
@@ -74,6 +78,11 @@ def build_roi_heads(cfg, in_channels):
         roi_heads.append(("box", build_roi_box_head(cfg, in_channels)))
         if cfg.MODEL.MASK_ON:
             roi_heads.append(("mask", build_roi_mask_head(cfg, in_channels)))
+
+            if cfg.MODEL.MASKIOU_ON:
+                from maskrcnn_benchmark.modeling.roi_heads.maskiou_head.maskiou_head import build_roi_maskiou_head
+
+                roi_heads.append(("maskiou", build_roi_maskiou_head(cfg)))
 
     # combine individual heads in a single module
     if roi_heads:
