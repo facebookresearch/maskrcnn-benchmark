@@ -19,21 +19,16 @@ class MaskIoUPostProcessor(nn.Module):
         super(MaskIoUPostProcessor, self).__init__()
 
     def forward(self, boxes, pred_maskiou, labels):
-        num_masks = pred_maskiou.shape[0]
-        index = torch.arange(num_masks, device=labels.device)
-        maskious = pred_maskiou[index, labels]
-        maskious = [maskious]
-        results = []
-        for maskiou, box in zip(maskious, boxes):
-            bbox = BoxList(box.bbox, box.size, mode="xyxy")
-            for field in box.fields():
-                bbox.add_field(field, box.get_field(field))
-            bbox_scores = bbox.get_field("scores")
-            mask_scores = bbox_scores * maskiou
-            bbox.add_field("mask_scores", mask_scores)
-            results.append(bbox)
+        for box, pm_iou, label in zip(boxes, pred_maskiou, labels):
+            num_masks = pm_iou.shape[0]
+            index = torch.arange(num_masks, device=label.device)
+            maskious = pm_iou[index, label]
 
-        return results
+            bbox_scores = box.get_field("scores")
+            mask_scores = bbox_scores * maskious
+            box.add_field("mask_scores", mask_scores)
+
+        return boxes
 
 def make_roi_maskiou_post_processor(cfg):
     maskiou_post_processor = MaskIoUPostProcessor()

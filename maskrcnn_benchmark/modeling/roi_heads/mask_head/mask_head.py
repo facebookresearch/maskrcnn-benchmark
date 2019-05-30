@@ -8,7 +8,7 @@ from .roi_mask_feature_extractors import make_roi_mask_feature_extractor
 from .roi_mask_predictors import make_roi_mask_predictor
 from .inference import make_roi_mask_post_processor
 from .loss import make_roi_mask_loss_evaluator
-
+from maskrcnn_benchmark.modeling.utils import cat
 
 def keep_only_positive_boxes(boxes):
     """
@@ -81,7 +81,8 @@ class ROIMaskHead(torch.nn.Module):
         else:
             if not self.training:
                 result = self.post_processor(mask_logits, proposals)
-                return x, result, {}, roi_feature, result[0].get_field("mask"), result[0].get_field("labels"), None
+                return x, result, {}, roi_feature, cat([r.get_field("mask") for r in result]), \
+                       cat([r.get_field("labels") for r in result]), None
 
             loss_mask, selected_mask, labels, maskiou_targets = self.loss_evaluator(proposals, mask_logits, targets)
             return x, all_proposals, dict(loss_mask=loss_mask), roi_feature, selected_mask, labels, maskiou_targets

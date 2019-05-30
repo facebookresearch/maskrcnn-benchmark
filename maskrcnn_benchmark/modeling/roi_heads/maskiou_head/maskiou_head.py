@@ -42,6 +42,10 @@ class ROIMaskIoUHead(torch.nn.Module):
         pred_maskiou = self.predictor(x)
 
         if not self.training:
+            boxes_per_image = [len(box) for box in proposals]
+            pred_maskiou = pred_maskiou.split(boxes_per_image, dim=0)
+            labels = labels.split(boxes_per_image, dim=0)
+
             result = self.post_processor(proposals, pred_maskiou, labels)
             return {}, result
 
