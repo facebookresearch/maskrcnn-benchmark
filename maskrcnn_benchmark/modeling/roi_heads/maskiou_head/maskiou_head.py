@@ -47,7 +47,7 @@ class ROIMaskIoUHead(torch.nn.Module):
 
         loss_maskiou = self.loss_evaluator(labels, pred_maskiou, maskiou_targets)
 
-        return dict(loss_maskiou=loss_maskiou), None
+        return dict(loss_maskiou=loss_maskiou), proposals
 
 
 def build_roi_maskiou_head(cfg):

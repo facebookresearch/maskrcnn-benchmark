@@ -26,10 +26,11 @@ class MaskIoULossComputation(object):
             return pred_maskiou.sum() * 0
         # gt_maskiou = gt_maskiou.detach()
 
-        pos_inds = torch.nonzero(gt_maskiou > 0.0).squeeze(1)
+        gt_miou = gt_maskiou.detach()
+        pos_inds = torch.nonzero(gt_miou > 0.0).squeeze(1)
         if pos_inds.numel() == 0:
             return pred_maskiou.sum() * 0
-        maskiou_loss = l2_loss(pred_maskiou[positive_inds, labels_pos][pos_inds], gt_maskiou[pos_inds])
+        maskiou_loss = l2_loss(pred_maskiou[positive_inds, labels_pos][pos_inds], gt_miou[pos_inds])
         maskiou_loss = self.loss_weight * maskiou_loss
 
         return maskiou_loss
