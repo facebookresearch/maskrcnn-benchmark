@@ -160,7 +160,7 @@ We currently use [APEX](https://github.com/NVIDIA/apex) to add [Automatic Mixed 
 export NGPUS=8
 python -m torch.distributed.launch --nproc_per_node=$NGPUS /path_to_maskrcnn_benchmark/tools/train_net.py --config-file "path/to/config/file.yaml" MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN images_per_gpu x 1000 DTYPE "float16"
 ```
-If you want more verbose logging, set `AMP_VERBOSE True`.
+If you want more verbose logging, set `AMP_VERBOSE True`. See [Mixed Precision Training guide](https://docs.nvidia.com/deeplearning/sdk/mixed-precision-training/index.html) for more details.
 
 ## Evaluation
 You can test your model directly on single or multiple gpus. Here is an example for Mask R-CNN R-50 FPN with the 1x schedule on 8 GPUS:
