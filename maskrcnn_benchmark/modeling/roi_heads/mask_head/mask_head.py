@@ -66,17 +66,25 @@ class ROIMaskHead(torch.nn.Module):
         if self.training and self.cfg.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             x = features
             x = x[torch.cat(positive_inds, dim=0)]
+            roi_feature = x
         else:
-            x = self.feature_extractor(features, proposals)
+            x, roi_feature = self.feature_extractor(features, proposals)
         mask_logits = self.predictor(x)
 
-        if not self.training:
-            result = self.post_processor(mask_logits, proposals)
-            return x, mask_logits, result, {}
+        if not self.cfg.MODEL.MASKIOU_ON: 
+            if not self.training:
+                result = self.post_processor(mask_logits, proposals)
+                return x, result, {}
 
-        loss_mask = self.loss_evaluator(proposals, mask_logits, targets)
+            loss_mask = self.loss_evaluator(proposals, mask_logits, targets)
+            return x, all_proposals, dict(loss_mask=loss_mask)
+        else:
+            if not self.training:
+                result = self.post_processor(mask_logits, proposals)
+                return x, result, {}, roi_feature, result[0].get_field("mask"), result[0].get_field("labels"), None
 
-        return x, mask_logits, proposals, dict(loss_mask=loss_mask)
+            loss_mask, selected_mask, labels, maskiou_targets = self.loss_evaluator(proposals, mask_logits, targets)
+            return x, all_proposals, dict(loss_mask=loss_mask), roi_feature, selected_mask, labels, maskiou_targets
 
 
 def build_roi_mask_head(cfg, in_channels):

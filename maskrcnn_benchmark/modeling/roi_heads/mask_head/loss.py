@@ -2,13 +2,16 @@
 import torch
 from torch.nn import functional as F
 
+import pycocotools.mask as mask_util
+import numpy as np
+
 from maskrcnn_benchmark.layers import smooth_l1_loss
 from maskrcnn_benchmark.modeling.matcher import Matcher
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 from maskrcnn_benchmark.modeling.utils import cat
 
 
-def project_masks_on_boxes(segmentation_masks, proposals, discretization_size):
+def project_masks_on_boxes(segmentation_masks, proposals, discretization_size, maskiou_on=False):
     """
     Given segmentation masks and the bounding boxes corresponding
     to the location of the masks in the image, this function
@@ -21,6 +24,8 @@ def project_masks_on_boxes(segmentation_masks, proposals, discretization_size):
         proposals: an instance of BoxList
     """
     masks = []
+    mask_ratios = []
+
     M = discretization_size
     device = proposals.bbox.device
     proposals = proposals.convert("xyxy")
@@ -37,13 +42,74 @@ def project_masks_on_boxes(segmentation_masks, proposals, discretization_size):
         scaled_mask = cropped_mask.resize((M, M))
         mask = scaled_mask.get_mask_tensor()
         masks.append(mask)
+
+        if maskiou_on:
+            
+            x1 = int(proposal[0])
+            y1 = int(proposal[1])
+            x2 = int(proposal[2]) + 1
+            y2 = int(proposal[3]) + 1
+
+            polygons = [p.polygons for p in segmentation_mask.instances.polygons]  # list of list
+            for poly_ in polygons:
+                poly = torch.cat(poly_)  # merge all subpolygons into one polygon
+                x1 = np.minimum(x1, poly[0::2].min())
+                x2 = np.maximum(x2, poly[0::2].max())
+                y1 = np.minimum(y1, poly[1::2].min())
+                y2 = np.maximum(y2, poly[1::2].max())
+            img_h = segmentation_mask.size[1]
+            img_w = segmentation_mask.size[0]
+            x1 = np.maximum(x1, 0)
+            x2 = np.minimum(x2, img_w-1)
+            y1 = np.maximum(y1, 0)
+            y2 = np.minimum(y2, img_h-1)
+            segmentation_mask_for_maskratio = segmentation_mask.crop([x1, y1, x2, y2])
+            ''' 
+            #type 1
+            gt_img_mask = segmentation_mask_for_maskratio.convert(mode='mask')    
+            gt_img_mask_area = gt_img_mask.sum().float()
+            gt_box_mask = gt_img_mask[int(proposal[1]-y1):int(proposal[3]-y1)+1, int(proposal[0]-x1):int(proposal[2]-x1)+1]
+            gt_box_mask_area = gt_box_mask.sum().float()
+            mask_ratio = gt_box_mask_area / gt_img_mask_area
+            '''
+            #type 2
+            fullarea_polygons = [torch.cat(p.polygons) for p in segmentation_mask_for_maskratio.instances.polygons]  # list of list
+            boxarea_polygons = [torch.cat(p.polygons) for p in cropped_mask.instances.polygons]  # list of list
+            rle_for_fullarea = mask_util.frPyObjects([p.numpy() for p in fullarea_polygons], y2-y1, x2-x1)
+            full_area = torch.tensor(mask_util.area(rle_for_fullarea).sum().astype(float))
+            rle_for_box_area = mask_util.frPyObjects([p.numpy() for p in boxarea_polygons], proposal[3]-proposal[1], proposal[2]-proposal[0])
+            box_area = torch.tensor(mask_util.area(rle_for_box_area).sum().astype(float))
+            mask_ratio = box_area / full_area
+            
+            mask_ratios.append(mask_ratio)
+
+    if maskiou_on:
+        mask_ratios = torch.stack(mask_ratios, dim=0).to(device, dtype=torch.float32)
+    else:
+        mask_ratios = None
     if len(masks) == 0:
-        return torch.empty(0, dtype=torch.float32, device=device)
-    return torch.stack(masks, dim=0).to(device, dtype=torch.float32)
+        return torch.empty(0, dtype=torch.float32, device=device), torch.empty(0, dtype=torch.float32, device=device)
+    return torch.stack(masks, dim=0).to(device, dtype=torch.float32), mask_ratios
+
+
+def compute_mask_iou_targets(pred_masks_in, mask_ratios, mask_targets, device):
+    value_eps = 1e-10 * torch.ones(mask_targets.shape[0], device=device)
+    mask_ratios = torch.max(mask_ratios, value_eps)
+    pred_masks = (pred_masks_in > 0).to(torch.float32)
+    mask_targets_full_area = mask_targets.sum(dim=[1,2]) / mask_ratios
+    mask_ovr = pred_masks * mask_targets
+    mask_ovr_area = mask_ovr.sum(dim=[1,2])
+    mask_union_area = pred_masks.sum(dim=[1,2]) + mask_targets_full_area - mask_ovr_area
+    value_1 = torch.ones(pred_masks.shape[0], device=device)
+    value_0 = torch.zeros(pred_masks.shape[0], device=device)
+    mask_union_area = torch.max(mask_union_area, value_1)
+    mask_ovr_area = torch.max(mask_ovr_area, value_0)
+    maskiou_targets = mask_ovr_area / mask_union_area
+    return maskiou_targets     
 
 
 class MaskRCNNLossComputation(object):
-    def __init__(self, proposal_matcher, discretization_size):
+    def __init__(self, proposal_matcher, discretization_size, maskiou_on=False):
         """
         Arguments:
             proposal_matcher (Matcher)
@@ -51,6 +117,7 @@ class MaskRCNNLossComputation(object):
         """
         self.proposal_matcher = proposal_matcher
         self.discretization_size = discretization_size
+        self.maskiou_on = maskiou_on
 
     def match_targets_to_proposals(self, proposal, target):
         match_quality_matrix = boxlist_iou(target, proposal)
@@ -68,6 +135,8 @@ class MaskRCNNLossComputation(object):
     def prepare_targets(self, proposals, targets):
         labels = []
         masks = []
+        mask_ratios = []
+
         for proposals_per_image, targets_per_image in zip(proposals, targets):
             matched_targets = self.match_targets_to_proposals(
                 proposals_per_image, targets_per_image
@@ -90,14 +159,15 @@ class MaskRCNNLossComputation(object):
 
             positive_proposals = proposals_per_image[positive_inds]
 
-            masks_per_image = project_masks_on_boxes(
-                segmentation_masks, positive_proposals, self.discretization_size
+            masks_per_image, mask_ratios_per_image = project_masks_on_boxes(
+                segmentation_masks, positive_proposals, self.discretization_size, self.maskiou_on
             )
 
             labels.append(labels_per_image)
             masks.append(masks_per_image)
+            mask_ratios.append(mask_ratios_per_image)
 
-        return labels, masks
+        return labels, masks, mask_ratios
 
     def __call__(self, proposals, mask_logits, targets):
         """
@@ -109,7 +179,7 @@ class MaskRCNNLossComputation(object):
         Return:
             mask_loss (Tensor): scalar tensor containing the loss
         """
-        labels, mask_targets = self.prepare_targets(proposals, targets)
+        labels, mask_targets, mask_ratios = self.prepare_targets(proposals, targets)
 
         labels = cat(labels, dim=0)
         mask_targets = cat(mask_targets, dim=0)
@@ -117,15 +187,31 @@ class MaskRCNNLossComputation(object):
         positive_inds = torch.nonzero(labels > 0).squeeze(1)
         labels_pos = labels[positive_inds]
 
+        if self.maskiou_on:
+            selected_index = torch.arange(mask_logits.shape[0], device=labels.device)
+            selected_mask = mask_logits[selected_index, labels]
+            mask_num, mask_h, mask_w = selected_mask.shape
+            selected_mask = selected_mask.reshape(mask_num, 1, mask_h, mask_w)
+
         # torch.mean (in binary_cross_entropy_with_logits) doesn't
         # accept empty tensors, so handle it separately
         if mask_targets.numel() == 0:
-            return mask_logits.sum() * 0
+            if not self.maskiou_on:
+                return mask_logits.sum() * 0
+            else:
+                return mask_logits.sum() * 0, selected_mask, labels, None
 
-        mask_loss = F.binary_cross_entropy_with_logits(
-            mask_logits[positive_inds, labels_pos], mask_targets
-        )
-        return mask_loss
+        pred_masks = mask_logits[positive_inds, labels_pos]
+        mask_loss = F.binary_cross_entropy_with_logits(pred_masks, mask_targets)       
+
+        if not self.maskiou_on:
+            return mask_loss
+        else:
+            device = labels.device
+            mask_ratios = cat(mask_ratios, dim=0)
+            maskiou_targets = compute_mask_iou_targets(pred_masks, mask_ratios, mask_targets, device)
+
+            return mask_loss, selected_mask.sigmoid(), labels, maskiou_targets
 
 
 def make_roi_mask_loss_evaluator(cfg):
@@ -136,7 +222,7 @@ def make_roi_mask_loss_evaluator(cfg):
     )
 
     loss_evaluator = MaskRCNNLossComputation(
-        matcher, cfg.MODEL.ROI_MASK_HEAD.RESOLUTION
+        matcher, cfg.MODEL.ROI_MASK_HEAD.RESOLUTION, cfg.MODEL.MASKIOU_ON
     )
 
     return loss_evaluator
