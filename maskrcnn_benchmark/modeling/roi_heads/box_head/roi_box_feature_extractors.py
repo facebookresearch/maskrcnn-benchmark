@@ -5,7 +5,7 @@ from torch.nn import functional as F
 
 from maskrcnn_benchmark.modeling import registry
 from maskrcnn_benchmark.modeling.backbone import resnet
-from maskrcnn_benchmark.modeling.poolers import Pooler
+from maskrcnn_benchmark.modeling.poolers import make_pooler
 from maskrcnn_benchmark.modeling.make_layers import group_norm
 from maskrcnn_benchmark.modeling.make_layers import make_fc
 
@@ -14,15 +14,6 @@ from maskrcnn_benchmark.modeling.make_layers import make_fc
 class ResNet50Conv5ROIFeatureExtractor(nn.Module):
     def __init__(self, config, in_channels):
         super(ResNet50Conv5ROIFeatureExtractor, self).__init__()
-
-        resolution = config.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
-        scales = config.MODEL.ROI_BOX_HEAD.POOLER_SCALES
-        sampling_ratio = config.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
-        pooler = Pooler(
-            output_size=(resolution, resolution),
-            scales=scales,
-            sampling_ratio=sampling_ratio,
-        )
 
         stage = resnet.StageSpec(index=4, block_count=3, return_features=False)
         head = resnet.ResNetHead(
@@ -36,7 +27,7 @@ class ResNet50Conv5ROIFeatureExtractor(nn.Module):
             dilation=config.MODEL.RESNETS.RES5_DILATION
         )
 
-        self.pooler = pooler
+        self.pooler = make_pooler(config, "ROI_BOX_HEAD")
         self.head = head
         self.out_channels = head.out_channels
 
@@ -56,17 +47,10 @@ class FPN2MLPFeatureExtractor(nn.Module):
         super(FPN2MLPFeatureExtractor, self).__init__()
 
         resolution = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
-        scales = cfg.MODEL.ROI_BOX_HEAD.POOLER_SCALES
-        sampling_ratio = cfg.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
-        pooler = Pooler(
-            output_size=(resolution, resolution),
-            scales=scales,
-            sampling_ratio=sampling_ratio,
-        )
         input_size = in_channels * resolution ** 2
         representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
         use_gn = cfg.MODEL.ROI_BOX_HEAD.USE_GN
-        self.pooler = pooler
+        self.pooler = make_pooler(cfg, "ROI_BOX_HEAD")
         self.fc6 = make_fc(input_size, representation_size, use_gn)
         self.fc7 = make_fc(representation_size, representation_size, use_gn)
         self.out_channels = representation_size
@@ -90,15 +74,7 @@ class FPNXconv1fcFeatureExtractor(nn.Module):
     def __init__(self, cfg, in_channels):
         super(FPNXconv1fcFeatureExtractor, self).__init__()
 
-        resolution = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
-        scales = cfg.MODEL.ROI_BOX_HEAD.POOLER_SCALES
-        sampling_ratio = cfg.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
-        pooler = Pooler(
-            output_size=(resolution, resolution),
-            scales=scales,
-            sampling_ratio=sampling_ratio,
-        )
-        self.pooler = pooler
+        self.pooler = make_pooler(cfg, "ROI_BOX_HEAD")
 
         use_gn = cfg.MODEL.ROI_BOX_HEAD.USE_GN
         conv_head_dim = cfg.MODEL.ROI_BOX_HEAD.CONV_HEAD_DIM

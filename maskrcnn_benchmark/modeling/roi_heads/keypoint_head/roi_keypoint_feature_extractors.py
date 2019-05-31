@@ -2,7 +2,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from maskrcnn_benchmark.modeling import registry
-from maskrcnn_benchmark.modeling.poolers import Pooler
+from maskrcnn_benchmark.modeling.poolers import make_pooler
 
 from maskrcnn_benchmark.layers import Conv2d
 
@@ -12,15 +12,7 @@ class KeypointRCNNFeatureExtractor(nn.Module):
     def __init__(self, cfg, in_channels):
         super(KeypointRCNNFeatureExtractor, self).__init__()
 
-        resolution = cfg.MODEL.ROI_KEYPOINT_HEAD.POOLER_RESOLUTION
-        scales = cfg.MODEL.ROI_KEYPOINT_HEAD.POOLER_SCALES
-        sampling_ratio = cfg.MODEL.ROI_KEYPOINT_HEAD.POOLER_SAMPLING_RATIO
-        pooler = Pooler(
-            output_size=(resolution, resolution),
-            scales=scales,
-            sampling_ratio=sampling_ratio,
-        )
-        self.pooler = pooler
+        self.pooler = make_pooler(config, "ROI_KEYPOINT_HEAD")
 
         input_features = in_channels
         layers = cfg.MODEL.ROI_KEYPOINT_HEAD.CONV_LAYERS
