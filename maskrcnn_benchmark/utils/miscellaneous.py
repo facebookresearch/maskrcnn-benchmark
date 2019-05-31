@@ -31,3 +31,9 @@ def save_labels(dataset_list, output_dir):
             logger.info("Saving labels mapping into {}".format(labels_file))
             with open(labels_file, 'w') as f:
                 json.dump(ids_to_labels, f, indent=2)
+
+
+def save_config(cfg, path):
+    if is_main_process():
+        with open(path, 'w') as f:
+            f.write(cfg.dump())
