@@ -29,7 +29,7 @@ class MaskRCNNFPNFeatureExtractor(nn.Module):
         super(MaskRCNNFPNFeatureExtractor, self).__init__()
 
         input_size = in_channels
-        self.pooler = make_pooler(config, "ROI_MASK_HEAD")
+        self.pooler = make_pooler(cfg, "ROI_MASK_HEAD")
 
         use_gn = cfg.MODEL.ROI_MASK_HEAD.USE_GN
         layers = cfg.MODEL.ROI_MASK_HEAD.CONV_LAYERS

@@ -12,7 +12,7 @@ class KeypointRCNNFeatureExtractor(nn.Module):
     def __init__(self, cfg, in_channels):
         super(KeypointRCNNFeatureExtractor, self).__init__()
 
-        self.pooler = make_pooler(config, "ROI_KEYPOINT_HEAD")
+        self.pooler = make_pooler(cfg, "ROI_KEYPOINT_HEAD")
 
         input_features = in_channels
         layers = cfg.MODEL.ROI_KEYPOINT_HEAD.CONV_LAYERS
