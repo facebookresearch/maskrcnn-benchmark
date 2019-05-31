@@ -77,7 +77,7 @@ def build_roi_heads(cfg, in_channels):
         if cfg.MODEL.MASKIOU_ON:
             from .maskiou_head.maskiou_head import build_roi_maskiou_head
 
-            roi_heads.append(("maskiou", build_roi_maskiou_head(cfg)))
+            roi_heads.append(("maskiou", build_roi_maskiou_head(cfg, in_channels)))
 
     if cfg.MODEL.KEYPOINT_ON:
         roi_heads.append(("keypoint", build_roi_keypoint_head(cfg, in_channels)))

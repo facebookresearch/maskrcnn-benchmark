@@ -31,7 +31,6 @@ _C.MODEL.CLS_AGNOSTIC_BBOX_REG = False
 
 # MASKIOU BRANCH
 _C.MODEL.MASKIOU_ON = False
-_C.MODEL.MASKIOU_LOSS_WEIGHT = 1.0
 
 # If the WEIGHT starts with a catalog://, like :R-50, the code will look for
 # the path in paths_catalog. Else, it will use it as the specified absolute
@@ -309,6 +308,14 @@ _C.MODEL.ROI_KEYPOINT_HEAD.CONV_LAYERS = tuple(512 for _ in range(8))
 _C.MODEL.ROI_KEYPOINT_HEAD.RESOLUTION = 14
 _C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
 _C.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR = True
+
+
+_C.MODEL.ROI_MASKIOU_HEAD = CN()
+_C.MODEL.ROI_MASKIOU_HEAD.MLP_HEAD_DIM = 1024
+_C.MODEL.ROI_MASKIOU_HEAD.CONV_LAYERS = (256, 256, 256, 256)
+_C.MODEL.ROI_MASKIOU_HEAD.USE_GN = False
+_C.MODEL.ROI_MASKIOU_HEAD.LOSS_WEIGHT = 1.0
+
 
 # ---------------------------------------------------------------------------- #
 # ResNe[X]t options (ResNets = {ResNet, ResNeXt}

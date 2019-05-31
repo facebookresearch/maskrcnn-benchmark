@@ -82,7 +82,7 @@ def build_roi_heads(cfg, in_channels):
             if cfg.MODEL.MASKIOU_ON:
                 from maskrcnn_benchmark.modeling.roi_heads.maskiou_head.maskiou_head import build_roi_maskiou_head
 
-                roi_heads.append(("maskiou", build_roi_maskiou_head(cfg)))
+                roi_heads.append(("maskiou", build_roi_maskiou_head(cfg, in_channels)))
 
     # combine individual heads in a single module
     if roi_heads:

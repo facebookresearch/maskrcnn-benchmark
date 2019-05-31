@@ -37,7 +37,7 @@ class MaskIoULossComputation(object):
 
 
 def make_roi_maskiou_loss_evaluator(cfg):
-    loss_weight = cfg.MODEL.MASKIOU_LOSS_WEIGHT
+    loss_weight = cfg.MODEL.ROI_MASKIOU_HEAD.LOSS_WEIGHT
     loss_evaluator = MaskIoULossComputation(loss_weight)
 
     return loss_evaluator

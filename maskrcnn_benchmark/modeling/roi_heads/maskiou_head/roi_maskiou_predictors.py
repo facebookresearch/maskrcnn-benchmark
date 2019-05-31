@@ -9,11 +9,11 @@ from maskrcnn_benchmark.layers import ConvTranspose2d
 
 
 class MaskIoUPredictor(nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, cfg, in_channels):
         super(MaskIoUPredictor, self).__init__()
         num_classes = cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES
 
-        self.maskiou = nn.Linear(1024, num_classes)
+        self.maskiou = nn.Linear(in_channels, num_classes)
 
         nn.init.normal_(self.maskiou.weight, mean=0, std=0.01)
         nn.init.constant_(self.maskiou.bias, 0)
@@ -27,6 +27,6 @@ class MaskIoUPredictor(nn.Module):
 _ROI_MASKIOU_PREDICTOR = {"MaskIoUPredictor": MaskIoUPredictor}
 
 
-def make_roi_maskiou_predictor(cfg):
+def make_roi_maskiou_predictor(cfg, in_channels):
     func = _ROI_MASKIOU_PREDICTOR['MaskIoUPredictor']
-    return func(cfg)
+    return func(cfg, in_channels)

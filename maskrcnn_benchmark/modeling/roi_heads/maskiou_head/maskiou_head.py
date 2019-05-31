@@ -12,11 +12,11 @@ from .loss import make_roi_maskiou_loss_evaluator
 
 
 class ROIMaskIoUHead(torch.nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, cfg, in_channels):
         super(ROIMaskIoUHead, self).__init__()
         self.cfg = cfg.clone()
-        self.feature_extractor = make_roi_maskiou_feature_extractor(cfg)
-        self.predictor = make_roi_maskiou_predictor(cfg)
+        self.feature_extractor = make_roi_maskiou_feature_extractor(cfg, in_channels)
+        self.predictor = make_roi_maskiou_predictor(cfg, self.feature_extractor.out_channels)
         self.post_processor = make_roi_maskiou_post_processor(cfg)
         self.loss_evaluator = make_roi_maskiou_loss_evaluator(cfg)
 
@@ -54,5 +54,5 @@ class ROIMaskIoUHead(torch.nn.Module):
         return dict(loss_maskiou=loss_maskiou), proposals
 
 
-def build_roi_maskiou_head(cfg):
-    return ROIMaskIoUHead(cfg)
+def build_roi_maskiou_head(cfg, in_channels):
+    return ROIMaskIoUHead(cfg, in_channels)
