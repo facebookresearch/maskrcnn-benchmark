@@ -1,5 +1,5 @@
-from .coco_eval import do_coco_evaluation
-
+#from .coco_eval import do_coco_evaluation
+from .abstract_coco_eval import do_coco_evaluation
 
 def coco_evaluation(
     dataset,
