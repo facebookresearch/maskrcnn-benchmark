@@ -57,6 +57,7 @@ class PascalVOCDataset(torch.utils.data.Dataset):
 
         cls = PascalVOCDataset.CLASSES
         self.class_to_ind = dict(zip(cls, range(len(cls))))
+        self.categories = dict(zip(range(len(cls)), cls))
 
     def __getitem__(self, index):
         img_id = self.ids[index]
