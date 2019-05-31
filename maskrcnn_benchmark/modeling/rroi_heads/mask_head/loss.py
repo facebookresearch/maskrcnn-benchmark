@@ -27,9 +27,8 @@ from maskrcnn_benchmark.modeling.utils import cat
 #     cv2.imshow("cropped", cropped)
 #     cv2.waitKey(0)
 
-def compute_rotated_proposal_gt_iou(gt_seg_mask_struct, proposal):
-    img_h = gt_seg_mask_struct.size[1]
-    img_w = gt_seg_mask_struct.size[0]
+def compute_rotated_proposal_gt_iou(gt_mask, proposal):
+    img_h, img_w = gt_mask.shape[:2]
 
     xc, yc, w, h, angle = proposal
     h, w = np.round([h, w]).astype(np.int32)
@@ -39,24 +38,16 @@ def compute_rotated_proposal_gt_iou(gt_seg_mask_struct, proposal):
     img_mask = np.zeros((img_h, img_w), dtype=np.uint8)
     proposal_mask = np.ones((h, w), dtype=np.uint8)
     proposal_mask = paste_rotated_roi_in_image(img_mask, proposal_mask, proposal)
-    gt_mask = gt_seg_mask_struct.get_mask_tensor().numpy().astype(np.uint8)
     proposal_mask = gt_mask * proposal_mask
 
-    ''' 
-    #type 1
-    gt_img_mask = gt_seg_mask_for_maskratio.convert(mode='mask')    
-    gt_img_mask_area = gt_img_mask.sum().float()
-    gt_box_mask = gt_img_mask[int(proposal[1]-y1):int(proposal[3]-y1)+1, int(proposal[0]-x1):int(proposal[2]-x1)+1]
-    gt_box_mask_area = gt_box_mask.sum().float()
-    mask_ratio = gt_box_mask_area / gt_img_mask_area
-    '''
-    # type 2
-    rle_for_fullarea = mask_util.encode(np.asfortranarray(gt_mask))
-    rle_for_box_area = mask_util.encode(np.asfortranarray(proposal_mask))
-
-    full_area = mask_util.area(rle_for_fullarea).sum().astype(float)
-    box_area = mask_util.area(rle_for_box_area).sum().astype(float)
-    mask_iou = box_area / full_area
+    full_area = np.sum(gt_mask == 1)
+    box_area = np.sum(proposal_mask == 1)
+    mask_iou = float(box_area) / full_area
+    # rle_for_fullarea = mask_util.encode(np.asfortranarray(gt_mask))
+    # rle_for_box_area = mask_util.encode(np.asfortranarray(proposal_mask))
+    # full_area = mask_util.area(rle_for_fullarea).sum().astype(float)
+    # box_area = mask_util.area(rle_for_box_area).sum().astype(float)
+    # mask_iou = box_area / full_area
 
     return mask_iou
 
@@ -88,15 +79,15 @@ def project_masks_on_boxes(segmentation_masks, proposals, discretization_size, m
     for segmentation_mask, proposal in zip(segmentation_masks, proposals):
         # crop the masks, resize them to the desired resolution and
         # then convert them to the tensor representation.
-        bin_mask = segmentation_mask.get_mask_tensor().numpy()
-        # vis_mask(bin_mask * 255, proposal.numpy())
+        gt_mask = segmentation_mask.get_mask_tensor().numpy()
+        # vis_mask(gt_mask * 255, proposal.numpy())
 
         roi = proposal.numpy()
         if np.any(np.isnan(roi)) or np.any(np.isinf(roi)) or roi[2] <= 0 or roi[3] <= 0:
             scaled_mask = np.zeros((M, M), dtype=np.float32)
         else:
             # crop the mask from the ROI and rotate to make it axis-aligned
-            cropped_mask = crop_min_area_rect(bin_mask, roi)
+            cropped_mask = crop_min_area_rect(gt_mask, roi)
             scaled_mask = cv2.resize(cropped_mask.astype(np.float32), (M, M))  # bilinear by default
             scaled_mask[scaled_mask < 0.5] = 0
             scaled_mask[scaled_mask >= 0.5] = 1
@@ -105,7 +96,7 @@ def project_masks_on_boxes(segmentation_masks, proposals, discretization_size, m
         masks.append(mask)
 
         if maskiou_on:
-            mask_ratio = compute_rotated_proposal_gt_iou(segmentation_mask, proposal)
+            mask_ratio = compute_rotated_proposal_gt_iou(gt_mask, proposal)
             mask_ratio = torch.tensor(mask_ratio)
             mask_ratios.append(mask_ratio)
 

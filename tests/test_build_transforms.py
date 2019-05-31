@@ -81,6 +81,7 @@ if __name__ == '__main__':
 
             for ix, label in enumerate(labels):
                 seg_mask = m_field[ix]
+                sm = seg_mask.get_mask_tensor().numpy()
                 p = m_field.instances.polygons[ix]
                 m = p.convert_to_binarymask()
                 # visualize_mask(m.numpy())
@@ -97,7 +98,7 @@ if __name__ == '__main__':
 
                     import time
                     t = time.time()
-                    print(compute_rotated_proposal_gt_iou(seg_mask, proposal))
+                    print(compute_rotated_proposal_gt_iou(sm, proposal))
                     # print((time.time() - t))
                 else:
                     bbox = bboxes[ix]
