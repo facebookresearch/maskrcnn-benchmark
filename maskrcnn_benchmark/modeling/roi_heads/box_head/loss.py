@@ -7,7 +7,8 @@ from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 from maskrcnn_benchmark.modeling.matcher import Matcher
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 from maskrcnn_benchmark.modeling.balanced_positive_negative_sampler import (
-    BalancedPositiveNegativeSampler
+    BalancedPositiveNegativeSampler,
+    OhemPositiveNegativeSampler
 )
 from maskrcnn_benchmark.modeling.utils import cat
 
@@ -19,21 +20,23 @@ class FastRCNNLossComputation(object):
     """
 
     def __init__(
-        self, 
-        proposal_matcher, 
-        fg_bg_sampler, 
-        box_coder, 
+        self,
+        proposal_matcher,
+        fg_bg_sampler,
+        box_coder,
+        batch_size_per_image,
         cls_agnostic_bbox_reg=False
     ):
         """
         Arguments:
             proposal_matcher (Matcher)
-            fg_bg_sampler (BalancedPositiveNegativeSampler)
+            fg_bg_sampler (BalancedPositiveNegativeSampler, or OhemPositiveNegativeSampler)
             box_coder (BoxCoder)
         """
         self.proposal_matcher = proposal_matcher
         self.fg_bg_sampler = fg_bg_sampler
         self.box_coder = box_coder
+        self.batch_size_per_image = batch_size_per_image
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
 
     def match_targets_to_proposals(self, proposal, target):
@@ -105,15 +108,78 @@ class FastRCNNLossComputation(object):
 
         # distributed sampled proposals, that were obtained on all feature maps
         # concatenated via the fg_bg_sampler, into individual feature map levels
+        self.n_proposals_per_img = []
         for img_idx, (pos_inds_img, neg_inds_img) in enumerate(
             zip(sampled_pos_inds, sampled_neg_inds)
         ):
             img_sampled_inds = torch.nonzero(pos_inds_img | neg_inds_img).squeeze(1)
             proposals_per_image = proposals[img_idx][img_sampled_inds]
+            self.n_proposals_per_img.append(len(proposals_per_image))
             proposals[img_idx] = proposals_per_image
 
         self._proposals = proposals
         return proposals
+
+    def mining(self, class_logits, box_regression):
+        """
+        Similiar role as sumsample(), but return the rois with top loss.
+
+        Arguments:
+            class_logits (list[Tensor])
+            box_regression (list[Tensor])
+
+        Returns:
+            proposals (list[BoxList])
+        """
+
+        class_logits = cat(class_logits, dim=0)
+        box_regression = cat(box_regression, dim=0)
+        device = class_logits.device
+
+        if not hasattr(self, "_proposals"):
+            raise RuntimeError("subsample needs to be called before")
+
+        proposals = self._proposals
+
+        labels = cat([proposal.get_field("labels") for proposal in proposals], dim=0)
+        regression_targets = cat(
+            [proposal.get_field("regression_targets") for proposal in proposals], dim=0
+        )
+
+        classification_loss = F.cross_entropy(class_logits, labels, reduction='none')
+
+        # get indices that correspond to the regression targets for
+        # the corresponding ground truth labels, to be used with
+        # advanced indexing
+        sampled_pos_inds_subset = torch.nonzero(labels > 0).squeeze(1)
+        labels_pos = labels[sampled_pos_inds_subset]
+        if self.cls_agnostic_bbox_reg:
+            map_inds = torch.tensor([4, 5, 6, 7], device=device)
+        else:
+            map_inds = 4 * labels_pos[:, None] + torch.tensor(
+                [0, 1, 2, 3], device=device)
+
+        box_loss = smooth_l1_loss(
+            box_regression[sampled_pos_inds_subset[:, None], map_inds],
+            regression_targets[sampled_pos_inds_subset],
+            reduction='none',
+            beta=1,
+        ).sum(dim=1, keepdim=True)
+        ohem_loss = classification_loss.clone()
+        ohem_loss[sampled_pos_inds_subset[:, None]] = ohem_loss[sampled_pos_inds_subset[:, None]] + box_loss
+        if ohem_loss.size(0) > self.batch_size_per_image:
+            ohem_idx = ohem_loss.topk(self.batch_size_per_image)[1].cpu()
+            lengs = [0,] + self.n_proposals_per_img
+            milestones = torch.cumsum(torch.tensor(lengs), dim=0)
+            ms1 = milestones[:-1]
+            ms2 = milestones[1:]
+            ohem_idx = ohem_idx.sort()[0]
+            lengs = [torch.sum((el1 <= ohem_idx)*(ohem_idx < el2)) for el1, el2 in zip(ms1, ms2)]
+            ohem_idx = ohem_idx.split(lengs)
+            ohem_idx = [el-ms1[i] for i, el in enumerate(ohem_idx)]
+            self._proposals = [proposals[i][el] for i, el in enumerate(ohem_idx)]
+
+        return self._proposals
 
     def __call__(self, class_logits, box_regression):
         """
@@ -159,7 +225,7 @@ class FastRCNNLossComputation(object):
         box_loss = smooth_l1_loss(
             box_regression[sampled_pos_inds_subset[:, None], map_inds],
             regression_targets[sampled_pos_inds_subset],
-            size_average=False,
+            reduction='sum',
             beta=1,
         )
         box_loss = box_loss / labels.numel()
@@ -177,16 +243,21 @@ def make_roi_box_loss_evaluator(cfg):
     bbox_reg_weights = cfg.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS
     box_coder = BoxCoder(weights=bbox_reg_weights)
 
-    fg_bg_sampler = BalancedPositiveNegativeSampler(
-        cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE, cfg.MODEL.ROI_HEADS.POSITIVE_FRACTION
-    )
+    if cfg.MODEL.ROI_HEADS.OHEM:
+        fg_bg_sampler = OhemPositiveNegativeSampler()
+    else:
+        fg_bg_sampler = BalancedPositiveNegativeSampler(
+            cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE,
+            cfg.MODEL.ROI_HEADS.POSITIVE_FRACTION
+        )
 
     cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
 
     loss_evaluator = FastRCNNLossComputation(
-        matcher, 
-        fg_bg_sampler, 
-        box_coder, 
+        matcher,
+        fg_bg_sampler,
+        box_coder,
+        cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE,
         cls_agnostic_bbox_reg
     )
 
