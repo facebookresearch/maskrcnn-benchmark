@@ -36,6 +36,11 @@ _C.MODEL.MASKIOU_ON = False
 # the path in paths_catalog. Else, it will use it as the specified absolute
 # path
 _C.MODEL.WEIGHT = ""
+# If True, load optimizer parameters (if it exists) from weight file
+_C.MODEL.WEIGHT_LOAD_OPTIMIZER = True
+# If True, load scheduler parameters (if it exists) from weight file
+# Otherwise, also resets training iteration to 0
+_C.MODEL.WEIGHT_LOAD_SCHEDULER = True
 
 
 # -----------------------------------------------------------------------------
@@ -454,6 +459,7 @@ _C.MODEL.FBNET.RPN_BN_TYPE = ""
 # ---------------------------------------------------------------------------- #
 _C.SOLVER = CN()
 _C.SOLVER.MAX_ITER = 40000
+# Currently supports "Adam" or "SGD"
 _C.SOLVER.OPTIMIZER = "SGD"
 
 _C.SOLVER.BASE_LR = 0.001

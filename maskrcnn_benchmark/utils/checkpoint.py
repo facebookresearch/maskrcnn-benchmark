@@ -49,7 +49,7 @@ class Checkpointer(object):
         torch.save(data, save_file)
         self.tag_last_checkpoint(save_file)
 
-    def load(self, f=None):
+    def load(self, f=None, load_optimizer=True, load_scheduler=True):
         if self.has_checkpoint():
             # override argument with existing checkpoint
             f = self.get_checkpoint_file()
@@ -60,6 +60,15 @@ class Checkpointer(object):
         self.logger.info("Loading checkpoint from {}".format(f))
         checkpoint = self._load_file(f)
         self._load_model(checkpoint)
+
+        if not load_optimizer:
+            del checkpoint["optimizer"]
+            self.logger.info("Not loading optimizer parameters from checkpoint")
+        if not load_scheduler:
+            del checkpoint["scheduler"]
+            checkpoint["iteration"] = 0
+            self.logger.info("Not loading scheduler parameters from checkpoint")
+
         if "optimizer" in checkpoint and self.optimizer:
             self.logger.info("Loading optimizer from {}".format(f))
             self.optimizer.load_state_dict(checkpoint.pop("optimizer"))
