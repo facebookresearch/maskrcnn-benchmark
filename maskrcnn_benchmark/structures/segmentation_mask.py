@@ -3,9 +3,7 @@ import copy
 import torch
 import numpy as np
 from maskrcnn_benchmark.layers.misc import interpolate
-
-CV2_MAJOR_VERSION = int(cv2.__version__.split(".")[0])
-
+from maskrcnn_benchmark.utils import cv2_util
 import pycocotools.mask as mask_utils
 
 # transpose
@@ -150,11 +148,9 @@ class BinaryMaskList(object):
         masks = self.masks.detach().numpy()
         for mask in masks:
             mask = cv2.UMat(mask)
-
-            out = cv2.findContours(
-                    mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1
+            contour, hierarchy = cv2_util.findContours(
+                mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1
             )
-            contour = out[1] if CV2_MAJOR_VERSION == 3 else out[0]
 
             reshaped_contour = []
             for entity in contour:

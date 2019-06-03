@@ -114,12 +114,12 @@ def interpolate(
 class DFConv2d(nn.Module):
     """Deformable convolutional layer"""
     def __init__(
-        self, 
-        in_channels, 
-        out_channels, 
-        with_modulated_dcn=True, 
-        kernel_size=3, 
-        stride=1, 
+        self,
+        in_channels,
+        out_channels,
+        with_modulated_dcn=True,
+        kernel_size=3,
+        stride=1,
         groups=1,
         dilation=1,
         deformable_groups=1,
@@ -156,7 +156,7 @@ class DFConv2d(nn.Module):
             padding=padding,
             groups=1,
             dilation=dilation
-        )           
+        )
         for l in [self.offset,]:
             nn.init.kaiming_uniform_(l.weight, a=1)
             torch.nn.init.constant_(l.bias, 0.)
@@ -192,10 +192,10 @@ class DFConv2d(nn.Module):
         output_shape = [
             (i + 2 * p - (di * (k - 1) + 1)) // d + 1
             for i, p, di, k, d in zip(
-                x.shape[-2:], 
-                self.padding, 
-                self.dilation, 
-                self.kernel_size, 
+                x.shape[-2:],
+                self.padding,
+                self.dilation,
+                self.kernel_size,
                 self.stride
             )
         ]
