@@ -39,18 +39,18 @@ class DeformRoIPoolingFunction(Function):
         output = data.new_empty(n, out_channels, out_size, out_size)
         output_count = data.new_empty(n, out_channels, out_size, out_size)
         _C.deform_psroi_pooling_forward(
-            data, 
-            rois, 
-            offset, 
-            output, 
-            output_count, 
+            data,
+            rois,
+            offset,
+            output,
+            output_count,
             ctx.no_trans,
-            ctx.spatial_scale, 
-            ctx.out_channels, 
-            ctx.group_size, 
+            ctx.spatial_scale,
+            ctx.out_channels,
+            ctx.group_size,
             ctx.out_size,
-            ctx.part_size, 
-            ctx.sample_per_part, 
+            ctx.part_size,
+            ctx.sample_per_part,
             ctx.trans_std
         )
 
@@ -73,19 +73,19 @@ class DeformRoIPoolingFunction(Function):
         grad_offset = torch.zeros_like(offset)
 
         _C.deform_psroi_pooling_backward(
-            grad_output, 
-            data, 
-            rois, 
-            offset, 
-            output_count, 
+            grad_output,
+            data,
+            rois,
+            offset,
+            output_count,
             grad_input,
-            grad_offset, 
-            ctx.no_trans, 
-            ctx.spatial_scale, 
+            grad_offset,
+            ctx.no_trans,
+            ctx.spatial_scale,
             ctx.out_channels,
-            ctx.group_size, 
-            ctx.out_size, 
-            ctx.part_size, 
+            ctx.group_size,
+            ctx.out_size,
+            ctx.part_size,
             ctx.sample_per_part,
             ctx.trans_std
         )
