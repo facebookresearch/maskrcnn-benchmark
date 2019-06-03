@@ -3,7 +3,7 @@ import copy
 import torch
 import numpy as np
 from maskrcnn_benchmark.layers.misc import interpolate
-
+from maskrcnn_benchmark.utils import cv2_util
 import pycocotools.mask as mask_utils
 
 # transpose
@@ -148,7 +148,7 @@ class BinaryMaskList(object):
         masks = self.masks.detach().numpy()
         for mask in masks:
             mask = cv2.UMat(mask)
-            contour, hierarchy = cv2.findContours(
+            contour, hierarchy = cv2_util.findContours(
                 mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1
             )
 
