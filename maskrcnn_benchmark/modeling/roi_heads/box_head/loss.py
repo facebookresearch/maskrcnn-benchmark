@@ -19,10 +19,10 @@ class FastRCNNLossComputation(object):
     """
 
     def __init__(
-        self, 
-        proposal_matcher, 
-        fg_bg_sampler, 
-        box_coder, 
+        self,
+        proposal_matcher,
+        fg_bg_sampler,
+        box_coder,
         cls_agnostic_bbox_reg=False
     ):
         """
@@ -36,26 +36,13 @@ class FastRCNNLossComputation(object):
         self.box_coder = box_coder
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
 
-    def match_targets_to_proposals(self, proposal, target):
-        match_quality_matrix = boxlist_iou(target, proposal)
-        matched_idxs = self.proposal_matcher(match_quality_matrix)
-        # Fast RCNN only need "labels" field for selecting the targets
-        target = target.copy_with_fields("labels")
-        # get the targets corresponding GT for each proposal
-        # NB: need to clamp the indices because we can have a single
-        # GT in the image, and matched_idxs can be -2, which goes
-        # out of bounds
-        matched_targets = target[matched_idxs.clamp(min=0)]
-        matched_targets.add_field("matched_idxs", matched_idxs)
-        return matched_targets
 
     def prepare_targets(self, proposals, targets):
         labels = []
         regression_targets = []
         for proposals_per_image, targets_per_image in zip(proposals, targets):
-            matched_targets = self.match_targets_to_proposals(
-                proposals_per_image, targets_per_image
-            )
+            matched_targets = self.proposal_matcher.match_targets_to_proposals(
+                proposals_per_image, targets_per_image, copied_fields=["labels"])
             matched_idxs = matched_targets.get_field("matched_idxs")
 
             labels_per_image = matched_targets.get_field("labels")
@@ -184,9 +171,9 @@ def make_roi_box_loss_evaluator(cfg):
     cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
 
     loss_evaluator = FastRCNNLossComputation(
-        matcher, 
-        fg_bg_sampler, 
-        box_coder, 
+        matcher,
+        fg_bg_sampler,
+        box_coder,
         cls_agnostic_bbox_reg
     )
 

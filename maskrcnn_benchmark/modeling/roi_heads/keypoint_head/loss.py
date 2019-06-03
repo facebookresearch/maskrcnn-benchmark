@@ -63,26 +63,15 @@ class KeypointRCNNLossComputation(object):
         self.fg_bg_sampler = fg_bg_sampler
         self.discretization_size = discretization_size
 
-    def match_targets_to_proposals(self, proposal, target):
-        match_quality_matrix = boxlist_iou(target, proposal)
-        matched_idxs = self.proposal_matcher(match_quality_matrix)
-        # Keypoint RCNN needs "labels" and "keypoints "fields for creating the targets
-        target = target.copy_with_fields(["labels", "keypoints"])
-        # get the targets corresponding GT for each proposal
-        # NB: need to clamp the indices because we can have a single
-        # GT in the image, and matched_idxs can be -2, which goes
-        # out of bounds
-        matched_targets = target[matched_idxs.clamp(min=0)]
-        matched_targets.add_field("matched_idxs", matched_idxs)
-        return matched_targets
 
     def prepare_targets(self, proposals, targets):
         labels = []
         keypoints = []
         for proposals_per_image, targets_per_image in zip(proposals, targets):
-            matched_targets = self.match_targets_to_proposals(
-                proposals_per_image, targets_per_image
-            )
+            matched_targets = self.proposal_matcher.match_targets_to_proposals(
+                proposals_per_image,
+                targets_per_image,
+                copied_fields=["labels", "keypoints"])
             matched_idxs = matched_targets.get_field("matched_idxs")
 
             labels_per_image = matched_targets.get_field("labels")

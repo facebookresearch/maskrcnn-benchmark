@@ -52,26 +52,15 @@ class MaskRCNNLossComputation(object):
         self.proposal_matcher = proposal_matcher
         self.discretization_size = discretization_size
 
-    def match_targets_to_proposals(self, proposal, target):
-        match_quality_matrix = boxlist_iou(target, proposal)
-        matched_idxs = self.proposal_matcher(match_quality_matrix)
-        # Mask RCNN needs "labels" and "masks "fields for creating the targets
-        target = target.copy_with_fields(["labels", "masks"])
-        # get the targets corresponding GT for each proposal
-        # NB: need to clamp the indices because we can have a single
-        # GT in the image, and matched_idxs can be -2, which goes
-        # out of bounds
-        matched_targets = target[matched_idxs.clamp(min=0)]
-        matched_targets.add_field("matched_idxs", matched_idxs)
-        return matched_targets
 
     def prepare_targets(self, proposals, targets):
         labels = []
         masks = []
         for proposals_per_image, targets_per_image in zip(proposals, targets):
-            matched_targets = self.match_targets_to_proposals(
-                proposals_per_image, targets_per_image
-            )
+            matched_targets = self.proposal_matcher.match_targets_to_proposals(
+                proposals_per_image,
+                targets_per_image,
+                copied_fields=["labels", "masks"])
             matched_idxs = matched_targets.get_field("matched_idxs")
 
             labels_per_image = matched_targets.get_field("labels")
@@ -84,16 +73,19 @@ class MaskRCNNLossComputation(object):
 
             # mask scores are only computed on positive samples
             positive_inds = torch.nonzero(labels_per_image > 0).squeeze(1)
+            if positive_inds.numel():
+                segmentation_masks = matched_targets.get_field("masks")
+                segmentation_masks = segmentation_masks[positive_inds]
 
-            segmentation_masks = matched_targets.get_field("masks")
-            segmentation_masks = segmentation_masks[positive_inds]
+                positive_proposals = proposals_per_image[positive_inds]
 
-            positive_proposals = proposals_per_image[positive_inds]
-
-            masks_per_image = project_masks_on_boxes(
-                segmentation_masks, positive_proposals, self.discretization_size
-            )
-
+                masks_per_image = project_masks_on_boxes(
+                    segmentation_masks, positive_proposals, self.discretization_size
+                )
+            else:
+                # adding empty tensor with 0 elements
+                masks_per_image = torch.empty(
+                    0, dtype=torch.float32, device=labels_per_image.device)
             labels.append(labels_per_image)
             masks.append(masks_per_image)
 
@@ -116,15 +108,17 @@ class MaskRCNNLossComputation(object):
 
         positive_inds = torch.nonzero(labels > 0).squeeze(1)
         labels_pos = labels[positive_inds]
-
         # torch.mean (in binary_cross_entropy_with_logits) doesn't
         # accept empty tensors, so handle it separately
         if mask_targets.numel() == 0:
-            return mask_logits.sum() * 0
-
-        mask_loss = F.binary_cross_entropy_with_logits(
-            mask_logits[positive_inds, labels_pos], mask_targets
-        )
+            # it seems
+            mask_loss = mask_logits.sum() * 0
+            # mask_loss = F.binary_cross_entropy_with_logits(
+            #     mask_logits, mask_logits) * 0
+        else:
+            mask_loss = F.binary_cross_entropy_with_logits(
+                mask_logits[positive_inds, labels_pos], mask_targets
+            )
         return mask_loss
 
 

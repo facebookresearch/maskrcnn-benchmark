@@ -5,7 +5,6 @@ from .roi_keypoint_predictors import make_roi_keypoint_predictor
 from .inference import make_roi_keypoint_post_processor
 from .loss import make_roi_keypoint_loss_evaluator
 
-
 class ROIKeypointHead(torch.nn.Module):
     def __init__(self, cfg, in_channels):
         super(ROIKeypointHead, self).__init__()
@@ -34,7 +33,10 @@ class ROIKeypointHead(torch.nn.Module):
         if self.training:
             with torch.no_grad():
                 proposals = self.loss_evaluator.subsample(proposals, targets)
-
+            if all(len(proposal) < 1 for proposal in proposals):
+                # adding a fake proposal so all gpus would undergo the same computations
+                proposal = proposals[0]
+                proposal.bbox = proposal.bbox.new([[0, 0, 10, 10]])
         x = self.feature_extractor(features, proposals)
         kp_logits = self.predictor(x)
 
