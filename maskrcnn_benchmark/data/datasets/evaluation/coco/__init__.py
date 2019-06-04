@@ -2,6 +2,7 @@ from .coco_eval import do_coco_evaluation as do_orig_coco_evaluation
 from .coco_eval_wrapper import do_coco_evaluation as do_wrapped_coco_evaluation
 from maskrcnn_benchmark.data.datasets import AbstractDataset, COCODataset
 
+
 def coco_evaluation(
     dataset,
     predictions,
@@ -32,8 +33,10 @@ def coco_evaluation(
             expected_results_sigma_tol=expected_results_sigma_tol,
         )
     else:
-        raise NotImplementedError((
-            "Ground truth dataset is not a COCODataset, "
-            "nor it is derived from AbstractDataset: type(dataset)="
-            "%s" % type(dataset)
-        ))
+        raise NotImplementedError(
+            (
+                "Ground truth dataset is not a COCODataset, "
+                "nor it is derived from AbstractDataset: type(dataset)="
+                "%s" % type(dataset)
+            )
+        )

@@ -81,7 +81,13 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
 
         if anno and "segmentation" in anno[0]:
             masks = [obj["segmentation"] for obj in anno]
-            masks = SegmentationMask(masks, img.size, mode='poly')
+            # TODO: Remove before merging
+            # This is added only for compatibility with RLE annotations
+            # Original COCO annotations support RLEs but contain polygons
+            if isinstance(masks[0], (list, tuple)):
+                masks = SegmentationMask(masks, img.size, mode="poly")
+            else:
+                masks = SegmentationMask(masks, img.size, mode="mask")
             target.add_field("masks", masks)
 
         if anno and "keypoints" in anno[0]:
