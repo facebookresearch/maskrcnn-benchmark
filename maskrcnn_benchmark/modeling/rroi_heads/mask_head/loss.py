@@ -7,8 +7,8 @@ import cv2
 
 from maskrcnn_benchmark.modeling.matcher import Matcher
 # from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
-from maskrcnn_benchmark.modeling.rotate_ops import rotate_iou, crop_min_area_rect, paste_rotated_roi_in_image
-# from maskrcnn_benchmark.modeling.rrpn.anchor_generator import convert_rect_to_pts, get_bounding_box
+from maskrcnn_benchmark.modeling.rotate_ops import rotate_iou, crop_min_area_rect#, paste_rotated_roi_in_image
+from maskrcnn_benchmark.modeling.rrpn.anchor_generator import convert_rect_to_pts#, get_bounding_box
 from maskrcnn_benchmark.modeling.rrpn.utils import get_boxlist_rotated_rect_tensor
 from maskrcnn_benchmark.modeling.roi_heads.mask_head.loss import compute_mask_iou_targets
 
@@ -27,6 +27,14 @@ from maskrcnn_benchmark.modeling.utils import cat
 #     cv2.imshow("cropped", cropped)
 #     cv2.waitKey(0)
 
+def mask_rotated_roi_in_image(image, roi, mask_value):
+    assert len(roi) == 5  # xc yc w h angle
+
+    rect_pts = np.round(convert_rect_to_pts(roi)).astype(np.int32)
+    mask = cv2.fillConvexPoly(image, rect_pts, mask_value)
+
+    return mask
+
 def compute_rotated_proposal_gt_iou(gt_mask, proposal):
     img_h, img_w = gt_mask.shape[:2]
 
@@ -36,18 +44,14 @@ def compute_rotated_proposal_gt_iou(gt_mask, proposal):
     if h <= 0 or w <= 0:
         return 0.0
     img_mask = np.zeros((img_h, img_w), dtype=np.uint8)
-    proposal_mask = np.ones((h, w), dtype=np.uint8)
-    proposal_mask = paste_rotated_roi_in_image(img_mask, proposal_mask, proposal)
+    proposal_mask = mask_rotated_roi_in_image(img_mask, proposal, 1)
+    # proposal_mask = np.ones((h, w), dtype=np.uint8)
+    # proposal_mask = paste_rotated_roi_in_image(img_mask, proposal_mask, proposal)
     proposal_mask = gt_mask * proposal_mask
 
     full_area = np.sum(gt_mask == 1)
     box_area = np.sum(proposal_mask == 1)
     mask_iou = float(box_area) / full_area
-    # rle_for_fullarea = mask_util.encode(np.asfortranarray(gt_mask))
-    # rle_for_box_area = mask_util.encode(np.asfortranarray(proposal_mask))
-    # full_area = mask_util.area(rle_for_fullarea).sum().astype(float)
-    # box_area = mask_util.area(rle_for_box_area).sum().astype(float)
-    # mask_iou = box_area / full_area
 
     return mask_iou
 
