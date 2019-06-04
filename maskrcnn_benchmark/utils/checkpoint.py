@@ -61,20 +61,22 @@ class Checkpointer(object):
         checkpoint = self._load_file(f)
         self._load_model(checkpoint)
 
-        if not load_optimizer:
-            del checkpoint["optimizer"]
-            self.logger.info("Not loading optimizer parameters from checkpoint")
-        if not load_scheduler:
-            del checkpoint["scheduler"]
-            checkpoint["iteration"] = 0
-            self.logger.info("Not loading scheduler parameters from checkpoint")
-
         if "optimizer" in checkpoint and self.optimizer:
-            self.logger.info("Loading optimizer from {}".format(f))
-            self.optimizer.load_state_dict(checkpoint.pop("optimizer"))
+            if not load_optimizer:
+                del checkpoint["optimizer"]
+                self.logger.info("Not loading optimizer parameters from checkpoint")
+            else:
+                self.logger.info("Loading optimizer from {}".format(f))
+                self.optimizer.load_state_dict(checkpoint.pop("optimizer"))
+
         if "scheduler" in checkpoint and self.scheduler:
-            self.logger.info("Loading scheduler from {}".format(f))
-            self.scheduler.load_state_dict(checkpoint.pop("scheduler"))
+            if not load_scheduler:
+                del checkpoint["scheduler"]
+                checkpoint["iteration"] = 0
+                self.logger.info("Not loading scheduler parameters from checkpoint")
+            else:
+                self.logger.info("Loading scheduler from {}".format(f))
+                self.scheduler.load_state_dict(checkpoint.pop("scheduler"))
 
         # return any further checkpoint data
         return checkpoint
