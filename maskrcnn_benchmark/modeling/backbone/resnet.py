@@ -288,11 +288,11 @@ class Bottleneck(nn.Module):
             deformable_groups = dcn_config.get("deformable_groups", 1)
             with_modulated_dcn = dcn_config.get("with_modulated_dcn", False)
             self.conv2 = DFConv2d(
-                bottleneck_channels, 
-                bottleneck_channels, 
-                with_modulated_dcn=with_modulated_dcn, 
-                kernel_size=3, 
-                stride=stride_3x3, 
+                bottleneck_channels,
+                bottleneck_channels,
+                with_modulated_dcn=with_modulated_dcn,
+                kernel_size=3,
+                stride=stride_3x3,
                 groups=num_groups,
                 dilation=dilation,
                 deformable_groups=deformable_groups,
@@ -332,8 +332,8 @@ class Bottleneck(nn.Module):
         out = self.bn2(out)
         out = F.relu_(out)
 
-        out0 = self.conv3(out)
-        out = self.bn3(out0)
+        out = self.conv3(out)
+        out = self.bn3(out)
 
         if self.downsample is not None:
             identity = self.downsample(x)
