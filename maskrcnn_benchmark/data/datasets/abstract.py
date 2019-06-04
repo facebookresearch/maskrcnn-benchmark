@@ -3,6 +3,7 @@
 
 import torch
 
+
 class AbstractDataset(torch.utils.data.Dataset):
     """
     Serves as a common interface to reduce boilerplate and help dataset
@@ -40,10 +41,8 @@ class AbstractDataset(torch.utils.data.Dataset):
         self.ccid_to_classid = None
         self.ccid_to_name = None
 
-        
     def __getitem__(self, idx):
         raise NotImplementedError
-
 
     def initMaps(self):
         """
@@ -68,13 +67,12 @@ class AbstractDataset(torch.utils.data.Dataset):
 
         assert self.classid_to_name is not None
         self.classid_to_ccid = {
-            classid: ccid 
+            classid: ccid
             for ccid, classid in enumerate(self.classid_to_name.keys(), 1)
         }
 
         self.name_to_classid = {
-            name: classid
-            for classid, name in self.classid_to_name.items()
+            name: classid for classid, name in self.classid_to_name.items()
         }
         self.name_to_ccid = {
             name: self.classid_to_ccid[classid]
@@ -82,18 +80,14 @@ class AbstractDataset(torch.utils.data.Dataset):
         }
 
         self.ccid_to_classid = {
-            ccid: classid 
-            for classid, ccid in self.classid_to_ccid.items()
+            ccid: classid for classid, ccid in self.classid_to_ccid.items()
         }
         self.ccid_to_name = {
-            ccid: name
-            for name, ccid in self.name_to_ccid.items()
+            ccid: name for name, ccid in self.name_to_ccid.items()
         }
-
 
     def get_img_info(self, index):
         raise NotImplementedError
-
 
     def __len__(self):
         raise NotImplementedError
