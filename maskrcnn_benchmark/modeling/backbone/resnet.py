@@ -332,8 +332,8 @@ class Bottleneck(nn.Module):
         out = self.bn2(out)
         out = F.relu_(out)
 
-        out0 = self.conv3(out)
-        out = self.bn3(out0)
+        out = self.conv3(out)
+        out = self.bn3(out)
 
         if self.downsample is not None:
             identity = self.downsample(x)
