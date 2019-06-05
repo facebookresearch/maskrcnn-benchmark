@@ -85,9 +85,25 @@ class Matcher(object):
         # For each gt, find the prediction with which it has highest quality
         highest_quality_foreach_gt, _ = match_quality_matrix.max(dim=1)
         # Find highest quality match available, even if it is low, including ties
-        gt_pred_pairs_of_highest_quality = torch.nonzero(
-            match_quality_matrix == highest_quality_foreach_gt[:, None]
-        )
+
+        # computation of gt_pred_pairs_of_highest_quality (N x 2), specifically
+        # match_quality_matrix == highest_quality_foreach_gt, results in
+        # another N x M matrix, which can lead to CUDA out of memory error if N is large
+        # Strategy is to split N into batches, capped at MAX_PER_BATCH
+        device = match_quality_matrix.device
+        total_gt = len(highest_quality_foreach_gt)
+        MAX_PER_BATCH = 50
+
+        gt_pred_pairs_of_highest_quality = torch.empty((0, 2), device=device, dtype=torch.int64)
+        for i in range(total_gt // MAX_PER_BATCH + 1):
+            start_x = i * MAX_PER_BATCH
+            end_x = min((i+1) * MAX_PER_BATCH, total_gt)
+            gt_pred_pairs_of_highest_quality = torch.cat((
+                gt_pred_pairs_of_highest_quality,
+                torch.nonzero(
+                    match_quality_matrix[start_x:end_x] == highest_quality_foreach_gt[start_x:end_x, None]
+                )
+            ))
         # Example gt_pred_pairs_of_highest_quality:
         #   tensor([[    0, 39796],
         #           [    1, 32055],
