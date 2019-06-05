@@ -135,6 +135,7 @@ class COCODemo(object):
         show_mask_heatmaps=False,
         masks_per_dim=2,
         min_image_size=224,
+        weight_loading = None
     ):
         self.cfg = cfg.clone()
         self.model = build_detection_model(cfg)
@@ -146,7 +147,11 @@ class COCODemo(object):
         save_dir = cfg.OUTPUT_DIR
         checkpointer = DetectronCheckpointer(cfg, self.model, save_dir=save_dir)
         _ = checkpointer.load(cfg.MODEL.WEIGHT)
-
+        
+        if weight_loading:
+            print('Loading weight from {}.'.format(weight_loading))
+            _ = checkpointer._load_model(torch.load(weight_loading))
+        
         self.transforms = self.build_transform()
 
         mask_threshold = -1 if show_mask_heatmaps else 0.5
