@@ -23,7 +23,7 @@ from maskrcnn_benchmark.utils.collect_env import collect_env_info
 from maskrcnn_benchmark.utils.comm import synchronize, get_rank
 from maskrcnn_benchmark.utils.imports import import_file
 from maskrcnn_benchmark.utils.logger import setup_logger
-from maskrcnn_benchmark.utils.miscellaneous import mkdir
+from maskrcnn_benchmark.utils.miscellaneous import mkdir, save_config
 
 # See if we can use apex.DistributedDataParallel instead of the torch default,
 # and enable mixed-precision via apex.amp
@@ -175,6 +175,11 @@ def main():
         config_str = "\n" + cf.read()
         logger.info(config_str)
     logger.info("Running with config:\n{}".format(cfg))
+
+    output_config_path = os.path.join(cfg.OUTPUT_DIR, 'config.yml')
+    logger.info("Saving config into: {}".format(output_config_path))
+    # save overloaded model config in the output directory
+    save_config(cfg, output_config_path)
 
     model = train(cfg, args.local_rank, args.distributed)
 
