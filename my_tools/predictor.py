@@ -119,12 +119,18 @@ def load_model(model, f):
 
 
 class Predictor(object):
-    def __init__(self, config_file, min_score=0.8, device="cuda"):
+    def __init__(self, config_file, min_score=0.8, mask_thresh=0.5, device="cuda"):
+        """
+        mask_thresh: [0,1] or None. 
+        If value is [0,1], performs binary thresh
+        If value is None, ignore binary thresholding
+        """
         
         cfg.merge_from_file(config_file)
 
         self.cfg = cfg
         self.min_score = min_score
+        self.mask_thresh = mask_thresh
 
         self.device = device
         self.cpu_device = torch.device("cpu")
@@ -165,7 +171,7 @@ class Predictor(object):
             for ix in range(N):
                 box = boxes[ix]
                 if not is_pp_mask:
-                    mask = paste_mask_on_image(masks[ix], box, img_height, img_width, thresh=0.5, rotated=rotated)
+                    mask = paste_mask_on_image(masks[ix], box, img_height, img_width, thresh=self.mask_thresh, rotated=rotated)
                 else:
                     mask = cv2.resize(masks[ix], (img_width, img_height))
 

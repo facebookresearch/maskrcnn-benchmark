@@ -57,7 +57,7 @@ def do_train(
     for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
         
         if any(len(target) < 1 for target in targets):
-            logger.error(f"Iteration={iteration + 1} || Image Ids used for training {_} || targets Length={[len(target) for target in targets]}" )
+            logger.error("Iteration=%d || Image Ids used for training %s || targets Length=%s"%(iteration + 1, _, [len(target) for target in targets]) )
             continue
         data_time = time.time() - end
         iteration = iteration + 1
