@@ -35,9 +35,9 @@ class ResNet50Conv5ROIFeatureExtractor(nn.Module):
         self.out_channels = head.out_channels
 
     def forward(self, x, proposals):
-        x = self.pooler(x, proposals)
-        x = self.head(x)
-        return x
+        roi_feature = self.pooler(x, proposals)
+        x = self.head(roi_feature)
+        return x, roi_feature
 
 
 @registry.ROI_BOX_FEATURE_EXTRACTORS.register("FPN2MLPFeatureExtractor")
@@ -62,12 +62,14 @@ class FPN2MLPFeatureExtractor(nn.Module):
 
     def forward(self, x, proposals):
         x = self.pooler(x, proposals)
+        roi_feature = x
+
         x = x.view(x.size(0), -1)
 
         x = F.relu(self.fc6(x))
         x = F.relu(self.fc7(x))
 
-        return x
+        return x, roi_feature
 
 
 @registry.ROI_BOX_FEATURE_EXTRACTORS.register("FPNXconv1fcFeatureExtractor")
@@ -121,10 +123,12 @@ class FPNXconv1fcFeatureExtractor(nn.Module):
 
     def forward(self, x, proposals):
         x = self.pooler(x, proposals)
+        roi_feature = x
+
         x = self.xconvs(x)
         x = x.view(x.size(0), -1)
         x = F.relu(self.fc6(x))
-        return x
+        return x, roi_feature
 
 
 def make_roi_box_feature_extractor(cfg, in_channels):

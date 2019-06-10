@@ -22,8 +22,23 @@ class MaskIoUFeatureExtractor(nn.Module):
         use_gn = cfg.MODEL.ROI_MASKIOU_HEAD.USE_GN
         representation_size = cfg.MODEL.ROI_MASKIOU_HEAD.MLP_HEAD_DIM
 
-        input_resolution = cfg.MODEL.ROI_MASK_HEAD.RESOLUTION
-        resolution = input_resolution // 2  # after max pooling 2x2
+        resolution_key = "RESOLUTION"
+        pooler_resolution_key = "POOLER_RESOLUTION"
+
+        resolution = cfg.MODEL.ROI_MASK_HEAD[resolution_key]
+        input_pooler_resolution = cfg.MODEL.ROI_MASK_HEAD[pooler_resolution_key]
+
+        self.max_pool2d = lambda x: x
+        if resolution == input_pooler_resolution * 2:
+            self.max_pool2d = torch.nn.MaxPool2d(kernel_size=2, stride=2)
+            resolution = resolution // 2  # after max pooling 2x2
+        elif resolution != input_pooler_resolution:
+            raise NotImplementedError(
+                "Only supports %s == %s or %s == 2x%s. Received %d vs %d instead"
+                % (resolution_key, pooler_resolution_key, resolution_key, pooler_resolution_key,
+                   resolution, input_pooler_resolution)
+            )
+
         layers = cfg.MODEL.ROI_MASKIOU_HEAD.CONV_LAYERS
         # stride=1 for each layer, and stride=2 for last layer
         strides = [1 for l in layers]
@@ -48,7 +63,7 @@ class MaskIoUFeatureExtractor(nn.Module):
 
 
     def forward(self, x, mask):
-        mask_pool = F.max_pool2d(mask, kernel_size=2, stride=2)
+        mask_pool = self.max_pool2d(mask)
         x = torch.cat((x, mask_pool), 1)
 
         for layer_name in self.blocks:

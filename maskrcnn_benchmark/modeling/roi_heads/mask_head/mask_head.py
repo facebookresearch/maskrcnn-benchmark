@@ -64,12 +64,14 @@ class ROIMaskHead(torch.nn.Module):
             all_proposals = proposals
             proposals, positive_inds = keep_only_positive_boxes(proposals)
         if self.training and self.cfg.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
-            x = features
-            x = x[torch.cat(positive_inds, dim=0)]
-            roi_feature = x
+            x = list(features)
+            pos_inds = torch.cat(positive_inds, dim=0)
+            x[0] = x[0][pos_inds]
+            x[1] = x[1][pos_inds]
         else:
-            x, roi_feature = self.feature_extractor(features, proposals)
-        mask_logits = self.predictor(x)
+            x = self.feature_extractor(features, proposals)
+        roi_feature = x[1]
+        mask_logits = self.predictor(x[0])
 
         if not self.cfg.MODEL.MASKIOU_ON: 
             if not self.training:
