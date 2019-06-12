@@ -1,6 +1,8 @@
 import cv2
 import copy
 import torch
+from torchvision.transforms import functional as TVF
+
 import numpy as np
 from maskrcnn_benchmark.layers.misc import interpolate
 from maskrcnn_benchmark.utils import cv2_util
@@ -28,6 +30,24 @@ SegmentationList is supposed to represent both,
 therefore it wraps the functions of BinaryMaskList
 and PolygonList to make it transparent.
 """
+
+
+def rotate_mask_tensors(mask_tensors, angle, center=None):
+    """
+    mask tensors: Shape (N,H,W)
+    """
+    out_tensors = torch.zeros_like(mask_tensors)
+    N = len(out_tensors)
+    for n in range(N):
+        m = mask_tensors[n:n + 1]
+        pil_m = TVF.to_pil_image(m)
+        rotated_m = np.array(TVF.rotate(pil_m, angle, center=center))
+        out_tensors[n:n + 1] = torch.from_numpy(rotated_m)
+
+        # cv2.imshow("m", mask_tensors[n].numpy().squeeze() * 255)
+        # cv2.imshow("rm", out_tensors[n].numpy().squeeze() * 255)
+        # cv2.waitKey(0)
+    return out_tensors
 
 
 class BinaryMaskList(object):
@@ -112,6 +132,10 @@ class BinaryMaskList(object):
         dim = 1 if method == FLIP_TOP_BOTTOM else 2
         flipped_masks = self.masks.flip(dim)
         return BinaryMaskList(flipped_masks, self.size)
+
+    def rotate(self, angle):
+        rotated_masks = rotate_mask_tensors(self.masks, angle, center=None)
+        return BinaryMaskList(rotated_masks, self.size)
 
     def crop(self, box):
         assert isinstance(box, (list, tuple, torch.Tensor)), str(type(box))
@@ -265,6 +289,39 @@ class PolygonInstance(object):
             TO_REMOVE = 1
             p[idx::2] = dim - poly[idx::2] - TO_REMOVE
             flipped_polygons.append(p)
+
+        return PolygonInstance(flipped_polygons, size=self.size)
+
+    @staticmethod
+    def rotate_points(corners, angle, cx, cy):
+        col = corners.shape[-1]
+        corners = corners.reshape(-1, 2)
+        corners = np.hstack((corners, np.ones((corners.shape[0], 1), dtype=type(corners[0][0]))))
+
+        M = cv2.getRotationMatrix2D((cx, cy), angle, 1.0)
+
+        # Prepare the vector to be transformed
+        calculated = np.dot(M, corners.T).T
+
+        calculated = calculated.reshape(-1, col)
+
+        return calculated
+
+    def rotate(self, angle):
+        """Rotate from the middle of the mask"""
+        flipped_polygons = []
+        width, height = self.size
+
+        cx, cy = (width // 2, height // 2)
+
+        for poly in self.polygons:
+            p = poly.cpu().numpy()
+            polygon = np.expand_dims(p, axis=0)
+            polygon = self.rotate_points(polygon, angle, cx, cy)
+            polygon = polygon.squeeze()
+            pp = torch.tensor(polygon)
+
+            flipped_polygons.append(pp)
 
         return PolygonInstance(flipped_polygons, size=self.size)
 
@@ -426,6 +483,13 @@ class PolygonList(object):
 
         return PolygonList(flipped_polygons, size=self.size)
 
+    def rotate(self, angle):
+        flipped_polygons = []
+        for polygon in self.polygons:
+            flipped_polygons.append(polygon.rotate(angle))
+
+        return PolygonList(flipped_polygons, size=self.size)
+
     def crop(self, box):
         w, h = box[2] - box[0], box[3] - box[1]
         cropped_polygons = []
@@ -525,6 +589,10 @@ class SegmentationMask(object):
 
     def transpose(self, method):
         flipped_instances = self.instances.transpose(method)
+        return SegmentationMask(flipped_instances, self.size, self.mode)
+
+    def rotate(self, angle):
+        flipped_instances = self.instances.rotate(angle)
         return SegmentationMask(flipped_instances, self.size, self.mode)
 
     def crop(self, box):

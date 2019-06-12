@@ -68,8 +68,14 @@ _C.INPUT.CONTRAST = 0.0
 _C.INPUT.SATURATION = 0.0
 _C.INPUT.HUE = 0.0
 
+# Image Flip
 _C.INPUT.HORIZONTAL_FLIP_PROB_TRAIN = 0.5
 _C.INPUT.VERTICAL_FLIP_PROB_TRAIN = 0.0
+
+# Image Rotate
+_C.INPUT.ROTATE_PROB_TRAIN = 0.0
+# Rotate image uniformly at random in this degree range
+_C.INPUT.ROTATE_DEGREES_TRAIN = (-90.0, 90.0)
 
 # -----------------------------------------------------------------------------
 # Dataset

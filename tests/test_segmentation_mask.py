@@ -63,6 +63,24 @@ class TestSegmentationMask(unittest.TestCase):
         self.assertTrue(diff_hor <= 53250.)
         self.assertTrue(diff_ver <= 42494.)
 
+    def test_rotate(self):
+        angle = 45
+        m1 = self.M.rotate(angle)
+        p1 = self.P.rotate(angle)
+        diff = self.L1(m1, p1)
+        self.assertTrue(diff <= 28127.)
+        # import cv2
+        # N = len(m1)
+        # m1 = m1.get_mask_tensor()
+        # p1 = p1.get_mask_tensor()
+        # if N == 1:
+        #     m1 = [m1]
+        #     p1 = [p1]
+        # for n in range(N):
+        #     cv2.imshow("m", m1[n].numpy() * 255)
+        #     cv2.imshow("p", p1[n].numpy() * 255)
+        #     cv2.waitKey(0)
+
 
 if __name__ == "__main__":
 

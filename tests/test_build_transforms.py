@@ -9,15 +9,23 @@ from maskrcnn_benchmark.data import make_data_loader
 from maskrcnn_benchmark.modeling.roi_heads.mask_head.loss import compute_proposal_gt_iou
 from maskrcnn_benchmark.modeling.rroi_heads.mask_head.loss import compute_rotated_proposal_gt_iou
 
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
+
 if __name__ == '__main__':
-    config_file = "./configs/mscoco/surfboard_2.yaml"
+    # config_file = "./configs/icdar/general_text_detector.yaml"
+    config_file = "./configs/mscoco/dog_skate_miou.yaml"
     try:
         cfg.merge_from_file(config_file)
     except KeyError as e:
         print(e)
     cfg.INPUT.PIXEL_MEAN = [0,0,0]
-    cfg.INPUT.HORIZONTAL_FLIP_PROB_TRAIN = 0.0
-    cfg.INPUT.VERTICAL_FLIP_PROB_TRAIN = 0.0
+    cfg.INPUT.HORIZONTAL_FLIP_PROB_TRAIN = 0.5
+    cfg.INPUT.VERTICAL_FLIP_PROB_TRAIN = 0.5
+    cfg.INPUT.ROTATE_PROB_TRAIN = 1.0
+    cfg.INPUT.ROTATE_DEGREES_TRAIN = (-45, 45)
+    cfg.DATALOADER.NUM_WORKERS = 1
+    cfg.DATALOADER.SIZE_DIVISIBILITY = 0
     cfg.freeze()
 
     data_loader = make_data_loader(
@@ -92,26 +100,28 @@ if __name__ == '__main__':
                 if is_rotated:
                     rr = rrects[ix]
                     proposal = rr.numpy().copy()
-                    proposal[:2] += 15
+                    # proposal[:2] += 15
                     m = draw_anchors(m, [rr], [[0, 0, 255]])
-                    m = draw_anchors(m, [proposal], [[255, 0, 0]])
+                    # m = draw_anchors(m, [proposal], [[255, 0, 0]])
 
-                    import time
-                    t = time.time()
-                    print(compute_rotated_proposal_gt_iou(sm, proposal))
-                    # print((time.time() - t))
+                    # import time
+                    # t = time.time()
+                    # print(compute_rotated_proposal_gt_iou(sm, proposal))
+                    # # print((time.time() - t))
                 else:
                     bbox = bboxes[ix]
-                    proposal = bbox + 10
+                    # proposal = bbox + 10
                     cv2.rectangle(m, tuple(bbox[:2]), tuple(bbox[2:]), (0,0,255), 2)
-                    cv2.rectangle(m, tuple(proposal[:2]), tuple(proposal[2:]), (255,0,0), 2)
+                    # cv2.rectangle(m, tuple(proposal[:2]), tuple(proposal[2:]), (255,0,0), 2)
 
-                    cropped_mask = seg_mask.crop(proposal)
+                    # cropped_mask = seg_mask.crop(proposal)
 
                     import time
                     t = time.time()
 
-                    print(compute_proposal_gt_iou(seg_mask, proposal, cropped_mask))
-                    print((time.time() - t))
+                    # print(compute_proposal_gt_iou(seg_mask, proposal, cropped_mask))
+                    # print((time.time() - t))
                 cv2.imshow("mask", m)
                 cv2.waitKey(0)
+
+            print(m.shape, im_np.shape)

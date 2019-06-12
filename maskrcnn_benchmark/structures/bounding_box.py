@@ -1,6 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
 
+from numbers import Number
+from .segmentation_mask import SegmentationMask
+
 # transpose
 FLIP_LEFT_RIGHT = 0
 FLIP_TOP_BOTTOM = 1
@@ -103,7 +106,7 @@ class BoxList(object):
             bbox = BoxList(scaled_box, size, mode=self.mode)
             # bbox._copy_extra_fields(self)
             for k, v in self.extra_fields.items():
-                if not isinstance(v, torch.Tensor):
+                if not isinstance(v, torch.Tensor) and not isinstance(v, Number):
                     v = v.resize(size, *args, **kwargs)
                 bbox.add_field(k, v)
             return bbox
@@ -120,7 +123,7 @@ class BoxList(object):
         bbox = BoxList(scaled_box, size, mode="xyxy")
         # bbox._copy_extra_fields(self)
         for k, v in self.extra_fields.items():
-            if not isinstance(v, torch.Tensor) and hasattr(v, 'resize'):
+            if not isinstance(v, torch.Tensor) and not isinstance(v, Number):
                 v = v.resize(size, *args, **kwargs)
             bbox.add_field(k, v)
 
@@ -159,9 +162,61 @@ class BoxList(object):
         bbox = BoxList(transposed_boxes, self.size, mode="xyxy")
         # bbox._copy_extra_fields(self)
         for k, v in self.extra_fields.items():
-            if not isinstance(v, torch.Tensor) and hasattr(v, 'transpose'):
+            if not isinstance(v, torch.Tensor) and not isinstance(v, Number):
                 v = v.transpose(method)
             bbox.add_field(k, v)
+        return bbox.convert(self.mode)
+
+    def rotate(self, angle):
+        extra_fields = self.extra_fields.keys()
+        mask_fields = [k for k, v in self.extra_fields.items() if isinstance(v, SegmentationMask)]
+        non_mask_fields = [k for k in extra_fields if k not in mask_fields]
+
+        if len(mask_fields) == 0:
+            raise NotImplementedError("Rotate not implemented if no SegmentationMask structure is found.")
+
+        img_w, img_h = self.size
+
+        # Get a mask structure and generate the rotated gt mask/polygons
+        # Then infer the bboxes from the min and max of the gt polygons
+        mk1 = mask_fields[0]
+        mv1 = self.extra_fields[mk1]
+        mv1 = mv1.convert("poly")
+        mv1 = mv1.rotate(angle)
+        bboxes = []
+        for poly_instance in mv1.instances.polygons:
+            polygons = poly_instance.polygons
+            if len(polygons) == 0:
+                bboxes.append([0,0,0,0])
+                continue
+
+            x1 = polygons[0][0::2].min()
+            x2 = polygons[0][0::2].max()
+            y1 = polygons[0][1::2].min()
+            y2 = polygons[0][1::2].max()
+
+            for poly in polygons[1:]:
+                x1 = min(x1, poly[0::2].min())
+                x2 = max(x2, poly[0::2].max())
+                y1 = min(y1, poly[1::2].min())
+                y2 = max(y2, poly[1::2].max())
+
+            x1 = max(x1, 0)
+            x2 = min(x2, img_w - 1)
+            y1 = max(y1, 0)
+            y2 = min(y2, img_h - 1)
+
+            bboxes.append([x1,y1,x2,y2])
+
+        bbox = BoxList(bboxes, self.size, mode="xyxy")
+        bbox.add_field(mk1, mv1)
+
+        for ix, k in enumerate(mask_fields[1:] + non_mask_fields):
+            v = self.extra_fields[k]
+            if not isinstance(v, torch.Tensor) and not isinstance(v, Number):
+                v = v.rotate(angle)
+            bbox.add_field(k, v)
+
         return bbox.convert(self.mode)
 
     def crop(self, box):
@@ -187,7 +242,7 @@ class BoxList(object):
         bbox = BoxList(cropped_box, (w, h), mode="xyxy")
         # bbox._copy_extra_fields(self)
         for k, v in self.extra_fields.items():
-            if not isinstance(v, torch.Tensor) and hasattr(v, 'crop'):
+            if not isinstance(v, torch.Tensor) and not isinstance(v, Number):
                 v = v.crop(box)
             bbox.add_field(k, v)
         return bbox.convert(self.mode)

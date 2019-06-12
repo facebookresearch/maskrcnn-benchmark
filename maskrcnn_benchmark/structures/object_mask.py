@@ -1,8 +1,10 @@
 import torch
 import torch.nn.functional as F
-# from torchvision.transforms import functional as F
+# from torchvision.transforms import functional as TVF
 
 import numpy as np
+
+from .segmentation_mask import rotate_mask_tensors
 
 # transpose
 FLIP_LEFT_RIGHT = 0
@@ -37,6 +39,7 @@ def flip_top_bottom(tensor):
     # # flip height channel
     return flip(tensor, 2)
 
+
 class ObjectMask(object):
     """
     Contains all object masks in the image
@@ -66,6 +69,10 @@ class ObjectMask(object):
             flipped = flip_top_bottom(self.object_masks)
 
         return ObjectMask(flipped, size=self.size)
+
+    def rotate(self, angle):
+        rotated_masks = rotate_mask_tensors(self.object_masks, angle, center=None)
+        return ObjectMask(rotated_masks, self.size)
 
     def resize(self, size, *args, **kwargs):
         # print("RESIZE")

@@ -58,6 +58,9 @@ class Keypoints(object):
             keypoints.add_field(k, v)
         return keypoints
 
+    def rotate(self, angle):
+        raise NotImplementedError("Rotate not implemented")
+
     def to(self, *args, **kwargs):
         keypoints = type(self)(self.keypoints.to(*args, **kwargs), self.size, self.mode)
         for k, v in self.extra_fields.items():

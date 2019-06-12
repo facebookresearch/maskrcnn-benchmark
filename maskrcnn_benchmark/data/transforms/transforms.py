@@ -5,6 +5,8 @@ import torch
 import torchvision
 from torchvision.transforms import functional as F
 
+import numbers
+
 
 class Compose(object):
     def __init__(self, transforms):
@@ -123,6 +125,37 @@ class Normalize(object):
         if self.to_bgr255:
             image = image[[2, 1, 0]] * 255
         image = F.normalize(image, mean=self.mean, std=self.std)
-        if target is None:
-            return image
+        return image, target
+
+
+class RandomRotation(object):
+    def __init__(self, degrees, prob=0.0):
+        if isinstance(degrees, numbers.Number):
+            self.degrees = (-degrees, degrees)
+        else:
+            if len(degrees) != 2:
+                raise ValueError("If degrees is a sequence, it must be of len 2.")
+            self.degrees = degrees
+
+        self.prob = prob
+
+    @staticmethod
+    def get_angle_uniform(degrees_range):
+        """Get parameters for ``rotate`` for a random rotation.
+
+        Returns:
+            sequence: params to be passed to ``rotate`` for random rotation.
+        """
+        angle = random.uniform(min(degrees_range), max(degrees_range))
+
+        return angle
+
+    def __call__(self, image, target):
+        if random.random() > self.prob:
+            return image, target
+
+        angle = self.get_angle_uniform(self.degrees)
+        image = F.rotate(image, angle, center=None)
+        target = target.rotate(angle)
+
         return image, target
