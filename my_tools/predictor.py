@@ -52,6 +52,7 @@ class ImageTransformer(object):
 
 def paste_mask_on_image(mask, box, im_h, im_w, thresh=None, interp=cv2.INTER_LINEAR, rotated=False):
 
+    box = np.round(box).astype(np.int32)
     if rotated:
         assert len(box) == 5  # xc,yc,w,h,angle
         w = box[2]
@@ -63,9 +64,6 @@ def paste_mask_on_image(mask, box, im_h, im_w, thresh=None, interp=cv2.INTER_LIN
 
     w = max(w, 1)
     h = max(h, 1)
-
-    w = int(np.round(w))
-    h = int(np.round(h))
 
     resized = cv2.resize(mask, (w, h), interpolation=interp)
 
