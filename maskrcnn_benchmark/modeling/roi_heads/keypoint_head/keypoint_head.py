@@ -34,7 +34,12 @@ class ROIKeypointHead(torch.nn.Module):
         if self.training:
             with torch.no_grad():
                 proposals = self.loss_evaluator.subsample(proposals, targets)
-
+        if self.training and self.cfg.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
+            raise NotImplementedError("SHARE_BOX_FEATURE_EXTRACTOR is not implemented")
+            # x = list(features)
+            # pos_inds = torch.cat(positive_inds, dim=0)
+            # x[0] = x[0][pos_inds]
+            # x[1] = x[1][pos_inds]
         x = self.feature_extractor(features, proposals)
         kp_logits = self.predictor(x)
 
