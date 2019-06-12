@@ -188,7 +188,6 @@ class BoxList(object):
         for ix, poly_instance in enumerate(mv1.instances.polygons):
             polygons = poly_instance.polygons
             if len(polygons) == 0:
-                bboxes.append([0,0,0,0])
                 continue
 
             x1 = polygons[0][0::2].min()
