@@ -184,7 +184,8 @@ class BoxList(object):
         mv1 = mv1.convert("poly")
         mv1 = mv1.rotate(angle)
         bboxes = []
-        for poly_instance in mv1.instances.polygons:
+        good_indices = []
+        for ix, poly_instance in enumerate(mv1.instances.polygons):
             polygons = poly_instance.polygons
             if len(polygons) == 0:
                 bboxes.append([0,0,0,0])
@@ -206,13 +207,20 @@ class BoxList(object):
             y1 = max(y1, 0)
             y2 = min(y2, img_h - 1)
 
-            bboxes.append([x1,y1,x2,y2])
+            # FILTER invalid bboxes
+            if x2 > x1 and y2 > y1:
+                bboxes.append([x1,y1,x2,y2])
+                good_indices.append(ix)
 
+        if len(bboxes) == 0:
+            raise ValueError
+            # bboxes = [[0,0,0,0]]  # dummy value
+            # good_indices = [0]
         bbox = BoxList(bboxes, self.size, mode="xyxy")
-        bbox.add_field(mk1, mv1)
+        bbox.add_field(mk1, mv1[good_indices])
 
         for ix, k in enumerate(mask_fields[1:] + non_mask_fields):
-            v = self.extra_fields[k]
+            v = self.extra_fields[k][good_indices]
             if not isinstance(v, torch.Tensor) and not isinstance(v, Number):
                 v = v.rotate(angle)
             bbox.add_field(k, v)

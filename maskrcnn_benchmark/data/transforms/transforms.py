@@ -155,7 +155,11 @@ class RandomRotation(object):
             return image, target
 
         angle = self.get_angle_uniform(self.degrees)
-        image = F.rotate(image, angle, center=None)
-        target = target.rotate(angle)
+        try:  # TODO: CLEANUP
+            target = target.rotate(angle)
+        except ValueError:
+            print("Value error thrown, skipping rotate")
+            return image, target
 
+        image = F.rotate(image, angle, center=None)
         return image, target
