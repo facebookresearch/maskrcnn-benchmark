@@ -5,9 +5,9 @@ FLIP_LEFT_RIGHT = 0
 FLIP_TOP_BOTTOM = 1
 
 class RotatedBox(object):
-    def __init__(self, rbox, size, mode=None):
-        device = rbox.device if isinstance(rbox, torch.Tensor) else torch.device('cpu')
-        rbox = torch.as_tensor(rbox, dtype=torch.float32, device=device)
+    def __init__(self, rbox, size):
+        if not isinstance(rbox, torch.Tensor):
+            rbox = torch.as_tensor(rbox, dtype=torch.float32, device=torch.device('cpu'))
 
         if rbox.ndimension() != 2:
             raise ValueError(
@@ -21,13 +21,11 @@ class RotatedBox(object):
 
         self.rbox = rbox
         self.size = size
-        self.mode = mode
-        self.extra_fields = {}
 
     def crop(self, box):
         raise NotImplementedError()
 
-    def resize(self, size, *args, **kwargs):
+    def resize(self, size):
         ratios = tuple(float(s) / float(s_orig) for s, s_orig in zip(size, self.size))
         ratio_w, ratio_h = ratios
         resized_data = self.rbox.clone()
@@ -35,10 +33,7 @@ class RotatedBox(object):
         resized_data[..., 1] *= ratio_h
         resized_data[..., 2] *= ratio_w
         resized_data[..., 3] *= ratio_h
-        rbox = type(self)(resized_data, size, self.mode)
-        for k, v in self.extra_fields.items():
-            rbox.add_field(k, v)
-        return rbox
+        return RotatedBox(resized_data, size)
 
     def transpose(self, method):
         if method not in (FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM):
@@ -61,30 +56,19 @@ class RotatedBox(object):
         rbox[:, 0] = transposed_xc
         rbox[:, 1] = transposed_yc
 
-        rbox = type(self)(rbox, self.size, self.mode)
-        for k, v in self.extra_fields.items():
-            rbox.add_field(k, v)
-        return rbox
+        return RotatedBox(rbox, self.size)
 
-    def to(self, *args, **kwargs):
-        rbox = type(self)(self.rbox.to(*args, **kwargs), self.size, self.mode)
-        for k, v in self.extra_fields.items():
-            if hasattr(v, "to"):
-                v = v.to(*args, **kwargs)
-            rbox.add_field(k, v)
-        return rbox
+    def rotate(self, angle):
+        raise NotImplementedError("Rotate not implemented")
 
     def __getitem__(self, item):
-        rbox = type(self)(self.rbox[item], self.size, self.mode)
-        for k, v in self.extra_fields.items():
-            rbox.add_field(k, v[item])
-        return rbox
-
-    def add_field(self, field, field_data):
-        self.extra_fields[field] = field_data
-
-    def get_field(self, field):
-        return self.extra_fields[field]
+        if self.rbox.numel() == 0:
+            raise RuntimeError("Indexing empty RotatedBox")
+        if isinstance(item, int):
+            selected = self.rbox[item:item+1]
+        else:
+            selected = self.rbox[item]
+        return RotatedBox(selected, self.size)
 
     def area(self):
         box = self.rbox
