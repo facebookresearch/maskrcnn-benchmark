@@ -27,12 +27,18 @@ except ImportError:
 def main():
     parser = argparse.ArgumentParser(description="PyTorch Object Detection Inference")
     parser.add_argument(
+        "-cfg",
         "--config-file",
         default="/private/home/fmassa/github/detectron.pytorch_v2/configs/e2e_faster_rcnn_R_50_C4_1x_caffe2.yaml",
         metavar="FILE",
         help="path to config file",
     )
     parser.add_argument("--local_rank", type=int, default=0)
+    parser.add_argument(
+        "--ckpt",
+        help="The path to the checkpoint for test, default is the latest checkpoint.",
+        default=None,
+    )
     parser.add_argument(
         "opts",
         help="Modify config options using the command-line",
@@ -74,7 +80,7 @@ def main():
 
     output_dir = cfg.OUTPUT_DIR
     checkpointer = DetectronCheckpointer(cfg, model, save_dir=output_dir)
-    _ = checkpointer.load(cfg.MODEL.WEIGHT)
+    _ = checkpointer.load(args.ckpt, use_latest=args.ckpt is None)
 
     iou_types = ("bbox",)
     if cfg.MODEL.MASK_ON:
