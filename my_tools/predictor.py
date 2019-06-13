@@ -104,6 +104,8 @@ def select_top_predictions(predictions, confidence_threshold=0.7, score_field="s
     """
     scores = predictions.get_field(score_field)
     keep = torch.nonzero(scores > confidence_threshold).squeeze(1)
+    if len(keep) == 0:
+        return []
     predictions = predictions[keep]
     scores = predictions.get_field(score_field)
     _, idx = scores.sort(0, descending=True)
@@ -204,6 +206,9 @@ class Predictor(object):
         # reshape prediction (a BoxList) into the original image size
         predictions = predictions.resize((width, height))
         predictions = select_top_predictions(predictions, self.min_score, self.score_field)
+
+        if len(predictions) == 0:
+            return []
 
         data = self.get_data_from_prediction(predictions, height, width)
 
