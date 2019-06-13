@@ -4,7 +4,7 @@ import torch
 # transpose
 FLIP_LEFT_RIGHT = 0
 FLIP_TOP_BOTTOM = 1
-
+ROTATE_90 = 2
 
 class BoxList(object):
     """
@@ -152,6 +152,11 @@ class BoxList(object):
             transposed_xmax = xmax
             transposed_ymin = image_height - ymax
             transposed_ymax = image_height - ymin
+        elif method == ROTATE_90:
+            transposed_xmin = ymin * image_width/image_height
+            transposed_xmax = ymax * image_width/image_height
+            transposed_ymin = (image_width - xmax) * image_height / image_width
+            transposed_ymax = (image_width - xmin) * image_height/ image_width
 
         transposed_boxes = torch.cat(
             (transposed_xmin, transposed_ymin, transposed_xmax, transposed_ymax), dim=-1

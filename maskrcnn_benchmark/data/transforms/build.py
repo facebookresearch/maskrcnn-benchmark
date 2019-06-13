@@ -8,6 +8,7 @@ def build_transforms(cfg, is_train=True):
         max_size = cfg.INPUT.MAX_SIZE_TRAIN
         flip_horizontal_prob = 0.5  # cfg.INPUT.FLIP_PROB_TRAIN
         flip_vertical_prob = cfg.INPUT.VERTICAL_FLIP_PROB_TRAIN
+        rot_prob = cfg.INPUT.ROTATE90_PROB_TRAIN
         brightness = cfg.INPUT.BRIGHTNESS
         contrast = cfg.INPUT.CONTRAST
         saturation = cfg.INPUT.SATURATION
@@ -17,6 +18,7 @@ def build_transforms(cfg, is_train=True):
         max_size = cfg.INPUT.MAX_SIZE_TEST
         flip_horizontal_prob = 0.0
         flip_vertical_prob = 0.0
+        rot_prob = 0.0
         brightness = 0.0
         contrast = 0.0
         saturation = 0.0
@@ -39,6 +41,7 @@ def build_transforms(cfg, is_train=True):
             T.Resize(min_size, max_size),
             T.RandomHorizontalFlip(flip_horizontal_prob),
             T.RandomVerticalFlip(flip_vertical_prob),
+            T.RandomRotate90(rot_prob),
             T.ToTensor(),
             normalize_transform,
         ]
