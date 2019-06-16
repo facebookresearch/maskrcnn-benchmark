@@ -9,6 +9,45 @@ BBOX_XFORM_CLIP = np.log(1000. / 16.)
 EPSILON = 1e-7
 
 
+def convert_rect_to_pts(anchor):
+    x_c, y_c, w, h, theta = anchor
+    rect = ((x_c, y_c), (w, h), theta)
+    rect = cv2.boxPoints(rect)
+    # rect = np.int0(np.round(rect))
+    return rect
+
+def get_random_color():
+    return (np.random.randint(255), np.random.randint(255), np.random.randint(255))
+
+def draw_anchors(img, anchors, color_list=[], fill=False, line_sz=2):
+    """
+    img: (H,W,3) np.uint8 array
+    anchors: (N,5) np.float32 array, where each row is [xc,yc,w,h,angle]
+    """
+    if isinstance(color_list, tuple):
+        color_list = [color_list]
+
+    img_copy = img.copy()
+    Nc = len(color_list)
+    N = len(anchors)
+    if Nc == 0:
+        color_list = [get_random_color() for a in anchors]
+    elif Nc != N:
+        color_list = [color_list[n % Nc] for n in range(N)]
+
+    for ix, anchor in enumerate(anchors):
+        color = color_list[ix]
+        rect = anchor
+        if len(anchor) == 5:
+            rect = convert_rect_to_pts(anchor)
+        rect = np.round(rect).astype(np.int32)
+        if fill:
+            cv2.fillConvexPoly(img_copy, rect, color)
+        else:
+            cv2.drawContours(img_copy, [rect], 0, color, line_sz)
+    return img_copy
+
+
 def stack(x, dim=0, lib=np):
     if lib == np:
         return lib.stack(x, axis=dim)
@@ -257,8 +296,8 @@ def reorder_pts(int_pts, num_of_inter, lib=np):
         center /= num_of_inter;
 
         vs = lib.zeros(16, dtype=lib.float32)
-        v = lib.zeros(2, dtype=lib.float32)
         for i in range(num_of_inter):
+            v = lib.zeros(2, dtype=lib.float32)
             v[0] = int_pts[2 * i] - center[0];
             v[1] = int_pts[2 * i + 1] - center[1];
             d = lib.sqrt(v[0] * v[0] + v[1] * v[1]);
@@ -312,6 +351,83 @@ def inter_pts(pts1, pts2, lib=np):
 
     return num_of_inter, int_pts
 
+def trangle_area2(a, b, c):
+    return ((a[...,0] - c[...,0]) * (b[...,1] - c[...,1]) - (a[...,1] - c[...,1]) * (b[...,0] - c[...,0])) / 2.0
+
+def reorder_pts2(int_pts):
+    num_of_inter = len(int_pts)
+    if num_of_inter == 0:
+        return
+
+    center = torch.mean(int_pts, 0)
+    v = int_pts - center
+    d = torch.sqrt(v[:,0] * v[:,0] + v[:,1] * v[:,1])
+    v = v / d.unsqueeze(-1)
+    v1_lt_0 = v[:,1] < 0 
+    v[v1_lt_0, 0] = -2 - v[v1_lt_0, 0]
+    vs = v[:,0]
+
+    # int_pts_f = int_pts.flatten()
+    for i in range(num_of_inter):
+        if vs[i-1] > vs[i]:
+            temp = vs[i].clone()
+            t = int_pts[i].clone()
+            j = i
+            while (j > 0 and vs[j-1] > temp):
+                vs[j] = vs[j-1]
+                int_pts[j] = int_pts[j-1]
+                j -= 1
+          
+            vs[j] = temp
+            int_pts[j] = t
+
+def in_rect2(pts1, pts2):
+    ab = pts2[:,1] - pts2[:,0]
+    ab = ab.unsqueeze(-1)
+    ad = pts2[:,3] - pts2[:,0]
+    ad = ad.unsqueeze(-1)
+    ap = pts1 - pts2[:,0].unsqueeze(1)
+
+    abab = ab[:,0] * ab[:,0] + ab[:,1] * ab[:,1]
+    abap = ab[:,0] * ap[:,:,0] + ab[:,1] * ap[:,:,1]
+    adad = ad[:,0] * ad[:,0] + ad[:,1] * ad[:,1]
+    adap = ad[:,0] * ap[:,:,0] + ad[:,1] * ap[:,:,1]
+
+    return (abab >= abap) * (abap >= 0) * (adad >= adap) * (adap >= 0)
+
+def inter2line2(pts1, pts2):
+    device = pts1.device
+    mgx, mgy = torch.meshgrid(torch.arange(4), torch.arange(4))
+    mgx = mgx.to(device)
+    mgy = mgy.to(device)
+
+    a = pts1[:, mgx] # N,4,4,2
+    b = pts1[:, (mgx+1)%4] # N,4,4,2
+    c = pts2[:, mgy] # N,4,4,2
+    d = pts2[:, (mgy+1)%4] # N,4,4,2
+
+    area_abc = trangle_area2(a, b, c)
+    area_abd = trangle_area2(a, b, d)
+    area_cda = trangle_area2(c, d, a)
+    area_cdb = area_cda + area_abc - area_abd
+
+    is_intersect = (area_abc * area_abd < 0) * (area_cda * area_cdb < 0)  # N,4,4
+
+    t = area_cda / (area_abd - area_abc)
+    dxy = t.unsqueeze(-1) * (b - a)
+    intersect_pts = a + dxy  # N,4,4,2
+
+    return is_intersect, intersect_pts
+
+def intersect_area2(int_pts, num_of_inter):
+    if num_of_inter <= 2:
+        return 0.0
+
+    device = int_pts.device
+    a = torch.arange(num_of_inter - 2).to(device)
+    area = torch.sum(torch.abs(trangle_area2(int_pts[a*0], int_pts[a+1], int_pts[a+2])))
+    return area
+
 def iou_rotate_cpu2(boxes1, boxes2, lib=np):
     area1 = boxes1[:, 2] * boxes1[:, 3]
     area2 = boxes2[:, 2] * boxes2[:, 3]
@@ -324,8 +440,6 @@ def iou_rotate_cpu2(boxes1, boxes2, lib=np):
     box2_pts = convert_rect_to_pts2(boxes2, lib=lib)
 
     for i, box1 in enumerate(boxes1):
-        box2 = boxes2[i]
-
         pts1 = box1_pts[i].flatten()
         pts2 = box2_pts[i].flatten()
 
@@ -339,6 +453,46 @@ def iou_rotate_cpu2(boxes1, boxes2, lib=np):
         ious[i] = iou
 
     return ious
+
+def iou_rotate_cpu3(boxes1, boxes2):
+    N = len(boxes1)
+    assert N == len(boxes2)
+    ious = torch.zeros(N).to(boxes1)
+
+    device = boxes1.device
+
+    area1 = boxes1[:, 2] * boxes1[:, 3]
+    area2 = boxes2[:, 2] * boxes2[:, 3]
+
+    box1_pts = convert_rect_to_pts2(boxes1, lib=torch)
+    box2_pts = convert_rect_to_pts2(boxes2, lib=torch)
+
+    b1_in_b2 = in_rect2(box1_pts, box2_pts) # N,4  
+    b2_in_b1 = in_rect2(box2_pts, box1_pts) # N,4
+
+    is_intersect, intersect_pts = inter2line2(box1_pts, box2_pts)
+
+    for n in range(N):
+        int_pts = torch.empty((0, 2), dtype=torch.float32, device=device)
+        int_b1 = box1_pts[n][b1_in_b2[n]]
+        int_b2 = box2_pts[n][b2_in_b1[n]]
+        int_lines = intersect_pts[n][is_intersect[n]]
+        for s_pts in [int_b1, int_b2, int_lines]:
+            if len(s_pts) > 0:
+                int_pts = torch.cat((int_pts, s_pts), 0)
+
+        iou = 0.0
+
+        num_of_inter = int_pts.size(0)
+        if num_of_inter > 2:
+            reorder_pts2(int_pts)
+            int_area = intersect_area2(int_pts, num_of_inter)
+
+            iou = int_area / (area1[n] + area2[n] - int_area)
+
+        ious[n] = iou
+
+    return ious 
 
 def iou_rotate_cpu(boxes1, boxes2):
     area1 = boxes1[:, 2] * boxes1[:, 3]
@@ -367,8 +521,10 @@ def compute_iou_loss(pred, target, base_box, box_coder):
     pred_box = box_coder.decode(pred, base_box)
     gt_box = box_coder.decode(target, base_box)
 
-    ious = iou_rotate_cpu2(pred_box, gt_box, lib=torch)
-    iou_loss = -torch.log(ious)
+    # ious = iou_rotate_cpu2(pred_box, gt_box, lib=torch)
+    ious = iou_rotate_cpu3(pred_box, gt_box)
+    # ious = (ious - 0.5) * 1.0 / 0.5
+    iou_loss = -torch.log(ious**2)
     return iou_loss.mean()
 
 if __name__ == '__main__':
@@ -384,22 +540,40 @@ if __name__ == '__main__':
         [80,80,160,160, 0],  # xc yc w h angle
         [90,90,105,105, 30],
         [50,50,50,50, -30],
+        [60, 60, 60, 60, 30],
+        [50, 50, 50, 50, -40],
+        [50, 50, 50, 50, -30],
+        [50, 50, 100, 50, 0],
+        [100, 100, 200, 50, 0],
+        [100, 100, 200, 50, 0],
+        [0, 0, 66, 33, 45],
+        [0, 0, 66, 33, 45],
     ], dtype=np.float32)
     bbox_gt = np.array([
         [90,90,170,170, 0], 
         [100,100,95,95, 40],
         [55,55,70,70, -10],
+        [65, 65, 80, 80, 20],
+        [55, 53, 72, 70, -20],
+        [50, 55, 60, 60, 60],
+        [50, 45, 55, 90, -90],
+        [90, 110, 65, 180, -80],
+        [75, 105, 170, 60, 0],
+        [5, -5, 50, 50, -40],
+        [-5, 5, 66, 33, 0],
     ], dtype=np.float32)
 
     N = len(bbox_gt)
 
-    ious = iou_rotate_cpu(bbox_gt, anchor)
-    ious2 = iou_rotate_cpu2(bbox_gt, anchor)
-    print(ious)
-    print(ious2)
-
     t_bbox_gt = torch.from_numpy(bbox_gt)
     t_anchor = torch.from_numpy(anchor)
+
+    # ious = iou_rotate_cpu(bbox_gt, anchor)
+    # ious2 = iou_rotate_cpu2(bbox_gt, anchor)
+    # ious3 = iou_rotate_cpu3(t_bbox_gt, t_anchor)
+    # print(ious)
+    # print(ious2)
+    # print(ious3)
 
     box_coder = BoxCoder(weights=(1.0,1.0,1.0,1.0,1.0))
     regression_targets = box_coder.encode(
@@ -407,17 +581,19 @@ if __name__ == '__main__':
     )
 
     model = SimpleLinearModel(regression_cn=5)
+    model.train()
 
     import torch.optim as optim
     lr = 1e-2
-    n_iters = 100
+    n_iters = 300
 
     optimizer = optim.Adam(model.parameters(), lr=lr)#, betas=(0.9, 0.999))
+    # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9)  # , betas=(0.9, 0.999))
     for n in range(n_iters):
-        
+
         regression_pred = model(normalize_rect_tensors(t_anchor), normalize_rect_tensors(t_bbox_gt))
 
-        l1_loss = smooth_l1_loss(regression_pred, regression_targets, beta=1.0/9)
+        # l1_loss = smooth_l1_loss(regression_pred, regression_targets, beta=1.0/9)
         iou_loss = compute_iou_loss(regression_pred, regression_targets, t_anchor, box_coder)
 
         loss = iou_loss
@@ -430,21 +606,24 @@ if __name__ == '__main__':
             bbox_pred = box_coder.decode(
                 regression_pred.view(-1, 5), t_anchor.view(-1, 5)
             ).numpy()
-            mean_iou = np.mean(iou_rotate_cpu(bbox_pred, bbox_gt))
-            print("Iter %d) Loss: %.3f, Mean IoU: %.2f"%(n, loss.item(), mean_iou))
+            val_iou = iou_rotate_cpu(bbox_pred, bbox_gt)
+            print("Iter %d) Loss: %.3f, Mean IoU: %.2f"%(n, loss.item(), np.mean(val_iou)))
+            if n % 50 == 0:
+                print(val_iou)
 
-    # anchor_pts = convert_rect_to_pts2(t_anchor, lib=torch)
-    # gt_pts = convert_rect_to_pts2(t_bbox_gt, lib=torch)
+    model.eval()
+    with torch.no_grad():
+        regression_pred = model(normalize_rect_tensors(t_anchor), normalize_rect_tensors(t_bbox_gt))
+    bbox_pred = box_coder.decode(
+        regression_pred.view(-1, 5), t_anchor.view(-1, 5)
+    ).numpy()
+    print(np.round(bbox_pred).astype(int))
+    ious = iou_rotate_cpu(bbox_pred, bbox_gt)
+    print(ious)
+    print(np.mean(ious))
 
-    # pts1 = anchor_pts[0].flatten()
-    # pts2 = gt_pts[0].flatten()
-    # area1 = (t_anchor[:, 2] * t_anchor[:, 3])[0]
-    # area2 = (t_bbox_gt[:, 2] * t_bbox_gt[:, 3])[0]
-
-    # num_of_inter, int_pts = inter_pts(pts1, pts2, lib=torch)
-    # int_pts_numpy = int_pts.detach().numpy().copy()
-
-    # if num_of_inter > 0:
-    #     reorder_pts(int_pts, num_of_inter, lib=torch)
-    #     int_area = area(int_pts, num_of_inter, lib=torch)
-    #     iou = int_area * 1.0 / (area1 + area2 - int_area)
+    # for pred, gt in zip(bbox_pred, bbox_gt):
+    #     m = np.zeros((300, 300, 3), dtype=np.uint8)
+    #     m = draw_anchors(m, [pred, gt], [(0,0,255),(255,0,0)])
+    #     cv2.imshow("m", m)
+    #     cv2.waitKey(0)
