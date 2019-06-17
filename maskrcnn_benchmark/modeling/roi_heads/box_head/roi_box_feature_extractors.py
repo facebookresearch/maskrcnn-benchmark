@@ -1,5 +1,4 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-import torch
 from torch import nn
 from torch.nn import functional as F
 
@@ -74,10 +73,8 @@ class FPN2MLPFeatureExtractor(nn.Module):
     def forward(self, x, proposals):
         x = self.pooler(x, proposals)
         x = x.view(x.size(0), -1)
-
         x = F.relu(self.fc6(x))
         x = F.relu(self.fc7(x))
-
         return x
 
 
@@ -106,7 +103,7 @@ class FPNXconv1fcFeatureExtractor(nn.Module):
         dilation = cfg.MODEL.ROI_BOX_HEAD.DILATION
 
         xconvs = []
-        for ix in range(num_stacked_convs):
+        for _ in range(num_stacked_convs):
             xconvs.append(
                 nn.Conv2d(
                     in_channels,
@@ -127,9 +124,9 @@ class FPNXconv1fcFeatureExtractor(nn.Module):
         for modules in [self.xconvs,]:
             for l in modules.modules():
                 if isinstance(l, nn.Conv2d):
-                    torch.nn.init.normal_(l.weight, std=0.01)
+                    nn.init.normal_(l.weight, std=0.01)
                     if not use_gn:
-                        torch.nn.init.constant_(l.bias, 0)
+                        nn.init.constant_(l.bias, 0)
 
         input_size = conv_head_dim * resolution ** 2
         representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM

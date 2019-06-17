@@ -1,6 +1,7 @@
 from torch import nn
 
-from maskrcnn_benchmark import layers
+from maskrcnn_benchmark.layers import ConvTranspose2d
+from maskrcnn_benchmark.layers import interpolate
 from maskrcnn_benchmark.modeling import registry
 
 
@@ -8,11 +9,10 @@ from maskrcnn_benchmark.modeling import registry
 class KeypointRCNNPredictor(nn.Module):
     def __init__(self, cfg, in_channels):
         super(KeypointRCNNPredictor, self).__init__()
-        input_features = in_channels
         num_keypoints = cfg.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES
         deconv_kernel = 4
-        self.kps_score_lowres = layers.ConvTranspose2d(
-            input_features,
+        self.kps_score_lowres = ConvTranspose2d(
+            in_channels,
             num_keypoints,
             deconv_kernel,
             stride=2,
@@ -27,7 +27,7 @@ class KeypointRCNNPredictor(nn.Module):
 
     def forward(self, x):
         x = self.kps_score_lowres(x)
-        x = layers.interpolate(
+        x = interpolate(
             x, scale_factor=self.up_scale, mode="bilinear", align_corners=False
         )
         return x

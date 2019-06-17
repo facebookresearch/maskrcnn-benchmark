@@ -106,7 +106,7 @@ class RPNHead(nn.Module):
         return logits, bbox_reg
 
 
-class RPNModule(torch.nn.Module):
+class RPNModule(nn.Module):
     """
     Module for RPN computation. Takes feature maps from the backbone and RPN
     proposals and losses. Works for both FPN and non-FPN.
@@ -117,25 +117,16 @@ class RPNModule(torch.nn.Module):
 
         self.cfg = cfg.clone()
 
-        anchor_generator = make_anchor_generator(cfg)
-
+        self.anchor_generator = make_anchor_generator(cfg)
         rpn_head = registry.RPN_HEADS[cfg.MODEL.RPN.RPN_HEAD]
-        head = rpn_head(
-            cfg, in_channels, anchor_generator.num_anchors_per_location()[0]
+        self.head = rpn_head(
+            cfg, in_channels, self.anchor_generator.num_anchors_per_location()[0]
         )
 
         rpn_box_coder = BoxCoder(weights=(1.0, 1.0, 1.0, 1.0))
-
-        box_selector_train = make_rpn_postprocessor(cfg, rpn_box_coder, is_train=True)
-        box_selector_test = make_rpn_postprocessor(cfg, rpn_box_coder, is_train=False)
-
-        loss_evaluator = make_rpn_loss_evaluator(cfg, rpn_box_coder)
-
-        self.anchor_generator = anchor_generator
-        self.head = head
-        self.box_selector_train = box_selector_train
-        self.box_selector_test = box_selector_test
-        self.loss_evaluator = loss_evaluator
+        self.box_selector_train = make_rpn_postprocessor(cfg, rpn_box_coder, is_train=True)
+        self.box_selector_test = make_rpn_postprocessor(cfg, rpn_box_coder, is_train=False)
+        self.loss_evaluator = make_rpn_loss_evaluator(cfg, rpn_box_coder)
 
     def forward(self, images, features, targets=None):
         """

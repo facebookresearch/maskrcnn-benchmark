@@ -9,7 +9,6 @@ from .loss import make_roi_keypoint_loss_evaluator
 class ROIKeypointHead(torch.nn.Module):
     def __init__(self, cfg, in_channels):
         super(ROIKeypointHead, self).__init__()
-        self.cfg = cfg.clone()
         self.feature_extractor = make_roi_keypoint_feature_extractor(cfg, in_channels)
         self.predictor = make_roi_keypoint_predictor(
             cfg, self.feature_extractor.out_channels)
@@ -27,10 +26,11 @@ class ROIKeypointHead(torch.nn.Module):
             x (Tensor): the result of the feature extractor
             proposals (list[BoxList]): during training, the original proposals
                 are returned. During testing, the predicted boxlists are returned
-                with the `mask` field set
+                with the `keypoint` field set
             losses (dict[Tensor]): During training, returns the losses for the
                 head. During testing, returns an empty dict.
         """
+
         if self.training:
             with torch.no_grad():
                 proposals = self.loss_evaluator.subsample(proposals, targets)

@@ -19,6 +19,7 @@ def project_masks_on_boxes(segmentation_masks, proposals, discretization_size):
     Arguments:
         segmentation_masks: an instance of SegmentationMask
         proposals: an instance of BoxList
+        discretization_size: spatial resolution of masks
     """
     masks = []
     M = discretization_size
@@ -33,9 +34,9 @@ def project_masks_on_boxes(segmentation_masks, proposals, discretization_size):
     for segmentation_mask, proposal in zip(segmentation_masks, proposals):
         # crop the masks, resize them to the desired resolution and
         # then convert them to the tensor representation.
-        cropped_mask = segmentation_mask.crop(proposal)
-        scaled_mask = cropped_mask.resize((M, M))
-        mask = scaled_mask.get_mask_tensor()
+        mask = segmentation_mask.crop(proposal)
+        mask = mask.resize((M, M))
+        mask = mask.get_mask_tensor()
         masks.append(mask)
     if len(masks) == 0:
         return torch.empty(0, dtype=torch.float32, device=device)
