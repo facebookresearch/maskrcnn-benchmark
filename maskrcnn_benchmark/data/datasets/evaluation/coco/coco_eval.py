@@ -60,7 +60,7 @@ def do_coco_evaluation(
                 dataset.coco, coco_results[iou_type], file_path, iou_type
             )
             results.update(res)
-    logger.info('Dataset: {}\n{}'.format(dataset.name, results))
+    logger.info(results)
     check_expected_results(results, expected_results, expected_results_sigma_tol)
     if output_folder:
         torch.save(results, os.path.join(output_folder, "coco_results.pth"))

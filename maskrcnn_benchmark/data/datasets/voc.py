@@ -40,12 +40,11 @@ class PascalVOCDataset(torch.utils.data.Dataset):
         "tvmonitor",
     )
 
-    def __init__(self, data_dir, name, split, use_difficult=False, transforms=None):
+    def __init__(self, data_dir, split, use_difficult=False, transforms=None):
         self.root = data_dir
         self.image_set = split
         self.keep_difficult = use_difficult
         self.transforms = transforms
-        self.name = name
 
         self._annopath = os.path.join(self.root, "Annotations", "%s.xml")
         self._imgpath = os.path.join(self.root, "JPEGImages", "%s.jpg")
