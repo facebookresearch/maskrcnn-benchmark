@@ -29,7 +29,8 @@ def do_voc_evaluation(dataset, predictions, output_folder, logger):
         iou_thresh=0.5,
         use_07_metric=True,
     )
-    result_str = "mAP: {:.4f}\n".format(result["map"])
+    result_str = 'Dataset: {}\n'.format(dataset.name)
+    result_str += "mAP: {:.4f}\n".format(result["map"])
     for i, ap in enumerate(result["ap"]):
         if i == 0:  # skip background
             continue

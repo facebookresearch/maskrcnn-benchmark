@@ -60,7 +60,7 @@ def do_coco_evaluation(
                 dataset.coco, coco_results[iou_type], file_path, iou_type
             )
             results.update(res)
-    logger.info(results)
+    logger.info('Dataset: {}\n{}'.format(dataset.name, results))
     check_expected_results(results, expected_results, expected_results_sigma_tol)
     if output_folder:
         torch.save(results, os.path.join(output_folder, "coco_results.pth"))
@@ -364,8 +364,14 @@ class COCOResults(object):
             res[metric] = s[idx]
 
     def __repr__(self):
-        # TODO make it pretty
-        return repr(self.results)
+        results = ''
+        for task, metrics in self.results.items():
+            results += 'Task: {}\n'.format(task)
+            metric_names = metrics.keys()
+            metric_vals = ['{:.4f}'.format(v) for v in metrics.values()]
+            results += (', '.join(metric_names) + '\n')
+            results += (', '.join(metric_vals) + '\n')
+        return results
 
 
 def check_expected_results(results, expected_results, sigma_tol):
