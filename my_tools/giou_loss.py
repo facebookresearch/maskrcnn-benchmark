@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 import numpy as np
 
 # Heuristic choice based on that would scale a 16 pixel anchor up to 1000 pixels
@@ -179,11 +180,12 @@ class SimpleLinearModel(nn.Module):
     def __init__(self, regression_cn=4):
         super(SimpleLinearModel, self).__init__()
 
-        hidden_layer = 2
+        hidden_layer = 5
         self.fc_layer1 = nn.Linear(regression_cn, hidden_layer)
         self.fc_layer2 = nn.Linear(regression_cn, hidden_layer)
         self.fc_out_layer = nn.Linear(hidden_layer*2, 16)
         self.fc_out_layer2 = nn.Linear(16, regression_cn)
+        self.bn = nn.BatchNorm1d(hidden_layer*2)
 
         for layer in [self.fc_layer1, self.fc_layer2, self.fc_out_layer, self.fc_out_layer2]:
             nn.init.normal_(layer.weight, mean=0, std=0.01)
@@ -193,7 +195,8 @@ class SimpleLinearModel(nn.Module):
         out1 = self.fc_layer1(input1)
         out2 = self.fc_layer2(input2)
         x = torch.cat((out1, out2), 1)
-        x = self.fc_out_layer(x)
+        x = self.bn(F.relu(x))
+        x = F.relu(self.fc_out_layer(x))
         out = self.fc_out_layer2(x)
         return out
 
