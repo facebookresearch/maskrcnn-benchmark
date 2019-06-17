@@ -60,6 +60,8 @@ class BinaryMaskList(object):
             elif isinstance(masks[0], torch.Tensor):
                 masks = torch.stack(masks, dim=2).clone()
             elif isinstance(masks[0], dict) and "counts" in masks[0]:
+                if(isinstance(masks[0]["counts"], (list, tuple))):
+                    masks = mask_utils.frPyObjects(masks, size[1], size[0])
                 # RLE interpretation
                 rle_sizes = [tuple(inst["size"]) for inst in masks]
 
