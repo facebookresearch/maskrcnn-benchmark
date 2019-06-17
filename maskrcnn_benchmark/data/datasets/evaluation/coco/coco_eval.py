@@ -364,7 +364,7 @@ class COCOResults(object):
             res[metric] = s[idx]
 
     def __repr__(self):
-        results = ''
+        results = '\n'
         for task, metrics in self.results.items():
             results += 'Task: {}\n'.format(task)
             metric_names = metrics.keys()
