@@ -250,23 +250,27 @@ class FastRCNNLossComputation(object):
         # box_loss = box_loss.mean() # (box_loss * pos_label_weights.unsqueeze(1)).sum() / total_samples
         # # box_loss = box_loss / labels.numel()
 
-        # box_loss = smooth_l1_loss(
-        #     box_regression[sampled_pos_inds[:, None], map_inds],
-        #     regression_targets[sampled_pos_inds],
-        #     # size_average=False,
-        #     beta=1,
-        # ).sum()
-        # box_loss = box_loss / total_samples
+        box_loss = smooth_l1_loss(
+            box_regression[sampled_pos_inds[:, None], map_inds],
+            regression_targets[sampled_pos_inds],
+            # size_average=False,
+            beta=1,
+        ).sum()
+        box_loss = box_loss / total_samples
 
-        box_reg = box_regression[sampled_pos_inds[:, None], map_inds]
-        box_reg_targets = regression_targets[sampled_pos_inds]
+        # box_reg = box_regression[sampled_pos_inds[:, None], map_inds]
+        # box_reg_targets = regression_targets[sampled_pos_inds]
 
-        base_anchors = torch.cat([a.get_field("rrects") for a in proposals])[sampled_pos_inds]
-        pred_box = self.box_coder.decode(box_reg, base_anchors)
-        gt_box = self.box_coder.decode(box_reg_targets, base_anchors)
-        ious = compute_iou_rotate_loss(pred_box, gt_box)
-        iou_loss = torch.where(ious <= 0, ious * 0.0, -torch.log(ious ** 2))
-        box_loss = iou_loss.sum() / total_samples
+        # base_anchors = torch.cat([a.get_field("rrects") for a in proposals])[sampled_pos_inds]
+        # pred_box = self.box_coder.decode(box_reg, base_anchors)
+        # gt_box = self.box_coder.decode(box_reg_targets, base_anchors)
+        # ious = compute_iou_rotate_loss(pred_box, gt_box)
+        # iou_loss = torch.where(ious <= 0, ious * 0.0, -torch.log(ious ** 2))
+        # box_loss = iou_loss.sum() / total_pos
+        #
+        # if torch.isnan(classification_loss) or torch.isnan(box_loss):
+        #     print("BOXHEAD LOSS IS NAN")
+        #     raise Exception
 
         return classification_loss, box_loss
 

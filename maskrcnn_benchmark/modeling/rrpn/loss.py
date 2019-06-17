@@ -38,39 +38,39 @@ def compute_reg_targets(targets_ori, anchors, box_coder):
 
     with torch.no_grad():
         if box_coder.relative_angle:
-            pass
-            # """
-            # Get the diff (absolute value) between both angles
-            # Normalize the diff to [0, 180]
-            # if the angle diff is in range [45, 135]:
-            #     flip the target height-width
-            #     adjust the target angle -90
-            # else if angle diff is in range [135, 180]:
-            #     adjust the target angle -180
-            # This normalizes the target angle diff to range [-45, 45]
-            # """
-            # reg_angles = targets[:, -1] - anchors[:, -1]
-            # reg_angles_sign = (reg_angles > 0).to(torch.float32)
-            # reg_angles_sign[reg_angles_sign == 0] = -1
-            # reg_angles_abs = torch.abs(reg_angles)
-            #
-            # # normalize angle diffs: 0 - 180
-            # reg_angles_abs = reg_angles_abs % 180
-            #
-            # gt_45 = reg_angles_abs > 45
-            # gt_135 = reg_angles_abs > 135
-            # lt_135 = ~gt_135
-            # gt_45_lt_135 = torch.mul(gt_45, lt_135)
-            #
-            # # if angle diff is in range [45, 135]
-            # xd = targets_ori[gt_45_lt_135, 2:4]
-            # targets[gt_45_lt_135, 2] = xd[:, 1]
-            # targets[gt_45_lt_135, 3] = xd[:, 0]
-            #
-            # targets[gt_45_lt_135, -1] -= reg_angles_sign[gt_45_lt_135] * 90
-            #
-            # # if angle diff is in range [135, 180]
-            # targets[gt_135, -1] -= reg_angles_sign[gt_135] * 180
+            # pass
+            """
+            Get the diff (absolute value) between both angles
+            Normalize the diff to [0, 180]
+            if the angle diff is in range [45, 135]:
+                flip the target height-width
+                adjust the target angle -90
+            else if angle diff is in range [135, 180]:
+                adjust the target angle -180
+            This normalizes the target angle diff to range [-45, 45]
+            """
+            reg_angles = targets[:, -1] - anchors[:, -1]
+            reg_angles_sign = (reg_angles > 0).to(torch.float32)
+            reg_angles_sign[reg_angles_sign == 0] = -1
+            reg_angles_abs = torch.abs(reg_angles)
+
+            # normalize angle diffs: 0 - 180
+            reg_angles_abs = reg_angles_abs % 180
+
+            gt_45 = reg_angles_abs > 45
+            gt_135 = reg_angles_abs > 135
+            lt_135 = ~gt_135
+            gt_45_lt_135 = torch.mul(gt_45, lt_135)
+
+            # if angle diff is in range [45, 135]
+            xd = targets_ori[gt_45_lt_135, 2:4]
+            targets[gt_45_lt_135, 2] = xd[:, 1]
+            targets[gt_45_lt_135, 3] = xd[:, 0]
+
+            targets[gt_45_lt_135, -1] -= reg_angles_sign[gt_45_lt_135] * 90
+
+            # if angle diff is in range [135, 180]
+            targets[gt_135, -1] -= reg_angles_sign[gt_135] * 180
         else:
             """
             Normalize anchor angles to range [-45, 45] to match target angles range [-45, 45] 
@@ -410,23 +410,24 @@ class RPNLossComputation(object):
 
         box_reg = box_regression[sampled_pos_inds]
         box_reg_targets = regression_targets[sampled_pos_inds]
-        # box_loss = smooth_l1_loss(
-        #     box_reg,
-        #     box_reg_targets,
-        #     beta=1.0 / 9,
-        #     # size_average=False,
-        # ).sum() / (total_samples)
+        box_loss = smooth_l1_loss(
+            box_reg,
+            box_reg_targets,
+            beta=1.0 / 9,
+            # size_average=False,
+        ).sum() / (total_samples)
 
-        base_anchors = torch.cat([a.get_field("rrects") for a in anchors])[sampled_pos_inds]
-        pred_box = self.box_coder.decode(box_reg, base_anchors)
-        gt_box = self.box_coder.decode(box_reg_targets, base_anchors)
-        ious = compute_iou_rotate_loss(pred_box, gt_box)
-        iou_loss = torch.where(ious <= 0, ious * 0.0, -torch.log(ious ** 2))
-        box_loss = iou_loss.sum() / total_samples
+        # base_anchors = torch.cat([a.get_field("rrects") for a in anchors])[sampled_pos_inds]
+        # pred_box = self.box_coder.decode(box_reg, base_anchors)
+        # gt_box = self.box_coder.decode(box_reg_targets, base_anchors)
+        # ious = compute_iou_rotate_loss(pred_box, gt_box)
+        # iou_loss = torch.where(ious <= 0, ious * 0.0, -torch.log(ious**2))
+        # box_loss = iou_loss.sum() / total_samples
 
-        # objectness_loss = F.binary_cross_entropy_with_logits(
-        #     objectness[sampled_inds], labels[sampled_inds]
-        # )
+        objectness_loss = F.binary_cross_entropy_with_logits(
+            objectness[sampled_inds], labels[sampled_inds]
+        )
+
         return objectness_loss, box_loss#, angle_loss
 
 
