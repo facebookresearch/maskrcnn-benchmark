@@ -13,6 +13,16 @@ def l2_loss(input, target):
     loss = 0.5 * cond**2 / input.shape[0]
     return loss.sum()
 
+def smooth_l1_loss(input, target, beta=1. / 9):
+    """
+    very similar to the smooth_l1_loss from pytorch, but with
+    the extra beta parameter
+    """
+    n = torch.abs(input - target)
+    cond = n < beta
+    loss = torch.where(cond, 0.5 * n ** 2 / beta, n - 0.5 * beta)
+    return loss.mean()
+
 
 class MaskIoULossComputation(object):
     def __init__(self, loss_weight):
@@ -30,7 +40,7 @@ class MaskIoULossComputation(object):
         pos_inds = torch.nonzero(gt_miou > 0.0).squeeze(1)
         if pos_inds.numel() == 0:
             return pred_maskiou.sum() * 0
-        maskiou_loss = l2_loss(pred_maskiou[positive_inds, labels_pos][pos_inds], gt_miou[pos_inds])
+        maskiou_loss = smooth_l1_loss(pred_maskiou[positive_inds, labels_pos][pos_inds], gt_miou[pos_inds])
         maskiou_loss = self.loss_weight * maskiou_loss
 
         return maskiou_loss
