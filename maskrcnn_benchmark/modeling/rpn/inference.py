@@ -169,7 +169,7 @@ class RPNPostProcessor(torch.nn.Module):
             inds_mask[inds_sorted] = 1
             inds_mask = inds_mask.split(box_sizes)
             for i in range(num_images):
-                boxlists[i] = boxlists[i][inds_mask[i]]
+                boxlists[i] = boxlists[i].masked_select(inds_mask[i])
         else:
             for i in range(num_images):
                 objectness = boxlists[i].get_field("objectness")
