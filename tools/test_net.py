@@ -34,6 +34,11 @@ def main():
     )
     parser.add_argument("--local_rank", type=int, default=0)
     parser.add_argument(
+        "--ckpt",
+        help="The path to the checkpoint for test, default is the latest checkpoint.",
+        default=None,
+    )
+    parser.add_argument(
         "opts",
         help="Modify config options using the command-line",
         default=None,
@@ -73,7 +78,8 @@ def main():
 
     output_dir = cfg.OUTPUT_DIR
     checkpointer = DetectronCheckpointer(cfg, model, save_dir=output_dir)
-    _ = checkpointer.load(cfg.MODEL.WEIGHT)
+    ckpt = cfg.MODEL.WEIGHT if args.ckpt is None else args.ckpt
+    _ = checkpointer.load(ckpt, use_latest=args.ckpt is None)
 
     iou_types = ("bbox",)
     if cfg.MODEL.MASK_ON:
