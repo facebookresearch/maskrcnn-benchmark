@@ -51,7 +51,8 @@ def compute_rotated_proposal_gt_iou(gt_mask, proposal):
 
     full_area = np.sum(gt_mask == 1)
     box_area = np.sum(proposal_mask == 1)
-    mask_iou = float(box_area) / full_area
+
+    mask_iou = float(box_area) / full_area if full_area > 0 else 0.0
 
     return mask_iou
 
