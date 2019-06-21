@@ -424,9 +424,9 @@ class RPNLossComputation(object):
         # iou_loss = torch.where(ious <= 0, ious * 0.0, -torch.log(ious**2))
         # box_loss = iou_loss.sum() / total_samples
 
-        objectness_loss = F.binary_cross_entropy_with_logits(
-            objectness[sampled_inds], labels[sampled_inds]
-        )
+        # objectness_loss = F.binary_cross_entropy_with_logits(
+        #     objectness[sampled_inds], labels[sampled_inds]
+        # )
 
         return objectness_loss, box_loss#, angle_loss
 
