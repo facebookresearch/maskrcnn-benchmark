@@ -23,6 +23,7 @@ class PostProcessor(nn.Module):
         detections_per_img=100,
         box_coder=None,
         cls_agnostic_bbox_reg=False,
+        use_nms=True,
         bbox_aug_enabled=False
     ):
         """
@@ -41,6 +42,10 @@ class PostProcessor(nn.Module):
         self.box_coder = box_coder
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
         self.bbox_aug_enabled = bbox_aug_enabled
+
+        self.use_nms = use_nms
+        if not self.use_nms:
+            self.detections_per_img = -1
 
     def forward(self, x, boxes):
         """
@@ -125,9 +130,11 @@ class PostProcessor(nn.Module):
             boxes_j = boxes[inds, j * 4 : (j + 1) * 4]
             boxlist_for_class = BoxList(boxes_j, boxlist.size, mode="xyxy")
             boxlist_for_class.add_field("scores", scores_j)
-            boxlist_for_class = boxlist_nms(
-                boxlist_for_class, self.nms
-            )
+
+            if self.use_nms:
+                boxlist_for_class = boxlist_nms(
+                    boxlist_for_class, self.nms
+                )
             num_labels = len(boxlist_for_class)
             boxlist_for_class.add_field(
                 "labels", torch.full((num_labels,), j, dtype=torch.int64, device=device)
@@ -161,12 +168,17 @@ def make_roi_box_post_processor(cfg):
     cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
     bbox_aug_enabled = cfg.TEST.BBOX_AUG.ENABLED
 
+    use_nms = True
+    if "ROI_MASKIOU_HEAD" in cfg.MODEL and cfg.MODEL.ROI_MASKIOU_HEAD.USE_NMS:
+        use_nms = False
+
     postprocessor = PostProcessor(
         score_thresh,
         nms_thresh,
         detections_per_img,
         box_coder,
         cls_agnostic_bbox_reg,
+        use_nms,
         bbox_aug_enabled
     )
     return postprocessor

@@ -326,6 +326,9 @@ _C.MODEL.ROI_MASKIOU_HEAD.MLP_HEAD_DIM = 1024
 _C.MODEL.ROI_MASKIOU_HEAD.CONV_LAYERS = (256, 256, 256, 256)
 _C.MODEL.ROI_MASKIOU_HEAD.USE_GN = False
 _C.MODEL.ROI_MASKIOU_HEAD.LOSS_WEIGHT = 1.0
+# If True, NMS is not run during boxhead inference and is instead saved for
+# maskiou head, which runs NMS on mask_iou score instead of classification score
+_C.MODEL.ROI_MASKIOU_HEAD.USE_NMS = False
 
 
 # ---------------------------------------------------------------------------- #
