@@ -15,6 +15,7 @@ from ..balanced_positive_negative_sampler import BalancedPositiveNegativeSampler
 # from maskrcnn_benchmark.layers import smooth_l1_loss
 from maskrcnn_benchmark.modeling.matcher import Matcher
 from maskrcnn_benchmark.modeling.rotate_ops import rotate_iou
+from maskrcnn_benchmark.modeling.rrpn.anchor_generator import convert_rect_to_pts2
 from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
 from maskrcnn_benchmark.modeling.rrpn.utils import \
     get_boxlist_rotated_rect_tensor, concat_box_prediction_layers
@@ -37,12 +38,13 @@ def compute_reg_targets(targets_ori, anchors, box_coder):
 
     with torch.no_grad():
         if box_coder.relative_angle:
+            # pass
             """
             Get the diff (absolute value) between both angles
             Normalize the diff to [0, 180]
             if the angle diff is in range [45, 135]:
                 flip the target height-width
-                adjust the target angle -90 
+                adjust the target angle -90
             else if angle diff is in range [135, 180]:
                 adjust the target angle -180
             This normalizes the target angle diff to range [-45, 45]
@@ -82,6 +84,126 @@ def compute_reg_targets(targets_ori, anchors, box_coder):
     )
 
     return reg_targets
+
+
+def trangle_area2(a, b, c):
+    return ((a[..., 0] - c[..., 0]) * (b[..., 1] - c[..., 1]) - (a[..., 1] - c[..., 1]) * (b[..., 0] - c[..., 0])) / 2.0
+
+
+def reorder_pts2(int_pts):
+    num_of_inter = len(int_pts)
+    if num_of_inter == 0:
+        return
+
+    center = torch.mean(int_pts, 0)
+    v = int_pts - center
+    d = torch.sqrt(v[:, 0] * v[:, 0] + v[:, 1] * v[:, 1])
+    v = v / d.unsqueeze(-1)
+    v1_lt_0 = v[:, 1] < 0
+    v[v1_lt_0, 0] = -2 - v[v1_lt_0, 0]
+    vs = v[:, 0]
+
+    # int_pts_f = int_pts.flatten()
+    for i in range(num_of_inter):
+        if vs[i - 1] > vs[i]:
+            temp = vs[i].clone()
+            t = int_pts[i].clone()
+            j = i
+            while (j > 0 and vs[j - 1] > temp):
+                vs[j] = vs[j - 1]
+                int_pts[j] = int_pts[j - 1]
+                j -= 1
+
+            vs[j] = temp
+            int_pts[j] = t
+
+
+def in_rect2(pts1, pts2):
+    ab = pts2[:, 1] - pts2[:, 0]
+    ab = ab.unsqueeze(-1)
+    ad = pts2[:, 3] - pts2[:, 0]
+    ad = ad.unsqueeze(-1)
+    ap = pts1 - pts2[:, 0].unsqueeze(1)
+
+    abab = ab[:, 0] * ab[:, 0] + ab[:, 1] * ab[:, 1]
+    abap = ab[:, 0] * ap[:, :, 0] + ab[:, 1] * ap[:, :, 1]
+    adad = ad[:, 0] * ad[:, 0] + ad[:, 1] * ad[:, 1]
+    adap = ad[:, 0] * ap[:, :, 0] + ad[:, 1] * ap[:, :, 1]
+
+    return (abab >= abap) * (abap >= 0) * (adad >= adap) * (adap >= 0)
+
+
+def inter2line2(pts1, pts2):
+    device = pts1.device
+    mgx, mgy = torch.meshgrid(torch.arange(4), torch.arange(4))
+    mgx = mgx.to(device)
+    mgy = mgy.to(device)
+
+    a = pts1[:, mgx]  # N,4,4,2
+    b = pts1[:, (mgx + 1) % 4]  # N,4,4,2
+    c = pts2[:, mgy]  # N,4,4,2
+    d = pts2[:, (mgy + 1) % 4]  # N,4,4,2
+
+    area_abc = trangle_area2(a, b, c)
+    area_abd = trangle_area2(a, b, d)
+    area_cda = trangle_area2(c, d, a)
+    area_cdb = area_cda + area_abc - area_abd
+
+    is_intersect = (area_abc * area_abd < 0) * (area_cda * area_cdb < 0)  # N,4,4
+
+    t = area_cda / (area_abd - area_abc)
+    dxy = t.unsqueeze(-1) * (b - a)
+    intersect_pts = a + dxy  # N,4,4,2
+
+    return is_intersect, intersect_pts
+
+
+def intersect_area2(int_pts, num_of_inter):
+    if num_of_inter <= 2:
+        return 0.0
+
+    device = int_pts.device
+    a = torch.arange(num_of_inter - 2).to(device)
+    area = torch.sum(torch.abs(trangle_area2(int_pts[a * 0], int_pts[a + 1], int_pts[a + 2])))
+    return area
+
+def compute_iou_rotate_loss(boxes1, boxes2):
+    N = len(boxes1)
+    assert N == len(boxes2)
+    ious = torch.zeros(N).to(boxes1)
+
+    device = boxes1.device
+
+    area1 = boxes1[:, 2] * boxes1[:, 3]
+    area2 = boxes2[:, 2] * boxes2[:, 3]
+
+    box1_pts = convert_rect_to_pts2(boxes1, lib=torch)
+    box2_pts = convert_rect_to_pts2(boxes2, lib=torch)
+
+    b1_in_b2 = in_rect2(box1_pts, box2_pts) # N,4
+    b2_in_b1 = in_rect2(box2_pts, box1_pts) # N,4
+
+    is_intersect, intersect_pts = inter2line2(box1_pts, box2_pts)
+
+    for n in range(N):
+        int_pts = torch.empty((0, 2), dtype=torch.float32, device=device)
+        int_b1 = box1_pts[n][b1_in_b2[n]]
+        int_b2 = box2_pts[n][b2_in_b1[n]]
+        int_lines = intersect_pts[n][is_intersect[n]]
+        for s_pts in [int_b1, int_b2, int_lines]:
+            if len(s_pts) > 0:
+                int_pts = torch.cat((int_pts, s_pts), 0)
+
+        num_of_inter = int_pts.size(0)
+        if num_of_inter > 2:
+            reorder_pts2(int_pts)
+            int_area = intersect_area2(int_pts, num_of_inter)
+
+            iou = int_area / (area1[n] + area2[n] - int_area)
+
+            ious[n] = iou
+
+    return ious
 
 class RPNLossComputation(object):
     """
@@ -285,16 +407,27 @@ class RPNLossComputation(object):
         objectness_loss = F.binary_cross_entropy_with_logits(
             objectness[sampled_inds], sampled_labels, weight=objectness_weights
         )
+
+        box_reg = box_regression[sampled_pos_inds]
+        box_reg_targets = regression_targets[sampled_pos_inds]
         box_loss = smooth_l1_loss(
-            box_regression[sampled_pos_inds],
-            regression_targets[sampled_pos_inds],
+            box_reg,
+            box_reg_targets,
             beta=1.0 / 9,
             # size_average=False,
         ).sum() / (total_samples)
 
+        # base_anchors = torch.cat([a.get_field("rrects") for a in anchors])[sampled_pos_inds]
+        # pred_box = self.box_coder.decode(box_reg, base_anchors)
+        # gt_box = self.box_coder.decode(box_reg_targets, base_anchors)
+        # ious = compute_iou_rotate_loss(pred_box, gt_box)
+        # iou_loss = torch.where(ious <= 0, ious * 0.0, -torch.log(ious**2))
+        # box_loss = iou_loss.sum() / total_samples
+
         # objectness_loss = F.binary_cross_entropy_with_logits(
         #     objectness[sampled_inds], labels[sampled_inds]
         # )
+
         return objectness_loss, box_loss#, angle_loss
 
 

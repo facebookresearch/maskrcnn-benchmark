@@ -25,7 +25,8 @@ class PostProcessor(nn.Module):
         score_thresh=0.05,
         nms=0.5,
         detections_per_img=100,
-        cls_agnostic_bbox_reg=False
+        cls_agnostic_bbox_reg=False,
+        use_nms=True
     ):
         """
         Arguments:
@@ -42,6 +43,9 @@ class PostProcessor(nn.Module):
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
 
         self.nms_rotate = RotateNMS(nms_threshold=nms)#, post_nms_top_n=-1)
+        self.use_nms = use_nms
+        if not self.use_nms:
+            self.detections_per_img = -1
 
     def forward(self, x, boxes):
         """
@@ -141,10 +145,11 @@ class PostProcessor(nn.Module):
             scores_j = scores_j[sorted_idx]
 
             # perform nms
-            keep = self.nms_rotate(rrects_j)
-            bboxes_j = bboxes_j[keep]
-            rrects_j = rrects_j[keep]
-            scores_j = scores_j[keep]
+            if self.use_nms:
+                keep = self.nms_rotate(rrects_j)
+                bboxes_j = bboxes_j[keep]
+                rrects_j = rrects_j[keep]
+                scores_j = scores_j[keep]
 
             boxlist_for_class = BoxList(bboxes_j, boxlist.size, mode="xyxy")
             boxlist_for_class.add_field("rrects", rrects_j)
@@ -183,11 +188,16 @@ def make_roi_box_post_processor(cfg):
     detections_per_img = cfg.MODEL.ROI_HEADS.DETECTIONS_PER_IMG
     cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
 
+    use_nms = True
+    if "ROI_MASKIOU_HEAD" in cfg.MODEL and cfg.MODEL.ROI_MASKIOU_HEAD.USE_NMS:
+        use_nms = False
+
     postprocessor = PostProcessor(
         box_coder,
         score_thresh,
         nms_thresh,
         detections_per_img,
-        cls_agnostic_bbox_reg
+        cls_agnostic_bbox_reg,
+        use_nms
     )
     return postprocessor
