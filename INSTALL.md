@@ -33,10 +33,7 @@ conda install -c pytorch pytorch-nightly torchvision cudatoolkit=9.0
 export INSTALL_DIR=$PWD
 
 # install pycocotools
-cd $INSTALL_DIR
-git clone https://github.com/cocodataset/cocoapi.git
-cd cocoapi/PythonAPI
-python setup.py build_ext install
+pip install pycocotools
 
 # install apex
 cd $INSTALL_DIR
