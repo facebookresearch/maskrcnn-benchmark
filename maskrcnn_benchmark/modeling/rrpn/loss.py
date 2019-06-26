@@ -30,6 +30,11 @@ def smooth_l1_loss(input, target, beta=1. / 9):
     loss = torch.where(cond, 0.5 * n ** 2 / beta, n - 0.5 * beta)
     return loss
 
+def smooth_angle_loss(input, target, weight=10.0):
+    angle_loss = (1.0 - torch.cos(input - target)) * weight
+    # loss = torch.where(angle_loss < 1.0, angle_loss ** 0.5, angle_loss)
+    return angle_loss
+
 def compute_reg_targets(targets_ori, anchors, box_coder):
     targets = targets_ori.clone()
 
@@ -411,11 +416,13 @@ class RPNLossComputation(object):
         box_reg = box_regression[sampled_pos_inds]
         box_reg_targets = regression_targets[sampled_pos_inds]
         box_loss = smooth_l1_loss(
-            box_reg,
-            box_reg_targets,
+            box_reg[:, :-1],
+            box_reg_targets[:, :-1],
             beta=1.0 / 9,
             # size_average=False,
         ).sum() / (total_samples)
+        angle_loss = smooth_angle_loss(box_reg[:, -1], box_reg_targets[:, -1]).sum() / (total_samples)
+        box_loss = (box_loss + angle_loss) 
 
         # base_anchors = torch.cat([a.get_field("rrects") for a in anchors])[sampled_pos_inds]
         # pred_box = self.box_coder.decode(box_reg, base_anchors)
