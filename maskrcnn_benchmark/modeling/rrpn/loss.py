@@ -100,28 +100,30 @@ def reorder_pts2(int_pts):
     if num_of_inter == 0:
         return
 
-    center = torch.mean(int_pts, 0)
-    v = int_pts - center
-    d = torch.sqrt(v[:, 0] * v[:, 0] + v[:, 1] * v[:, 1])
-    v = v / d.unsqueeze(-1)
-    v1_lt_0 = v[:, 1] < 0
-    v[v1_lt_0, 0] = -2 - v[v1_lt_0, 0]
-    vs = v[:, 0]
+    with torch.no_grad():
+        center = torch.mean(int_pts, 0)
+        v = int_pts - center
+        d = torch.sqrt(v[:,0] * v[:,0] + v[:,1] * v[:,1])
+        v = v / d.unsqueeze(-1)
+        v1_lt_0 = v[:,1] < 0 
+        v[v1_lt_0, 0] = -2 - v[v1_lt_0, 0]
+        vs = v[:,0]
 
     # int_pts_f = int_pts.flatten()
+    indexing = torch.arange(num_of_inter, dtype=torch.long, device=int_pts.device)
     for i in range(num_of_inter):
         if vs[i - 1] > vs[i]:
-            temp = vs[i].clone()
-            t = int_pts[i].clone()
+            temp = vs[i].item()
             j = i
-            while (j > 0 and vs[j - 1] > temp):
-                vs[j] = vs[j - 1]
-                int_pts[j] = int_pts[j - 1]
+            while (j > 0 and vs[j-1] > temp):
+                vs[j] = vs[j-1].item()
+                indexing[j] = indexing[j-1]
                 j -= 1
-
+          
             vs[j] = temp
-            int_pts[j] = t
+            indexing[j] = i
 
+    return indexing
 
 def in_rect2(pts1, pts2):
     ab = pts2[:, 1] - pts2[:, 0]
@@ -156,7 +158,7 @@ def inter2line2(pts1, pts2):
 
     is_intersect = (area_abc * area_abd < 0) * (area_cda * area_cdb < 0)  # N,4,4
 
-    t = area_cda / (area_abd - area_abc)
+    t = area_cda / (area_abd - area_abc + 1e-7)
     dxy = t.unsqueeze(-1) * (b - a)
     intersect_pts = a + dxy  # N,4,4,2
 
@@ -201,10 +203,10 @@ def compute_iou_rotate_loss(boxes1, boxes2):
 
         num_of_inter = int_pts.size(0)
         if num_of_inter > 2:
-            reorder_pts2(int_pts)
-            int_area = intersect_area2(int_pts, num_of_inter)
+            reord_index = reorder_pts2(int_pts)
+            int_area = intersect_area2(int_pts[reord_index], num_of_inter)
 
-            iou = int_area / (area1[n] + area2[n] - int_area)
+            iou = int_area / (area1[n] + area2[n] - int_area + 1e-7)
 
             ious[n] = iou
 
@@ -412,6 +414,15 @@ class RPNLossComputation(object):
         objectness_loss = F.binary_cross_entropy_with_logits(
             objectness[sampled_inds], sampled_labels, weight=objectness_weights
         )
+        # gamma = 2.0
+        # alpha = 0.25
+        # p = torch.sigmoid(objectness[sampled_inds])
+        # t = sampled_labels
+        # term1 = (1 - p) ** gamma * torch.log(p)
+        # term2 = p ** gamma * torch.log(1 - p)
+        # objectness_loss = -(t == 1).float() * term1 * alpha - ((t != 1) * (t >= 0)).float() * term2 * (1 - alpha)
+        # objectness_loss = torch.mul(objectness_weights, objectness_loss).mean()
+
 
         box_reg = box_regression[sampled_pos_inds]
         box_reg_targets = regression_targets[sampled_pos_inds]
@@ -422,13 +433,14 @@ class RPNLossComputation(object):
             # size_average=False,
         ).sum() / (total_samples)
         angle_loss = smooth_angle_loss(box_reg[:, -1], box_reg_targets[:, -1]).sum() / (total_samples)
-        box_loss = (box_loss + angle_loss) 
+        box_loss = (box_loss + angle_loss)
 
-        # base_anchors = torch.cat([a.get_field("rrects") for a in anchors])[sampled_pos_inds]
+        # with torch.no_grad():
+        #     base_anchors = torch.cat([a.get_field("rrects") for a in anchors])[sampled_pos_inds]
+        #     gt_box = self.box_coder.decode(box_reg_targets, base_anchors)
         # pred_box = self.box_coder.decode(box_reg, base_anchors)
-        # gt_box = self.box_coder.decode(box_reg_targets, base_anchors)
-        # ious = compute_iou_rotate_loss(pred_box, gt_box)
-        # iou_loss = torch.where(ious <= 0, ious * 0.0, -torch.log(ious**2))
+        # ious = compute_iou_rotate_loss(pred_box, gt_box) + 1e-5
+        # iou_loss = -torch.log(ious**2)
         # box_loss = iou_loss.sum() / total_samples
 
         # objectness_loss = F.binary_cross_entropy_with_logits(

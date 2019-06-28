@@ -276,7 +276,7 @@ def inter2line(pts1, pts2, i, j, temp_pts, lib=np):
     if (area_cda * area_cdb >= 0):
         return False;
     
-    t = area_cda / (area_abd - area_abc);
+    t = area_cda / (area_abd - area_abc + 1e-7);
 
     dx = t * (b[0] - a[0]);
     dy = t * (b[1] - a[1]);
@@ -354,33 +354,6 @@ def inter_pts(pts1, pts2, lib=np):
 def trangle_area2(a, b, c):
     return ((a[...,0] - c[...,0]) * (b[...,1] - c[...,1]) - (a[...,1] - c[...,1]) * (b[...,0] - c[...,0])) / 2.0
 
-def reorder_pts2(int_pts):
-    num_of_inter = len(int_pts)
-    if num_of_inter == 0:
-        return
-
-    center = torch.mean(int_pts, 0)
-    v = int_pts - center
-    d = torch.sqrt(v[:,0] * v[:,0] + v[:,1] * v[:,1])
-    v = v / d.unsqueeze(-1)
-    v1_lt_0 = v[:,1] < 0 
-    v[v1_lt_0, 0] = -2 - v[v1_lt_0, 0]
-    vs = v[:,0]
-
-    # int_pts_f = int_pts.flatten()
-    for i in range(num_of_inter):
-        if vs[i-1] > vs[i]:
-            temp = vs[i].clone()
-            t = int_pts[i].clone()
-            j = i
-            while (j > 0 and vs[j-1] > temp):
-                vs[j] = vs[j-1]
-                int_pts[j] = int_pts[j-1]
-                j -= 1
-          
-            vs[j] = temp
-            int_pts[j] = t
-
 def in_rect2(pts1, pts2):
     ab = pts2[:,1] - pts2[:,0]
     ab = ab.unsqueeze(-1)
@@ -413,7 +386,7 @@ def inter2line2(pts1, pts2):
 
     is_intersect = (area_abc * area_abd < 0) * (area_cda * area_cdb < 0)  # N,4,4
 
-    t = area_cda / (area_abd - area_abc)
+    t = area_cda / (area_abd - area_abc + 1e-7)
     dxy = t.unsqueeze(-1) * (b - a)
     intersect_pts = a + dxy  # N,4,4,2
 
@@ -449,10 +422,40 @@ def iou_rotate_cpu2(boxes1, boxes2, lib=np):
             reorder_pts(int_pts, num_of_inter, lib=lib)
             int_area = area(int_pts, num_of_inter, lib=lib)
 
-            iou = int_area * 1.0 / (area1[i] + area2[i] - int_area)
+            iou = int_area * 1.0 / (area1[i] + area2[i] - int_area + 1e-7)
         ious[i] = iou
 
     return ious
+
+def reorder_pts2(int_pts):
+    num_of_inter = len(int_pts)
+    if num_of_inter == 0:
+        return
+
+    with torch.no_grad():
+        center = torch.mean(int_pts, 0)
+        v = int_pts - center
+        d = torch.sqrt(v[:,0] * v[:,0] + v[:,1] * v[:,1])
+        v = v / d.unsqueeze(-1)
+        v1_lt_0 = v[:,1] < 0 
+        v[v1_lt_0, 0] = -2 - v[v1_lt_0, 0]
+        vs = v[:,0]
+
+    # int_pts_f = int_pts.flatten()
+    indexing = torch.arange(num_of_inter, dtype=torch.long, device=int_pts.device)
+    for i in range(num_of_inter):
+        if vs[i-1] > vs[i]:
+            temp = vs[i].item()
+            j = i
+            while (j > 0 and vs[j-1] > temp):
+                vs[j] = vs[j-1].item()
+                indexing[j] = indexing[j-1]
+                j -= 1
+          
+            vs[j] = temp
+            indexing[j] = i
+
+    return indexing
 
 def iou_rotate_cpu3(boxes1, boxes2):
     N = len(boxes1)
@@ -467,7 +470,7 @@ def iou_rotate_cpu3(boxes1, boxes2):
     box1_pts = convert_rect_to_pts2(boxes1, lib=torch)
     box2_pts = convert_rect_to_pts2(boxes2, lib=torch)
 
-    b1_in_b2 = in_rect2(box1_pts, box2_pts) # N,4  
+    b1_in_b2 = in_rect2(box1_pts, box2_pts) # N,4
     b2_in_b1 = in_rect2(box2_pts, box1_pts) # N,4
 
     is_intersect, intersect_pts = inter2line2(box1_pts, box2_pts)
@@ -481,16 +484,13 @@ def iou_rotate_cpu3(boxes1, boxes2):
             if len(s_pts) > 0:
                 int_pts = torch.cat((int_pts, s_pts), 0)
 
-        iou = 0.0
-
         num_of_inter = int_pts.size(0)
         if num_of_inter > 2:
-            reorder_pts2(int_pts)
-            int_area = intersect_area2(int_pts, num_of_inter)
+            reorder_index = reorder_pts2(int_pts)
+            int_area = intersect_area2(int_pts[reorder_index], num_of_inter)
 
-            iou = int_area / (area1[n] + area2[n] - int_area)
-
-        ious[n] = iou
+            iou = int_area / (area1[n] + area2[n] - int_area + 1e-7)
+            ious[n] = iou
 
     return ious 
 
@@ -528,6 +528,7 @@ def compute_iou_loss(pred, target, base_box, box_coder):
     return iou_loss.mean()
 
 if __name__ == '__main__':
+    import time
     from giou_loss import smooth_l1_loss, SimpleLinearModel
 
     def normalize_rect_tensors(rects):
@@ -587,6 +588,7 @@ if __name__ == '__main__':
     lr = 1e-2
     n_iters = 300
 
+    ts = time.time()
     optimizer = optim.Adam(model.parameters(), lr=lr)#, betas=(0.9, 0.999))
     # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9)  # , betas=(0.9, 0.999))
     for n in range(n_iters):
@@ -595,7 +597,6 @@ if __name__ == '__main__':
 
         # l1_loss = smooth_l1_loss(regression_pred, regression_targets, beta=1.0/9)
         iou_loss = compute_iou_loss(regression_pred, regression_targets, t_anchor, box_coder)
-
         loss = iou_loss
 
         optimizer.zero_grad()
@@ -610,6 +611,8 @@ if __name__ == '__main__':
             print("Iter %d) Loss: %.3f, Mean IoU: %.2f"%(n, loss.item(), np.mean(val_iou)))
             if n % 50 == 0:
                 print(val_iou)
+
+    print("Total training time: %.3fs"%(time.time() - ts))
 
     model.eval()
     with torch.no_grad():
