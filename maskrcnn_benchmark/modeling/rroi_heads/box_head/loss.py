@@ -267,12 +267,14 @@ class FastRCNNLossComputation(object):
         # angle_loss = 0.0
         box_loss = (box_loss + angle_loss) / total_samples
 
-        # base_anchors = torch.cat([a.get_field("rrects") for a in proposals])[sampled_pos_inds]
+        # with torch.no_grad():
+        #     base_anchors = torch.cat([a.get_field("rrects") for a in proposals])[sampled_pos_inds]
+        #     gt_box = self.box_coder.decode(box_reg_targets, base_anchors)
         # pred_box = self.box_coder.decode(box_reg, base_anchors)
-        # gt_box = self.box_coder.decode(box_reg_targets, base_anchors)
-        # ious = compute_iou_rotate_loss(pred_box, gt_box)
-        # iou_loss = torch.where(ious <= 0, ious * 0.0, -torch.log(ious ** 2))
-        # box_loss = iou_loss.sum() / total_pos
+        # ious = compute_iou_rotate_loss(pred_box, gt_box) + 1e-5
+        # iou_loss = -torch.log(ious**2)
+        # box_loss = iou_loss.sum() / total_samples * 3.0
+
         #
         # if torch.isnan(classification_loss) or torch.isnan(box_loss):
         #     print("BOXHEAD LOSS IS NAN")
