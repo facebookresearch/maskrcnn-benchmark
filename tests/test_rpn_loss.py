@@ -35,7 +35,8 @@ def normalize(x, xmin=None, xmax=None):
 
 if __name__ == '__main__':
 
-    config_file = "./configs/coco_rpn_only.yaml"
+    # config_file = "./configs/mscoco/dog_skate_rotated_miou.yaml"
+    config_file = "./configs/mscoco/surfboard/rotated_mrcnn_miou_5_ratios.yaml"
     try:
         cfg.merge_from_file(config_file)
     except KeyError as e:
@@ -75,7 +76,7 @@ if __name__ == '__main__':
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]
         anchors_cnt = [len(a) for a in anchors]
 
-        labels, regression_targets, matched_gt_ids, matched_gt_ious \
+        labels, regression_targets, matched_gt_ids, _ \
             = loss_evaluator.prepare_targets(anchors, targets)
 
         sampled_pos_inds, sampled_neg_inds = fg_bg_sampler(labels)
@@ -98,7 +99,7 @@ if __name__ == '__main__':
             start_gt_idx += len(t)
 
         matched_gt_ids = torch.cat(matched_gt_ids)
-        matched_gt_ious = torch.cat(matched_gt_ious)
+        # matched_gt_ious = torch.cat(matched_gt_ious)
 
         img_tensors = images.tensors
 
@@ -109,7 +110,7 @@ if __name__ == '__main__':
         device = matched_gt_ids.device
 
         pos_matched_gt_ids = matched_gt_ids[sampled_pos_inds]
-        pos_matched_gt_ious = matched_gt_ious[sampled_pos_inds]
+        # pos_matched_gt_ious = matched_gt_ious[sampled_pos_inds]
         label_idxs = [torch.nonzero(pos_matched_gt_ids == x).squeeze() for x in range(start_gt_idx)]
         label_weights = torch.zeros_like(pos_matched_gt_ids, dtype=torch.float32)
         MAX_GT_NUM = 10
@@ -122,8 +123,8 @@ if __name__ == '__main__':
                 if nnn > 0:
                     label_weights[nz] = total_pos / nz.numel()
                 continue
-            top_iou_ids = torch.sort(pos_matched_gt_ious[nz], descending=True)[1][:MAX_GT_NUM]
-            inds = nz[top_iou_ids]
+            # top_iou_ids = torch.sort(pos_matched_gt_ious[nz], descending=True)[1][:MAX_GT_NUM]
+            # inds = nz[top_iou_ids]
             label_weights[inds] = total_pos / MAX_GT_NUM
 
         #                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       = total_pos / label_cnts.to(dtype=torch.float32)
@@ -146,7 +147,7 @@ if __name__ == '__main__':
             pos_anchors = anchors[ix][inds - cumu_cnt]
             reg_targets = regression_targets[inds]
             reg_target_gt_inds = matched_gt_ids[inds]
-            reg_target_gt_ious = matched_gt_ious[inds]
+            # reg_target_gt_ious = matched_gt_ious[inds]
 
             cumu_cnt += cnt
 
@@ -161,7 +162,7 @@ if __name__ == '__main__':
             # reg_targets[:, -1] = reg_targets_angles
             print(np.rad2deg(reg_targets[:, -1]))
             print(reg_target_gt_inds)
-            print(reg_target_gt_ious)
+            # print(reg_target_gt_ious)
             proposals = box_coder.decode(reg_targets, anchor_rrects).cpu().numpy()
 
             img = img_t.cpu().numpy()
