@@ -157,7 +157,7 @@ class PostProcessor(nn.Module):
                 if self.use_soft_nms:
                     indices, keep, scores_j_new = keep
                     boxlist_for_class = boxlist_for_class[indices]
-                    boxlist_for_class.add_field("scores", scores_j_new.to(device=device))
+                    boxlist_for_class.add_field(score_field, scores_j_new.to(device=device))
 
                 boxlist_for_class = boxlist_for_class[keep]
 
