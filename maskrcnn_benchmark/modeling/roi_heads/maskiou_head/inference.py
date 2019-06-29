@@ -25,6 +25,11 @@ class MaskIoUPostProcessor(nn.Module):
             self.score_thresh = cfg.MODEL.ROI_HEADS.SCORE_THRESH
             self.nms_thresh = cfg.MODEL.ROI_HEADS.NMS
 
+            self.use_soft_nms = cfg.MODEL.ROI_HEADS.USE_SOFT_NMS
+
+            method = cfg.MODEL.ROI_HEADS.SOFT_NMS.METHOD
+            sigma = cfg.MODEL.ROI_HEADS.SOFT_NMS.SIGMA
+            score_thresh = cfg.MODEL.ROI_HEADS.SOFT_NMS.SCORE_THRESH
             method = cfg.MODEL.ROI_HEADS.SOFT_NMS.METHOD
             self.use_soft_nms = cfg.MODEL.ROI_HEADS.USE_SOFT_NMS and method in [1, 2]
 
@@ -36,17 +41,15 @@ class MaskIoUPostProcessor(nn.Module):
             else:
                 from maskrcnn_benchmark.layers.nms import nms as _box_nms, soft_nms as _box_soft_nms
                 self.nms_func = lambda boxes, scores: _box_nms(boxes, scores, self.nms_thresh)
-                if self.use_soft_nms:
-                    def soft_nms_func(boxes, scores):
-                        sigma = cfg.MODEL.ROI_HEADS.SOFT_NMS.SIGMA
-                        score_thresh = cfg.MODEL.ROI_HEADS.SOFT_NMS.SCORE_THRESH
-                        indices, keep, scores_new = _box_soft_nms(
-                            boxes.cpu(), scores.cpu(), nms_thresh=self.nms_thresh,
-                            sigma=sigma, thresh=score_thresh, method=method
-                        )
-                        return indices, keep, scores_new
+            if self.use_soft_nms:
+                def soft_nms_func(boxes, scores):
+                    indices, keep, scores_new = _box_soft_nms(
+                        boxes.cpu(), scores.cpu(), nms_thresh=self.nms_thresh,
+                        sigma=sigma, score_thresh=score_thresh, method=method
+                    )
+                    return indices, keep, scores_new
 
-                    self.nms_func = soft_nms_func
+                self.nms_func = soft_nms_func
 
     def forward(self, boxes, pred_maskiou, labels):
         ix = 0
@@ -115,7 +118,7 @@ class MaskIoUPostProcessor(nn.Module):
 
         # Limit to max_per_image detections **over all classes**
         if number_of_detections > self.detections_per_img > 0:
-            cls_scores = result.get_field("scores")
+            cls_scores = result.get_field(score_field)
             image_thresh, _ = torch.kthvalue(
                 cls_scores.cpu(), number_of_detections - self.detections_per_img + 1
             )

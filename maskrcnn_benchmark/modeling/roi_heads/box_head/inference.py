@@ -42,7 +42,7 @@ class PostProcessor(nn.Module):
                     score_thresh = cfg.MODEL.ROI_HEADS.SOFT_NMS.SCORE_THRESH
                     indices, keep, scores_new = _box_soft_nms(
                         boxes.cpu(), scores.cpu(), nms_thresh=self.nms_thresh,
-                        sigma=sigma, thresh=score_thresh, method=method
+                        sigma=sigma, score_thresh=score_thresh, method=method
                     )
                     return indices, keep, scores_new
 
@@ -117,10 +117,11 @@ class PostProcessor(nn.Module):
         """Returns bounding-box detection results by thresholding on scores and
         applying non-maximum suppression (NMS).
         """
+        score_field = "scores"
         # unwrap the boxlist to avoid additional overhead.
         # if we had multi-class NMS, we could perform this directly on the boxlist
         boxes = boxlist.convert("xyxy").bbox.reshape(-1, num_classes * 4)
-        scores = boxlist.get_field("scores").reshape(-1, num_classes)
+        scores = boxlist.get_field(score_field).reshape(-1, num_classes)
 
         device = scores.device
         result = []
@@ -132,14 +133,14 @@ class PostProcessor(nn.Module):
             scores_j = scores[inds, j]
             boxes_j = boxes[inds, j * 4 : (j + 1) * 4]
             boxlist_for_class = BoxList(boxes_j, boxlist.size, mode="xyxy")
-            boxlist_for_class.add_field("scores", scores_j)
+            boxlist_for_class.add_field(score_field, scores_j)
 
             if self.use_nms:
                 keep = self.nms_func(boxes_j, scores_j)
                 if self.use_soft_nms:
                     indices, keep, scores_j_new = keep
                     boxlist_for_class = boxlist_for_class[indices]
-                    boxlist_for_class.add_field("scores", scores_j_new.to(device=boxes_j.device))
+                    boxlist_for_class.add_field(score_field, scores_j_new.to(device=device))
 
                 boxlist_for_class = boxlist_for_class[keep]
             num_labels = len(boxlist_for_class)
@@ -153,7 +154,7 @@ class PostProcessor(nn.Module):
 
         # Limit to max_per_image detections **over all classes**
         if number_of_detections > self.detections_per_img > 0:
-            cls_scores = result.get_field("scores")
+            cls_scores = result.get_field(score_field)
             image_thresh, _ = torch.kthvalue(
                 cls_scores.cpu(), number_of_detections - self.detections_per_img + 1
             )
