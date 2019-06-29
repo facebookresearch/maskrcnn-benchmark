@@ -25,12 +25,28 @@ class MaskIoUPostProcessor(nn.Module):
             self.score_thresh = cfg.MODEL.ROI_HEADS.SCORE_THRESH
             self.nms_thresh = cfg.MODEL.ROI_HEADS.NMS
 
+            method = cfg.MODEL.ROI_HEADS.SOFT_NMS.METHOD
+            self.use_soft_nms = cfg.MODEL.ROI_HEADS.USE_SOFT_NMS and method in [1, 2]
+
             if self.rotated:
                 from maskrcnn_benchmark.modeling.rotate_ops import RotateNMS
-                self.nms = RotateNMS(nms_threshold=self.nms_thresh)
+                self.nms_func = RotateNMS(nms_threshold=self.nms_thresh)
+                if self.use_soft_nms:
+                    raise NotImplementedError
             else:
-                from maskrcnn_benchmark.layers import nms as _box_nms
-                self.nms = _box_nms
+                from maskrcnn_benchmark.layers.nms import nms as _box_nms, soft_nms as _box_soft_nms
+                self.nms_func = lambda boxes, scores: _box_nms(boxes, scores, self.nms_thresh)
+                if self.use_soft_nms:
+                    def soft_nms_func(boxes, scores):
+                        sigma = cfg.MODEL.ROI_HEADS.SOFT_NMS.SIGMA
+                        score_thresh = cfg.MODEL.ROI_HEADS.SOFT_NMS.SCORE_THRESH
+                        indices, keep, scores_new = _box_soft_nms(
+                            boxes.cpu(), scores.cpu(), nms_thresh=self.nms_thresh,
+                            sigma=sigma, thresh=score_thresh, method=method
+                        )
+                        return indices, keep, scores_new
+
+                    self.nms_func = soft_nms_func
 
     def forward(self, boxes, pred_maskiou, labels):
         ix = 0
@@ -60,7 +76,8 @@ class MaskIoUPostProcessor(nn.Module):
             boxes = boxlist.get_field("rrects")  # (N,5)
         else:
             boxes = boxlist.bbox  # (N,4)
-        mask_scores = boxlist.get_field("mask_scores")  # (N)
+        score_field = "mask_scores"
+        mask_scores = boxlist.get_field(score_field)  # (N)
         labels = boxlist.get_field("labels")  # (N)
 
         # device = mask_scores.device
@@ -73,19 +90,24 @@ class MaskIoUPostProcessor(nn.Module):
             boxes_j = boxes[inds]
             scores_j = mask_scores[inds]
 
+            boxlist_for_class = boxlist[inds]
             # perform nms
             if self.rotated:
                 # sort scores!
                 sorted_idx = torch.sort(scores_j, descending=True)[1]
                 boxes_j = boxes_j[sorted_idx]
-                inds = inds[sorted_idx]
 
-                keep = self.nms(boxes_j)
+                boxlist_for_class = boxlist_for_class[sorted_idx]
+                keep = self.nms_func(boxes_j)
             else:
-                keep = self.nms(boxes_j, scores_j, self.nms_thresh)
+                keep = self.nms_func(boxes_j, scores_j)
 
-            boxlist_for_class = boxlist[inds][keep]
+            if self.use_soft_nms:
+                indices, keep, scores_j_new = keep
+                boxlist_for_class = boxlist_for_class[indices]
+                boxlist_for_class.add_field(score_field, scores_j_new.to(device=boxes_j.device))
 
+            boxlist_for_class = boxlist_for_class[keep]
             result.append(boxlist_for_class)
 
         result = cat_boxlist(result)

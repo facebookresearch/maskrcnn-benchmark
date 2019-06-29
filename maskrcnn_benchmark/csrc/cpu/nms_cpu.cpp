@@ -1,6 +1,8 @@
 // Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 #include "cpu/vision.h"
 
+#include "nms_methods.h"
+
 
 template <typename scalar_t>
 at::Tensor nms_cpu_kernel(const at::Tensor& dets,
@@ -72,4 +74,123 @@ at::Tensor nms_cpu(const at::Tensor& dets,
     result = nms_cpu_kernel<scalar_t>(dets, scores, threshold);
   });
   return result;
+}
+
+
+template <typename scalar_t>
+at::Tensor soft_nms_cpu_kernel(at::Tensor& dets,
+                          at::Tensor& scores,
+                          at::Tensor& indices,
+                          const float nms_thresh,
+                          const float sigma,
+                          const float score_thresh,
+                          const int method
+                          ) 
+{
+  AT_ASSERTM(!dets.type().is_cuda(), "dets must be a CPU tensor");
+  AT_ASSERTM(!scores.type().is_cuda(), "scores must be a CPU tensor");
+  AT_ASSERTM(dets.type() == scores.type(), "dets should have the same type as scores");
+
+  if (dets.numel() == 0) {
+    return at::empty({0}, dets.options().dtype(at::kLong).device(at::kCPU));
+  }
+
+  auto scores_d = scores.contiguous().data<scalar_t>();
+  auto dets_d = dets.contiguous().data<scalar_t>();
+  auto indices_d = indices.contiguous().data<int64_t>();
+
+  auto ndets = dets.size(0);
+
+  for (int64_t i = 0; i < ndets; i++) {
+    int64_t pos = i + 1;
+    auto rem_scores = scores.narrow(/*dim=*/0, /*start=*/pos, /*length=*/ndets - pos);
+    // auto order_t = std::get<1>(rem_scores.sort(0, /* descending=*/true));
+    // auto order = order_t.data<int64_t>();
+    int64_t maxpos = 0;
+    scalar_t maxscore = scores_d[ndets - 1];
+    if (i != ndets - 1)
+    {
+      maxpos = rem_scores.argmax().data<int64_t>()[0];
+      maxscore = rem_scores.data<scalar_t>()[maxpos];
+    }
+    if (scores_d[i] < maxscore)
+    {
+      scalar_t* dd = dets_d + (i*4);
+      scalar_t* dd_max = dets_d + ((maxpos+pos)*4);
+      scalar_t tmp;
+      for (size_t n = 0; n < 4; n++)
+      {
+        tmp = dd[n];
+        dd[n] = dd_max[n];
+        dd_max[n] = tmp;
+      }
+      tmp = scores_d[i];
+      scores_d[i] = maxscore;
+      scores_d[maxpos+pos] = tmp;
+
+      int64_t tmp_i = indices_d[i];
+      indices_d[i] = indices_d[maxpos + pos];
+      indices_d[maxpos + pos] = tmp_i;
+    }
+  
+    const scalar_t* bbox = dets_d + (i*4);
+    auto ix1 = bbox[0];
+    auto iy1 = bbox[1];
+    auto ix2 = bbox[2];
+    auto iy2 = bbox[3];
+    auto iarea = (ix2 - ix1 + 1) * (iy2 - iy1 + 1);
+
+    for (int64_t j = pos; j < ndets; j++) {
+
+      const scalar_t* bbox2 = dets_d + (j*4);
+      auto xx1 = std::max(ix1, bbox2[0]);
+      auto yy1 = std::max(iy1, bbox2[1]);
+      auto xx2 = std::min(ix2, bbox2[2]);
+      auto yy2 = std::min(iy2, bbox2[3]);
+
+      auto w = std::max(static_cast<scalar_t>(0), xx2 - xx1 + 1);
+      auto h = std::max(static_cast<scalar_t>(0), yy2 - yy1 + 1);
+      auto inter = w * h;
+      auto jarea = (bbox2[2] - bbox2[0] + 1) * (bbox2[3] - bbox2[1] + 1);
+      auto ovr = inter / (iarea + jarea - inter);
+
+      float weight = 1.0f;
+      if (method == NMS_METHOD::GAUSSIAN)
+      {
+        weight = exp(-(ovr * ovr) / sigma);
+      } else if (ovr >= nms_thresh)
+      {
+        weight = method == NMS_METHOD::LINEAR ? weight - ovr : 0.0f;
+      }
+      auto& score_j = scores_d[j];
+      score_j *= weight;
+   }
+  }
+  return at::nonzero(scores >= score_thresh).squeeze(1);
+}
+
+std::tuple<at::Tensor, at::Tensor> soft_nms_cpu(at::Tensor& dets,
+               at::Tensor& scores,
+               const float nms_thresh,
+               const float sigma,
+               const float score_thresh,
+               const int method
+               ) 
+{
+  auto N = dets.size(0);
+  at::Tensor keep;
+  at::Tensor indices = at::arange(N, dets.options().dtype(at::kLong).device(at::kCPU));
+  if (method == NMS_METHOD::LINEAR || method == NMS_METHOD::GAUSSIAN)
+  {
+    AT_DISPATCH_FLOATING_TYPES(dets.type(), "soft_nms", [&] {
+      keep = soft_nms_cpu_kernel<scalar_t>(dets, scores, indices, nms_thresh, sigma, score_thresh, method);
+    });
+  } else {
+    // original nms
+    AT_DISPATCH_FLOATING_TYPES(dets.type(), "nms", [&] {
+      keep = nms_cpu_kernel<scalar_t>(dets, scores, nms_thresh);
+    });
+  }
+
+  return std::make_tuple(indices, keep);
 }

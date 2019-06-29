@@ -220,6 +220,15 @@ _C.MODEL.ROI_HEADS.NMS = 0.5
 # established for the COCO dataset)
 _C.MODEL.ROI_HEADS.DETECTIONS_PER_IMG = 100
 
+# Use SoftNMS. Method 1) Linear 2) Gaussian
+# Currently does not work with RPN-only inference
+_C.MODEL.ROI_HEADS.USE_SOFT_NMS = False
+_C.MODEL.ROI_HEADS.SOFT_NMS = CN()
+_C.MODEL.ROI_HEADS.SOFT_NMS.METHOD = 2
+# sigma parameter (Gaussian method)
+_C.MODEL.ROI_HEADS.SOFT_NMS.SIGMA = 0.5
+# Different from NMS thresh. Score thresh filters out final box scores below the threshold
+_C.MODEL.ROI_HEADS.SOFT_NMS.SCORE_THRESH = 0.01
 
 # Default weights on (dx, dy, dw, dh) for normalizing bbox regression targets
 _C.MODEL.RPN.BBOX_REG_WEIGHTS = (1.0, 1.0, 1.0, 1.0)

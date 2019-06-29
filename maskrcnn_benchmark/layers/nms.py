@@ -9,3 +9,11 @@ nms = amp.float_function(_C.nms)
 
 # nms.__doc__ = """
 # This function performs Non-maximum suppresion"""
+
+def soft_nms(boxes, scores, nms_thresh=0.3, sigma=0.5, thresh=0.001, method=1):
+    # method: 1) linear, 2) gaussian, else) original NMS
+    boxes2 = boxes.clone()
+    scores2 = scores.clone()
+    indices, keep = _C.soft_nms(boxes2, scores2, nms_thresh, sigma, thresh, method)
+    return indices, keep, scores2
+

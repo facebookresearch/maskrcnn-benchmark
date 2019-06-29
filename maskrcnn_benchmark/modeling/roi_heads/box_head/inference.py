@@ -4,7 +4,8 @@ import torch.nn.functional as F
 from torch import nn
 
 from maskrcnn_benchmark.structures.bounding_box import BoxList
-from maskrcnn_benchmark.structures.boxlist_ops import boxlist_nms
+# from maskrcnn_benchmark.structures.boxlist_ops import boxlist_nms
+from maskrcnn_benchmark.layers.nms import nms as _box_nms, soft_nms as _box_soft_nms
 from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 
@@ -16,35 +17,37 @@ class PostProcessor(nn.Module):
     final results
     """
 
-    def __init__(
-        self,
-        score_thresh=0.05,
-        nms=0.5,
-        detections_per_img=100,
-        box_coder=None,
-        cls_agnostic_bbox_reg=False,
-        use_nms=True,
-        bbox_aug_enabled=False
-    ):
-        """
-        Arguments:
-            score_thresh (float)
-            nms (float)
-            detections_per_img (int)
-            box_coder (BoxCoder)
-        """
+    def __init__(self, cfg):
         super(PostProcessor, self).__init__()
-        self.score_thresh = score_thresh
-        self.nms = nms
-        self.detections_per_img = detections_per_img
-        if box_coder is None:
-            box_coder = BoxCoder(weights=(10., 10., 5., 5.))
-        self.box_coder = box_coder
-        self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
-        self.bbox_aug_enabled = bbox_aug_enabled
 
-        self.use_nms = use_nms
-        if not self.use_nms:
+        bbox_reg_weights = cfg.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS
+        self.box_coder = BoxCoder(weights=bbox_reg_weights)
+
+        self.score_thresh = cfg.MODEL.ROI_HEADS.SCORE_THRESH
+        self.nms_thresh = cfg.MODEL.ROI_HEADS.NMS
+        self.detections_per_img = cfg.MODEL.ROI_HEADS.DETECTIONS_PER_IMG
+        self.cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
+        self.bbox_aug_enabled = cfg.TEST.BBOX_AUG.ENABLED
+
+        self.use_nms = not (cfg.MODEL.MASKIOU_ON and "ROI_MASKIOU_HEAD" in cfg.MODEL
+                            and cfg.MODEL.ROI_MASKIOU_HEAD.USE_NMS)
+
+        if self.use_nms:
+            self.nms_func = lambda boxes, scores: _box_nms(boxes, scores, self.nms_thresh)
+            method = cfg.MODEL.ROI_HEADS.SOFT_NMS.METHOD
+            self.use_soft_nms = cfg.MODEL.ROI_HEADS.USE_SOFT_NMS and method in [1, 2]
+            if self.use_soft_nms:
+                def soft_nms_func(boxes, scores):
+                    sigma = cfg.MODEL.ROI_HEADS.SOFT_NMS.SIGMA
+                    score_thresh = cfg.MODEL.ROI_HEADS.SOFT_NMS.SCORE_THRESH
+                    indices, keep, scores_new = _box_soft_nms(
+                        boxes.cpu(), scores.cpu(), nms_thresh=self.nms_thresh,
+                        sigma=sigma, thresh=score_thresh, method=method
+                    )
+                    return indices, keep, scores_new
+
+                self.nms_func = soft_nms_func
+        else:
             self.detections_per_img = -1
 
     def forward(self, x, boxes):
@@ -116,7 +119,7 @@ class PostProcessor(nn.Module):
         """
         # unwrap the boxlist to avoid additional overhead.
         # if we had multi-class NMS, we could perform this directly on the boxlist
-        boxes = boxlist.bbox.reshape(-1, num_classes * 4)
+        boxes = boxlist.convert("xyxy").bbox.reshape(-1, num_classes * 4)
         scores = boxlist.get_field("scores").reshape(-1, num_classes)
 
         device = scores.device
@@ -132,9 +135,13 @@ class PostProcessor(nn.Module):
             boxlist_for_class.add_field("scores", scores_j)
 
             if self.use_nms:
-                boxlist_for_class = boxlist_nms(
-                    boxlist_for_class, self.nms
-                )
+                keep = self.nms_func(boxes_j, scores_j)
+                if self.use_soft_nms:
+                    indices, keep, scores_j_new = keep
+                    boxlist_for_class = boxlist_for_class[indices]
+                    boxlist_for_class.add_field("scores", scores_j_new.to(device=boxes_j.device))
+
+                boxlist_for_class = boxlist_for_class[keep]
             num_labels = len(boxlist_for_class)
             boxlist_for_class.add_field(
                 "labels", torch.full((num_labels,), j, dtype=torch.int64, device=device)
@@ -157,28 +164,5 @@ class PostProcessor(nn.Module):
 
 
 def make_roi_box_post_processor(cfg):
-    use_fpn = cfg.MODEL.ROI_HEADS.USE_FPN
-
-    bbox_reg_weights = cfg.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS
-    box_coder = BoxCoder(weights=bbox_reg_weights)
-
-    score_thresh = cfg.MODEL.ROI_HEADS.SCORE_THRESH
-    nms_thresh = cfg.MODEL.ROI_HEADS.NMS
-    detections_per_img = cfg.MODEL.ROI_HEADS.DETECTIONS_PER_IMG
-    cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
-    bbox_aug_enabled = cfg.TEST.BBOX_AUG.ENABLED
-
-    use_nms = True
-    if cfg.MODEL.MASKIOU_ON and "ROI_MASKIOU_HEAD" in cfg.MODEL and cfg.MODEL.ROI_MASKIOU_HEAD.USE_NMS:
-        use_nms = False
-
-    postprocessor = PostProcessor(
-        score_thresh,
-        nms_thresh,
-        detections_per_img,
-        box_coder,
-        cls_agnostic_bbox_reg,
-        use_nms,
-        bbox_aug_enabled
-    )
+    postprocessor = PostProcessor(cfg)
     return postprocessor

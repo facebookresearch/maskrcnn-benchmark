@@ -14,3 +14,10 @@ at::Tensor ROIAlign_forward_cpu(const at::Tensor& input,
 at::Tensor nms_cpu(const at::Tensor& dets,
                    const at::Tensor& scores,
                    const float threshold);
+
+std::tuple<at::Tensor, at::Tensor> soft_nms_cpu(at::Tensor& dets,
+               at::Tensor& scores,
+               const float nms_thresh,
+               const float sigma,
+               const float score_thresh,
+               const int method);
