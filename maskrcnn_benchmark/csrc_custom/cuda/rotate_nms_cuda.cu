@@ -67,25 +67,27 @@ __global__ void rotate_nms_kernel(const int n_boxes, const float nms_overlap_thr
         min(n_boxes - col_start * threadsPerBlock, threadsPerBlock);
 
   // cache all column data in this block
-  __shared__ float block_boxes[threadsPerBlock * 5];
+  __shared__ float block_boxes[threadsPerBlock * 6];
   if (threadIdx.x < col_size) {
-    block_boxes[threadIdx.x * 5 + 0] =
-        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 5 + 0];
-    block_boxes[threadIdx.x * 5 + 1] =
-        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 5 + 1];
-    block_boxes[threadIdx.x * 5 + 2] =
-        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 5 + 2];
-    block_boxes[threadIdx.x * 5 + 3] =
-        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 5 + 3];
-    block_boxes[threadIdx.x * 5 + 4] =
-        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 5 + 4];
+    block_boxes[threadIdx.x * 6 + 0] =
+        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 6 + 0];
+    block_boxes[threadIdx.x * 6 + 1] =
+        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 6 + 1];
+    block_boxes[threadIdx.x * 6 + 2] =
+        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 6 + 2];
+    block_boxes[threadIdx.x * 6 + 3] =
+        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 6 + 3];
+    block_boxes[threadIdx.x * 6 + 4] =
+        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 6 + 4];
+    block_boxes[threadIdx.x * 6 + 5] =
+        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 6 + 5];
   }
   __syncthreads();
 
   // iterate across each row in this block
   if (threadIdx.x < row_size) {
     const int cur_box_idx = threadsPerBlock * row_start + threadIdx.x;  // current row
-    const float *cur_box = dev_boxes + cur_box_idx * 5;
+    const float *cur_box = dev_boxes + cur_box_idx * 6;
     int i = 0;
     unsigned long long t = 0;
     int start = 0;
@@ -95,7 +97,7 @@ __global__ void rotate_nms_kernel(const int n_boxes, const float nms_overlap_thr
 
     // for this row, calculate all ious with each column
     for (i = start; i < col_size; i++) {
-      float iou = devRotateIoU(cur_box, block_boxes + i * 5);
+      float iou = devRotateIoU(cur_box, block_boxes + i * 6);
       // printf("iou: %.3f\n", iou);
       if (iou > nms_overlap_thresh) {
         t |= 1ULL << i;  // basically storing all overlaps across the columns, hashed into one single ULL index
@@ -177,43 +179,35 @@ void _iou_matrix_launcher(float* overlaps, const float* boxes, const float* quer
 }
 
 
-void _rotate_nms_launcher(int64_t* keep_out, int* num_out, const float* boxes, int boxes_num,
-        float nms_overlap_thresh, cudaStream_t stream)
-{
-  /**
-  Inputs:
-  boxes: N,5  (xc,yc,w,h,angle)  ASSUMES already sorted
-  boxes_num: N
-  nms_overlap_thresh: 0-1 e.g. 0.7
+// boxes is a N x 6 tensor
+at::Tensor rotate_nms_cuda(const at::Tensor& boxes, float nms_overlap_thresh) {
+  using scalar_t = float;
+  AT_ASSERTM(boxes.type().is_cuda(), "boxes must be a CUDA tensor");
+  auto scores = boxes.select(1, 5);
+  auto order_t = std::get<1>(scores.sort(0, /* descending=*/true));
+  auto boxes_sorted = boxes.index_select(0, order_t);
 
-  Outputs:
-  keep_out: N  (i.e. stores indices of valid boxes)
-  num_out: total count of valid indices
-
-  */
+  int boxes_num = boxes.size(0);
 
   const int col_blocks = THCCeilDiv(boxes_num, threadsPerBlock);
+
+  scalar_t* boxes_dev = boxes_sorted.data<scalar_t>();
 
   THCState *state = at::globalContext().lazyInitCUDA(); // TODO replace with getTHCState
 
   unsigned long long* mask_dev = NULL;
-  // Get the IoUs between each element in the array (N**2 operation)
-  // then store all the overlap results in the N*col_blocks array (mask_dev).
-  // col_blocks represents the total number of column blocks (blockDim.x) made for the kernel computation
-  // Each column block will store a hash of the iou overlaps between each column and row in the block. The hash is a ULL of bit overlaps between one row and all columns in the block
-  // then copy the results to host code
-  // Each result row is a col_block array, which contains all the iou overlap bool (as a hash) per column block.
-  // Loop through the col_block array to aggregate all iou overlap results for that row
+  //THCudaCheck(THCudaMalloc(state, (void**) &mask_dev,
+  //                      boxes_num * col_blocks * sizeof(unsigned long long)));
+
   mask_dev = (unsigned long long*) THCudaMalloc(state, boxes_num * col_blocks * sizeof(unsigned long long));
 
-  dim3 blocks(col_blocks, col_blocks);
+  dim3 blocks(THCCeilDiv(boxes_num, threadsPerBlock),
+              THCCeilDiv(boxes_num, threadsPerBlock));
   dim3 threads(threadsPerBlock);
-
   rotate_nms_kernel<<<blocks, threads>>>(boxes_num,
                                   nms_overlap_thresh,
-                                  boxes,
+                                  boxes_dev,
                                   mask_dev);
-  // cudaThreadSynchronize();
 
   std::vector<unsigned long long> mask_host(boxes_num * col_blocks);
   THCudaCheck(cudaMemcpy(&mask_host[0],
@@ -224,53 +218,31 @@ void _rotate_nms_launcher(int64_t* keep_out, int* num_out, const float* boxes, i
   std::vector<unsigned long long> remv(col_blocks);
   memset(&remv[0], 0, sizeof(unsigned long long) * col_blocks);
 
+  at::Tensor keep = at::empty({boxes_num}, boxes.options().dtype(at::kLong).device(at::kCPU));
+  int64_t* keep_out = keep.data<int64_t>();
+
   int num_to_keep = 0;
   for (int i = 0; i < boxes_num; i++) {
-    int nblock = i / threadsPerBlock;  // get column block
+    int nblock = i / threadsPerBlock;
     int inblock = i % threadsPerBlock;
 
-    if (!(remv[nblock] & (1ULL << inblock))) {  // if not zero i.e. no overlap
+    if (!(remv[nblock] & (1ULL << inblock))) {
       keep_out[num_to_keep++] = i;
       unsigned long long *p = &mask_host[0] + i * col_blocks;
-
-      // Loop through the col_block array to aggregate all iou overlap results for that box
       for (int j = nblock; j < col_blocks; j++) {
         remv[j] |= p[j];
       }
     }
   }
-  *num_out = num_to_keep;
 
   THCudaFree(state, mask_dev);
+  // TODO improve this part
+  return std::get<0>(order_t.index({
+                       keep.narrow(/*dim=*/0, /*start=*/0, /*length=*/num_to_keep).to(
+                         order_t.device(), keep.scalar_type())
+                     }).sort(0, false));
 }
 
-at::Tensor rotate_nms_cuda(
-    const at::Tensor& r_boxes, const float nms_threshold, const int max_output
-)
-{
-  int boxes_num = r_boxes.size(0);
-  // int channels = r_boxes.size(1);
-
-  at::Tensor keep = at::zeros({boxes_num}, r_boxes.options().dtype(at::kLong).device(at::kCPU));
-
-  if (boxes_num == 0)
-    return keep;
-
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
-
-  int num_to_keep = 0;
-  _rotate_nms_launcher(keep.data<int64_t>(), &num_to_keep, r_boxes.contiguous().data<float>(), boxes_num,
-          nms_threshold, stream);
-  THCudaCheck(cudaGetLastError());
-
-  if (max_output >= 0)
-    num_to_keep = std::min(num_to_keep, max_output);
-
-//  printf("GPU: num_to_keep: %d\n", num_to_keep);
-  return keep.narrow(/*dim=*/0, /*start=*/0, /*length=*/num_to_keep).to(
-      r_boxes.device(), keep.scalar_type());
-
-}
 
 at::Tensor rotate_iou_matrix_cuda(
     const at::Tensor& r_boxes1, const at::Tensor& r_boxes2

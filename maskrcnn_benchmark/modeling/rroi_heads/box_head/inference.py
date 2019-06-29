@@ -8,7 +8,7 @@ from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
 from maskrcnn_benchmark.modeling.rrpn.anchor_generator import convert_rects_to_bboxes
 # from maskrcnn_benchmark.structures.boxlist_ops import boxlist_nms
-from maskrcnn_benchmark.layers.rotate_nms import RotateNMS
+from maskrcnn_benchmark.layers.rotate_nms import RotateNMS, RotateSoftNMS
 
 REGRESSION_CN = 5
 
@@ -19,15 +19,7 @@ class PostProcessor(nn.Module):
     final results
     """
 
-    def __init__(
-        self,
-        box_coder,
-        score_thresh=0.05,
-        nms=0.5,
-        detections_per_img=100,
-        cls_agnostic_bbox_reg=False,
-        use_nms=True
-    ):
+    def __init__(self, cfg):
         """
         Arguments:
             score_thresh (float)
@@ -36,15 +28,31 @@ class PostProcessor(nn.Module):
             box_coder (BoxCoder)
         """
         super(PostProcessor, self).__init__()
-        self.score_thresh = score_thresh
-        self.nms = nms
-        self.detections_per_img = detections_per_img
-        self.box_coder = box_coder
-        self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
 
-        self.nms_rotate = RotateNMS(nms_threshold=nms)#, post_nms_top_n=-1)
-        self.use_nms = use_nms
-        if not self.use_nms:
+        bbox_reg_weights = cfg.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS
+        reg_angle_relative = cfg.MODEL.ROI_HEADS.BBOX_REG_ANGLE_RELATIVE
+        self.box_coder = BoxCoder(weights=bbox_reg_weights, relative_angle=reg_angle_relative)
+
+        self.score_thresh = cfg.MODEL.ROI_HEADS.SCORE_THRESH
+        self.nms_thresh = cfg.MODEL.ROI_HEADS.NMS
+        self.detections_per_img = cfg.MODEL.ROI_HEADS.DETECTIONS_PER_IMG
+        self.cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
+
+        self.use_nms = not (cfg.MODEL.MASKIOU_ON and "ROI_MASKIOU_HEAD" in cfg.MODEL
+                            and cfg.MODEL.ROI_MASKIOU_HEAD.USE_NMS)
+
+        if self.use_nms:
+            rotate_nms_instance = RotateNMS(self.nms_thresh)
+            self.nms_func = lambda boxes, scores: rotate_nms_instance(boxes, scores)
+            self.use_soft_nms = cfg.MODEL.ROI_HEADS.USE_SOFT_NMS
+            if self.use_soft_nms:
+                method = cfg.MODEL.ROI_HEADS.SOFT_NMS.METHOD
+                sigma = cfg.MODEL.ROI_HEADS.SOFT_NMS.SIGMA
+                score_thresh = cfg.MODEL.ROI_HEADS.SOFT_NMS.SCORE_THRESH
+                rotate_nms_instance = RotateSoftNMS(nms_thresh=self.nms_thresh,
+                    sigma=sigma, score_thresh=score_thresh, method=method)
+                self.nms_func = lambda boxes, scores: rotate_nms_instance(boxes.cpu(), scores.cpu())
+        else:
             self.detections_per_img = -1
 
     def forward(self, x, boxes):
@@ -123,9 +131,10 @@ class PostProcessor(nn.Module):
         """Returns bounding-box detection results by thresholding on scores and
         applying non-maximum suppression (NMS).
         """
+        score_field = "scores"
         bboxes = boxlist.bbox.reshape(-1, num_classes * 4)
         rrects = boxlist.get_field("rrects").reshape(-1, num_classes * REGRESSION_CN)
-        scores = boxlist.get_field("scores").reshape(-1, num_classes)
+        scores = boxlist.get_field(score_field).reshape(-1, num_classes)
 
         device = scores.device
         result = []
@@ -138,22 +147,19 @@ class PostProcessor(nn.Module):
             rrects_j = rrects[inds, j * REGRESSION_CN : (j + 1) * REGRESSION_CN]
             scores_j = scores[inds, j]
 
-            # sort scores!
-            sorted_idx = torch.sort(scores_j, descending=True)[1]
-            bboxes_j = bboxes_j[sorted_idx]
-            rrects_j = rrects_j[sorted_idx]
-            scores_j = scores_j[sorted_idx]
+            boxlist_for_class = BoxList(bboxes_j, boxlist.size, mode="xyxy")
+            boxlist_for_class.add_field("rrects", rrects_j)
+            boxlist_for_class.add_field(score_field, scores_j)
 
             # perform nms
             if self.use_nms:
-                keep = self.nms_rotate(rrects_j)
-                bboxes_j = bboxes_j[keep]
-                rrects_j = rrects_j[keep]
-                scores_j = scores_j[keep]
+                keep = self.nms_func(rrects_j, scores_j)
+                if self.use_soft_nms:
+                    indices, keep, scores_j_new = keep
+                    boxlist_for_class = boxlist_for_class[indices]
+                    boxlist_for_class.add_field("scores", scores_j_new.to(device=device))
 
-            boxlist_for_class = BoxList(bboxes_j, boxlist.size, mode="xyxy")
-            boxlist_for_class.add_field("rrects", rrects_j)
-            boxlist_for_class.add_field("scores", scores_j)
+                boxlist_for_class = boxlist_for_class[keep]
 
             num_labels = len(boxlist_for_class)
             boxlist_for_class.add_field(
@@ -166,7 +172,7 @@ class PostProcessor(nn.Module):
 
         # Limit to max_per_image detections **over all classes**
         if number_of_detections > self.detections_per_img > 0:
-            cls_scores = result.get_field("scores")
+            cls_scores = result.get_field(score_field)
             image_thresh, _ = torch.kthvalue(
                 cls_scores.cpu(), number_of_detections - self.detections_per_img + 1
             )
@@ -177,27 +183,5 @@ class PostProcessor(nn.Module):
 
 
 def make_roi_box_post_processor(cfg):
-    # use_fpn = cfg.MODEL.ROI_HEADS.USE_FPN
-
-    bbox_reg_weights = cfg.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS
-    reg_angle_relative = cfg.MODEL.ROI_HEADS.BBOX_REG_ANGLE_RELATIVE
-    box_coder = BoxCoder(weights=bbox_reg_weights, relative_angle=reg_angle_relative)
-
-    score_thresh = cfg.MODEL.ROI_HEADS.SCORE_THRESH
-    nms_thresh = cfg.MODEL.ROI_HEADS.NMS
-    detections_per_img = cfg.MODEL.ROI_HEADS.DETECTIONS_PER_IMG
-    cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
-
-    use_nms = True
-    if cfg.MODEL.MASKIOU_ON and "ROI_MASKIOU_HEAD" in cfg.MODEL and cfg.MODEL.ROI_MASKIOU_HEAD.USE_NMS:
-        use_nms = False
-
-    postprocessor = PostProcessor(
-        box_coder,
-        score_thresh,
-        nms_thresh,
-        detections_per_img,
-        cls_agnostic_bbox_reg,
-        use_nms
-    )
+    postprocessor = PostProcessor(cfg)
     return postprocessor

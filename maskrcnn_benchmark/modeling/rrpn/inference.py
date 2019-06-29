@@ -152,8 +152,8 @@ class RPNPostProcessor(torch.nn.Module):
                 proposal = proposal[keep]
                 score = score[keep]
 
-            # perform rotated nms (no need to sort, since already sorted above)
-            keep = self.nms_rotate(proposal)
+            # perform rotated nms
+            keep = self.nms_rotate(proposal, score)
             proposal = proposal[keep]
             score = score[keep]
 

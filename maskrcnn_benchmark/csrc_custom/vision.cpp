@@ -5,6 +5,7 @@
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
 
   m.def("rotate_nms", &rotate_nms, "rotate_nms");
+  m.def("rotate_soft_nms", &rotate_soft_nms, "rotate_soft_nms");
   m.def("rotate_iou_matrix", &rotate_iou_matrix, "rotate_iou_matrix");
 
 // rotated ROI implementations
