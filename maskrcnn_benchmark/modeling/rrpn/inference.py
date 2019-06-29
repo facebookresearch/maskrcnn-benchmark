@@ -6,7 +6,7 @@ from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
 from maskrcnn_benchmark.modeling.rrpn.anchor_generator import convert_rects_to_bboxes
 from maskrcnn_benchmark.modeling.rrpn.utils import get_boxlist_rotated_rect_tensor
-from maskrcnn_benchmark.modeling.rotate_ops import RotateNMS
+from maskrcnn_benchmark.layers.rotate_nms import RotateNMS
 # from maskrcnn_benchmark.structures.boxlist_ops import boxlist_nms
 # from maskrcnn_benchmark.structures.boxlist_ops import remove_small_boxes
 

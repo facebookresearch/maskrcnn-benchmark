@@ -29,7 +29,7 @@ class MaskIoUPostProcessor(nn.Module):
             self.use_soft_nms = cfg.MODEL.ROI_HEADS.USE_SOFT_NMS and method in [1, 2]
 
             if self.rotated:
-                from maskrcnn_benchmark.modeling.rotate_ops import RotateNMS
+                from maskrcnn_benchmark.layers.rotate_nms import RotateNMS
                 self.nms_func = RotateNMS(nms_threshold=self.nms_thresh)
                 if self.use_soft_nms:
                     raise NotImplementedError
