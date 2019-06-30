@@ -29,7 +29,7 @@ def has_valid_annotation(anno):
     # if an annotation is valid
     if "keypoints" not in anno[0]:
         return True
-    # for keypoint detection tasks, only consider valid images those
+    # for keypoint detection task, only consider valid images those
     # containing at least min_keypoints_per_image
     if _count_visible_keypoints(anno) >= min_keypoints_per_image:
         return True

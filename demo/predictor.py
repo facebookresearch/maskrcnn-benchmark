@@ -342,7 +342,7 @@ class COCODemo(object):
 
     def create_mask_montage(self, image, predictions):
         """
-        Create a montage showing the probability heatmaps for each one one of the
+        Create a montage showing the probability heatmaps for each one of the
         detected objects
 
         Arguments:
