@@ -25,7 +25,7 @@ def has_valid_annotation(anno):
     # if all boxes have close to zero area, there is no annotation
     if _has_only_empty_bbox(anno):
         return False
-    # keypoints task have a slight different critera for considering
+    # keypoints task has a slight different criteria for considering
     # if an annotation is valid
     if "keypoints" not in anno[0]:
         return True

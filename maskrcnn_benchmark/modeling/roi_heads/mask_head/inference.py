@@ -29,7 +29,7 @@ class MaskPostProcessor(nn.Module):
         Arguments:
             x (Tensor): the mask logits
             boxes (list[BoxList]): bounding boxes that are used as
-                reference, one for ech image
+                reference, one for each image
 
         Returns:
             results (list[BoxList]): one BoxList for each image, containing
