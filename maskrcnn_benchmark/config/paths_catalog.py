@@ -128,6 +128,17 @@ class DatasetCatalog(object):
                 factory="COCODataset",
                 args=args,
             )
+        if "micr" in name:
+            data_dir = DatasetCatalog.DATA_DIR
+            attrs = DatasetCatalog.DATASETS[name]
+            args = dict(
+                root=os.path.join(data_dir, attrs["img_dir"]),
+                ann_file=os.path.join(data_dir, attrs["ann_file"]),
+            )
+            return dict(
+                factory="MICRDataset",
+                args=args,
+            )
         elif "voc" in name:
             data_dir = DatasetCatalog.DATA_DIR
             attrs = DatasetCatalog.DATASETS[name]
