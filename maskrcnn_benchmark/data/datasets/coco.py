@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
-import torchvision
 
+from torchvision.datasets.coco import CocoDetection
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
 from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
@@ -25,18 +25,18 @@ def has_valid_annotation(anno):
     # if all boxes have close to zero area, there is no annotation
     if _has_only_empty_bbox(anno):
         return False
-    # keypoints task have a slight different critera for considering
+    # keypoints task has a slight different criteria for considering
     # if an annotation is valid
     if "keypoints" not in anno[0]:
         return True
-    # for keypoint detection tasks, only consider valid images those
+    # for keypoint detection task, only consider valid images those
     # containing at least min_keypoints_per_image
     if _count_visible_keypoints(anno) >= min_keypoints_per_image:
         return True
     return False
 
 
-class COCODataset(torchvision.datasets.coco.CocoDetection):
+class COCODataset(CocoDetection):
     def __init__(
         self, ann_file, root, remove_images_without_annotations, transforms=None
     ):

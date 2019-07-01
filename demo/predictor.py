@@ -10,6 +10,7 @@ from maskrcnn_benchmark.modeling.roi_heads.mask_head.inference import Masker
 from maskrcnn_benchmark import layers as L
 from maskrcnn_benchmark.utils import cv2_util
 
+
 class Resize(object):
     def __init__(self, min_size, max_size):
         self.min_size = min_size
@@ -42,6 +43,8 @@ class Resize(object):
         size = self.get_size(image.size)
         image = F.resize(image, size)
         return image
+
+
 class COCODemo(object):
     # COCO categories for pretty print
     CATEGORIES = [
@@ -197,9 +200,8 @@ class COCODemo(object):
             image (np.ndarray): an image as returned by OpenCV
 
         Returns:
-            prediction (BoxList): the detected objects. Additional information
-                of the detection properties can be found in the fields of
-                the BoxList via `prediction.fields()`
+            result (np.ndarray): an image with detected results
+            (boxes, masks, keypoints, etc) shown on top of it.
         """
         predictions = self.compute_prediction(image)
         top_predictions = self.select_top_predictions(predictions)
@@ -327,9 +329,7 @@ class COCODemo(object):
             )
             image = cv2.drawContours(image, contours, -1, color, 3)
 
-        composite = image
-
-        return composite
+        return image
 
     def overlay_keypoints(self, image, predictions):
         keypoints = predictions.get_field("keypoints")
@@ -342,7 +342,7 @@ class COCODemo(object):
 
     def create_mask_montage(self, image, predictions):
         """
-        Create a montage showing the probability heatmaps for each one one of the
+        Create a montage showing the probability heatmaps for each one of the
         detected objects
 
         Arguments:
