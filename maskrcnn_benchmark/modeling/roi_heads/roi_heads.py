@@ -35,7 +35,7 @@ class CombinedROIHeads(torch.nn.ModuleDict):
                 and self.cfg.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR
             ):
                 mask_features = box_features
-            # During training, self.box() will return the unaltered proposals as "detections"
+            # During training, self.mask() will return the unaltered proposals as "detections"
             # this makes the API consistent during training and testing
             _, detections, loss_mask = self.mask(mask_features, detections, targets)
             losses.update(loss_mask)
@@ -49,12 +49,12 @@ class CombinedROIHeads(torch.nn.ModuleDict):
                 and self.cfg.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR
             ):
                 keypoint_features = box_features
-            # During training, self.box() will return the unaltered proposals as "detections"
+            # During training, self.keypoint() will return the unaltered proposals as "detections"
             # this makes the API consistent during training and testing
             _, detections, loss_keypoint = self.keypoint(keypoint_features, detections, targets)
             losses.update(loss_keypoint)
 
-        return detections, losses
+        return box_features, detections, losses
 
 
 def build_roi_heads(cfg, in_channels):
