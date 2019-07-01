@@ -40,7 +40,8 @@ class MICRDataset(object):
     def __init__(
         self, ann_file, root, remove_images_without_annotations, transforms=None
     ):
-        super(MICRDataset, self).__init__(root, ann_file)
+        # super(MICRDataset, self).__init__(root, ann_file)
+        super(MICRDataset, self).__init__()
         # sort indices for reproducible results
         self.ids = sorted(self.ids)
 
