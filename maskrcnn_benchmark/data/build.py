@@ -148,6 +148,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
     paths_catalog = import_file(
         "maskrcnn_benchmark.config.paths_catalog", cfg.PATHS_CATALOG, True
     )
+    import pdb;pdb.set_trace()
     DatasetCatalog = paths_catalog.DatasetCatalog
     dataset_list = ll.DATASETS.TRAIN if is_train else cfg.DATASETS.TEST
 
