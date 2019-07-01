@@ -26,7 +26,7 @@ class ROIKeypointHead(torch.nn.Module):
             x (Tensor): the result of the feature extractor
             proposals (list[BoxList]): during training, the original proposals
                 are returned. During testing, the predicted boxlists are returned
-                with the `keypoint` field set
+                with the `keypoints` field set
             losses (dict[Tensor]): During training, returns the losses for the
                 head. During testing, returns an empty dict.
         """
