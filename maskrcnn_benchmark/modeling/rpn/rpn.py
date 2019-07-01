@@ -30,8 +30,8 @@ class RPNHeadConvRegressor(nn.Module):
         )
 
         for l in [self.cls_logits, self.bbox_pred]:
-            torch.nn.init.normal_(l.weight, std=0.01)
-            torch.nn.init.constant_(l.bias, 0)
+            nn.init.normal_(l.weight, std=0.01)
+            nn.init.constant_(l.bias, 0)
 
     def forward(self, x):
         assert isinstance(x, (list, tuple))
@@ -58,8 +58,8 @@ class RPNHeadFeatureSingleConv(nn.Module):
         )
 
         for l in [self.conv]:
-            torch.nn.init.normal_(l.weight, std=0.01)
-            torch.nn.init.constant_(l.bias, 0)
+            nn.init.normal_(l.weight, std=0.01)
+            nn.init.constant_(l.bias, 0)
 
         self.out_channels = in_channels
 
@@ -93,8 +93,8 @@ class RPNHead(nn.Module):
         )
 
         for l in [self.conv, self.cls_logits, self.bbox_pred]:
-            torch.nn.init.normal_(l.weight, std=0.01)
-            torch.nn.init.constant_(l.bias, 0)
+            nn.init.normal_(l.weight, std=0.01)
+            nn.init.constant_(l.bias, 0)
 
     def forward(self, x):
         logits = []
