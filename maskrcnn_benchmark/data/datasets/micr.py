@@ -37,40 +37,16 @@ def has_valid_annotation(anno):
 
 
 class MICRDataset(object):
-    def __init__(
-        self, ann_file, root, remove_images_without_annotations, transforms=None
-    ):
-        # super(MICRDataset, self).__init__(root, ann_file)
-        super(MICRDataset, self).__init__()
-        # sort indices for reproducible results
-        self.ids = sorted(self.ids)
+    def __init__(self,):
+        # as you would do normally
 
-        # filter images without detection annotations
-        if remove_images_without_annotations:
-            ids = []
-            for img_id in self.ids:
-                ann_ids = self.coco.getAnnIds(imgIds=img_id, iscrowd=None)
-                anno = self.coco.loadAnns(ann_ids)
-                if has_valid_annotation(anno):
-                    ids.append(img_id)
-            self.ids = ids
-
-        self.categories = {cat['id']: cat['name'] for cat in self.coco.cats.values()}
-
-        self.json_category_id_to_contiguous_id = {
-            v: i + 1 for i, v in enumerate(self.coco.getCatIds())
-        }
-        self.contiguous_category_id_to_json_id = {
-            v: k for k, v in self.json_category_id_to_contiguous_id.items()
-        }
-        self.id_to_img_map = {k: v for k, v in enumerate(self.ids)}
-        self._transforms = transforms
     def __getitem__(self, idx):
         # load the image as a PIL Image
         # image = ...
 
-        DATA_DIR = "/content/"
-        folder = "maskrcnn-benchmark/data"
+        DATA_DIR = "/home/p_vinsentds/maskrcnn-benchmark/datasets/micr/"
+        folder = "train2017"
+        image_id = idx
         image = cv2.imread(DATA_DIR + '/%s/%s.jpg'%(folder,image_id), cv2.IMREAD_COLOR)
 
         # load the bounding boxes as a list of list of boxes
