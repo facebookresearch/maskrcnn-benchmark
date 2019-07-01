@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+
 import torch
 import torchvision0
 
@@ -36,69 +36,39 @@ def has_valid_annotation(anno):
     return False
 
 
-class MICRDataset(torchvision.datasets.coco.CocoDetection):
-    def __init__(
-        self, ann_file, root, remove_images_without_annotations, transforms=None
-    ):
-        super(MICRDataset, self).__init__(root, ann_file)
-        # sort indices for reproducible results
-        self.ids = sorted(self.ids)
-
-        # filter images without detection annotations
-        if remove_images_without_annotations:
-            ids = []
-            for img_id in self.ids:
-                ann_ids = self.coco.getAnnIds(imgIds=img_id, iscrowd=None)
-                anno = self.coco.loadAnns(ann_ids)
-                if has_valid_annotation(anno):
-                    ids.append(img_id)
-            self.ids = ids
-
-        self.categories = {cat['id']: cat['name'] for cat in self.coco.cats.values()}
-
-        self.json_category_id_to_contiguous_id = {
-            v: i + 1 for i, v in enumerate(self.coco.getCatIds())
-        }
-        self.contiguous_category_id_to_json_id = {
-            v: k for k, v in self.json_category_id_to_contiguous_id.items()
-        }
-        self.id_to_img_map = {k: v for k, v in enumerate(self.ids)}
-        self._transforms = transforms
+class MICRDataset(object):
+    def __init__(self, ...):
+        # as you would do normally
 
     def __getitem__(self, idx):
-        img, anno = super(COCODataset, self).__getitem__(idx)
+        # load the image as a PIL Image
+        # image = ...
 
-        # filter crowd annotations
-        # TODO might be better to add an extra field
-        anno = [obj for obj in anno if obj["iscrowd"] == 0]
+        DATA_DIR = "/content/"
+        folder = "maskrcnn-benchmark/data"
+        image = cv2.imread(DATA_DIR + '/%s/%s.jpg'%(folder,image_id), cv2.IMREAD_COLOR)
 
-        boxes = [obj["bbox"] for obj in anno]
-        boxes = torch.as_tensor(boxes).reshape(-1, 4)  # guard against no boxes
-        target = BoxList(boxes, img.size, mode="xywh").convert("xyxy")
+        # load the bounding boxes as a list of list of boxes
+        # in this case, for illustrative purposes, we use
+        # x1, y1, x2, y2 order.
+        boxes = [[0, 0, 10, 10], [10, 20, 50, 50]]
+        # and labels
+        labels = torch.tensor([10, 20])
 
-        classes = [obj["category_id"] for obj in anno]
-        classes = [self.json_category_id_to_contiguous_id[c] for c in classes]
-        classes = torch.tensor(classes)
-        target.add_field("labels", classes)
+        # create a BoxList from the boxes
+        boxlist = BoxList(boxes, image.size, mode="xyxy")
+        # add the labels to the boxlist
+        boxlist.add_field("labels", labels)
 
-        if anno and "segmentation" in anno[0]:
-            masks = [obj["segmentation"] for obj in anno]
-            masks = SegmentationMask(masks, img.size, mode='poly')
-            target.add_field("masks", masks)
+        if self.transforms:
+            image, boxlist = self.transforms(image, boxlist)
 
-        if anno and "keypoints" in anno[0]:
-            keypoints = [obj["keypoints"] for obj in anno]
-            keypoints = PersonKeypoints(keypoints, img.size)
-            target.add_field("keypoints", keypoints)
+        # return the image, the boxlist and the idx in your dataset
+        return image, boxlist, idx
 
-        target = target.clip_to_image(remove_empty=True)
-
-        if self._transforms is not None:
-            img, target = self._transforms(img, target)
-
-        return img, target, idx
-
-    def get_img_info(self, index):
-        img_id = self.id_to_img_map[index]
-        img_data = self.coco.imgs[img_id]
-        return img_data
+    def get_img_info(self, idx):
+        # get img_height and img_width. This is used if
+        # we want to split the batches according to the aspect ratio
+        # of the image, as it can be more efficient than loading the
+        # image from disk
+        return {"height": img_height, "width": img_width}
