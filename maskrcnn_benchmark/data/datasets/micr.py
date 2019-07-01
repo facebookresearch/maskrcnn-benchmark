@@ -1,6 +1,6 @@
 
 import torch
-import torchvision0
+import torchvision
 
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
