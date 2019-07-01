@@ -38,8 +38,9 @@ def has_valid_annotation(anno):
 
 class MICRDataset(object):
     def __init__(self,):
+        
         # as you would do normally
-
+        pass
     def __getitem__(self, idx):
         # load the image as a PIL Image
         # image = ...
