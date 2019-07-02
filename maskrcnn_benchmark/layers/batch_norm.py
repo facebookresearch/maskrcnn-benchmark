@@ -9,8 +9,9 @@ class FrozenBatchNorm2d(nn.Module):
     are fixed
     """
 
-    def __init__(self, n):
+    def __init__(self, n, eps=1e-5):
         super(FrozenBatchNorm2d, self).__init__()
+        self.eps = eps
         self.register_buffer("weight", torch.ones(n))
         self.register_buffer("bias", torch.zeros(n))
         self.register_buffer("running_mean", torch.zeros(n))
@@ -24,7 +25,7 @@ class FrozenBatchNorm2d(nn.Module):
             self.running_mean = self.running_mean.half()
             self.running_var = self.running_var.half()
 
-        scale = self.weight * self.running_var.rsqrt()
+        scale = self.weight * (self.running_var + self.eps).rsqrt()
         bias = self.bias - self.running_mean * scale
         scale = scale.reshape(1, -1, 1, 1)
         bias = bias.reshape(1, -1, 1, 1)
