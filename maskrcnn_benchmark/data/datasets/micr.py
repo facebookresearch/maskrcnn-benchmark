@@ -35,10 +35,13 @@ def has_valid_annotation(anno):
         return True
     return False
 
+DATA_DIR = "/home/p_vinsentds/maskrcnn-benchmark/datasets/micr/"
+folder = "train2017"
+        
 
 class MICRDataset(object):
     def __init__(self,):
-        
+
         # as you would do normally
         pass
     def __getitem__(self, idx):
