@@ -5,6 +5,7 @@ import numpy as np
 import os
 from PIL import Image
 import matplotlib.pyplot as plt
+import json
 FOLDER_DATASET = "/home/p_vinsentds/maskrcnn-benchmark/datasets/micr/annotations/"
 plt.ion()
 

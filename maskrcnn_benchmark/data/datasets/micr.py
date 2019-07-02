@@ -43,9 +43,11 @@ class MICRDataset(object):
         def __init__(
         self, ann_file, root, remove_images_without_annotations, transforms=None
     ):
+        super(MICRDataset, self).__init__(root, ann_file)
+        self.ids = sorted(self.ids)
 
         # as you would do normally
-        pass
+        
     def __getitem__(self, idx):
         # load the image as a PIL Image
         # image = ...
