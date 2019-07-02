@@ -40,10 +40,11 @@ folder = "train2017"
         
 
 class MICRDataset(object):
-        def __init__(
+    def __init__(
         self, ann_file, root, remove_images_without_annotations, transforms=None
     ):
         super(MICRDataset, self).__init__(root, ann_file)
+        # sort indices for reproducible results
         self.ids = sorted(self.ids)
 
         # as you would do normally
