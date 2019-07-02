@@ -5,22 +5,19 @@ import numpy as np
 import os
 from PIL import Image
 import matplotlib.pyplot as plt
-FOLDER_DATASET = "./Track_1_Wheel_Test/"
+FOLDER_DATASET = "/home/p_vinsentds/maskrcnn-benchmark/datasets/micr/annotations/"
 plt.ion()
 
 class DriveData(Dataset):
     __xs = []
     __ys = []
-
+    import pdb; pdb.set_trace()
     def __init__(self, folder_dataset, transform=None):
         self.transform = transform
         # Open and load text file including the whole training data
-        with open(folder_dataset + "data.txt") as f:
-            for line in f:
-                # Image path
-                self.__xs.append(folder_dataset + line.split()[0])        
-                # Steering wheel label
-                self.__ys.append(np.float32(line.split()[1]))
+        with open("instances_train2017.json", "r") as read_file:
+            data = json.load(read_file)
+            print(type(data))
 
     # Override to give PyTorch access to any image on the dataset
     def __getitem__(self, index):
@@ -38,3 +35,5 @@ class DriveData(Dataset):
     def __len__(self):
         return len(self.__xs)
 
+dset_train = DriveData(FOLDER_DATASET)
+train_loader = DataLoader(dset_train, batch_size=10, shuffle=True, num_workers=1)
