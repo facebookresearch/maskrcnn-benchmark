@@ -15,8 +15,9 @@ class DriveData(Dataset):
     def __init__(self, folder_dataset, transform=None):
         self.transform = transform
         # Open and load text file including the whole training data
-        with open("instances_train2017.json", "r") as read_file:
+        with open(folder_dataset + "instances_train2017.json", "r") as read_file:
             data = json.load(read_file)
+            print("^^^^^^^^^^^^^^^^")
             print(type(data))
 
     # Override to give PyTorch access to any image on the dataset
