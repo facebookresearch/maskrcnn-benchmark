@@ -40,7 +40,9 @@ folder = "train2017"
         
 
 class MICRDataset(object):
-    def __init__(self,):
+        def __init__(
+        self, ann_file, root, remove_images_without_annotations, transforms=None
+    ):
 
         # as you would do normally
         pass
