@@ -161,7 +161,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
 
     if is_train:
         # save category_id to label name mapping
-        save_labels(datasets, cfg.OUTPUT_DIR)
+        save_labels(datasets, cfg.OUTPUT_DIR) ## TODO need to check this part as its giving warning.
 
     data_loaders = []
     import pdb;pdb.set_trace()
