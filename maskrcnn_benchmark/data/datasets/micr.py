@@ -53,6 +53,7 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
             ids = []
             for img_id in self.ids:
                 import pdb;pdb.set_trace()
+                print(img_id)
                 ann_ids = self.coco.getAnnIds(imgIds=img_id, iscrowd=None)
 
                 anno = self.coco.loadAnns(ann_ids)
