@@ -48,7 +48,9 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         if remove_images_without_annotations:
             ids = []
             for img_id in self.ids:
+                import pdb;pdb.set_trace()
                 ann_ids = self.coco.getAnnIds(imgIds=img_id, iscrowd=None)
+                print(ann_ids)
                 anno = self.coco.loadAnns(ann_ids)
                 if has_valid_annotation(anno):
                     ids.append(img_id)
