@@ -52,13 +52,15 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
             print("remove_images_without_annotations")
             ids = []
             for img_id in self.ids:
+                import pdb;pdb.set_trace()
                 ann_ids = self.coco.getAnnIds(imgIds=img_id, iscrowd=None)
+
                 anno = self.coco.loadAnns(ann_ids)
                 if has_valid_annotation(anno):
                     ids.append(img_id)
                     print("valid annotationid")
             self.ids = ids
-            print("printingsecond ids")
+            print("printing second ids")
             print(self.ids)
 
         self.categories = {cat['id']: cat['name'] for cat in self.coco.cats.values()}
