@@ -49,7 +49,7 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
         print(self.ids)
 
         from pycocotools.coco import COCO
-        self.coco = COCO(annFile)
+        self.coco = COCO(ann_file)
         print(dir(self.coco))
         coco = self.coco
         # filter images without detection annotations
