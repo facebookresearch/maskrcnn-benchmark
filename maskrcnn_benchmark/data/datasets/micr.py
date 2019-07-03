@@ -43,7 +43,7 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
     def __init__(
         self, ann_file, root, remove_images_without_annotations, transforms=None
     ):
-        super(MICRDataset, self).__init__(root, ann_file)
+        super().__init__(self, root, ann_file)
         # sort indices for reproducible results
         self.ids = sorted(self.ids)
         print(self.ids)
