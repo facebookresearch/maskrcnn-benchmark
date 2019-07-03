@@ -1,4 +1,6 @@
-
+# location of pycoco tools,
+# /home/p_vinsentds/.conda/envs/qanet/lib/python3.6/site-packages/pycocotools-2.0-py3.6-linux-x86_64.egg/pycocotools
+# 
 import torch
 import torchvision
 
