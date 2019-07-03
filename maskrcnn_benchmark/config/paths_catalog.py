@@ -133,6 +133,7 @@ class DatasetCatalog(object):
                 args=args,
             )
         if "micr" in name:
+            import pdb;pdb.set_trace()
             data_dir = DatasetCatalog.DATA_DIR
             attrs = DatasetCatalog.DATASETS[name]
             args = dict(
@@ -140,7 +141,7 @@ class DatasetCatalog(object):
                 ann_file=os.path.join(data_dir, attrs["ann_file"]),
             )
             return dict(
-                factory="COCODataset",
+                factory="MICRDataset",
                 args=args,
             )
         elif "voc" in name:

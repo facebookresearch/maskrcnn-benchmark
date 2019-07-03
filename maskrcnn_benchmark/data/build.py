@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+# Copyr ght (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import bisect
 import copy
 import logging
