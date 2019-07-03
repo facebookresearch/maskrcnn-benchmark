@@ -47,6 +47,9 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
         # sort indices for reproducible results
         self.ids = sorted(self.ids)
         print(self.ids)
+
+        from pycocotools.coco import COCO
+        self.coco = COCO(annFile)
         print(dir(self.coco))
         coco = self.coco
         # filter images without detection annotations
@@ -56,9 +59,9 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
             for img_id in self.ids:
                 import pdb;pdb.set_trace()
                 print(img_id)
-                ann_ids = coco.getAnnIds(imgIds=img_id, iscrowd=None)
+                ann_ids = self.coco.getAnnIds(imgIds=img_id, iscrowd=None)
                 print("ann_ids")
-                anno = coco.loadAnns(ann_ids)
+                anno = self.coco.loadAnns(ann_ids)
                 if has_valid_annotation(anno):
                     ids.append(img_id)
                     print("valid annotationid")
