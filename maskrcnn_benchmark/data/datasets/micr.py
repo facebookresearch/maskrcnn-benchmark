@@ -59,9 +59,9 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
             for img_id in self.ids:
                 import pdb;pdb.set_trace()
                 print(img_id)
-                ann_ids = self.coco.getAnnIds(imgIds=img_id, iscrowd=None)
+                ann_ids = coco.getAnnIds(imgIds=img_id, iscrowd=None)
                 print("ann_ids")
-                anno = self.coco.loadAnns(ann_ids)
+                anno = coco.loadAnns(ann_ids)
                 if has_valid_annotation(anno):
                     ids.append(img_id)
                     print("valid annotationid")
