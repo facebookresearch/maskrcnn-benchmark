@@ -47,6 +47,7 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
         # sort indices for reproducible results
         self.ids = sorted(self.ids)
         print(self.ids)
+        print(dir(self.coco))
         # filter images without detection annotations
         if remove_images_without_annotations:
             print("remove_images_without_annotations")
