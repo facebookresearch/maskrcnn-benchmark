@@ -39,7 +39,7 @@ DATA_DIR = "/home/p_vinsentds/maskrcnn-benchmark/datasets/micr/"
 folder = "train2017"
         
 print("you have reached micr datatset get method")
-class MICRDataset(object):
+class MICRDataset(torchvision.datasets.coco.CocoDetection):
     def __init__(
         self, ann_file, root, remove_images_without_annotations, transforms=None
     ):
