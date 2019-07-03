@@ -68,6 +68,8 @@ class MICRDataset(object):
         self._transforms = transforms
 
     def __getitem__(self, idx):
+        import pdb;pdb.set_trace()
+        print("you have reached micr datatset get method")
         img, anno = super(MICRDataset, self).__getitem__(idx)
 
         # filter crowd annotations
@@ -104,3 +106,7 @@ class MICRDataset(object):
         img_id = self.id_to_img_map[index]
         img_data = self.coco.imgs[img_id]
         return img_data
+
+
+# TODO change the file numbers in train and test file or include only 15 files in train and rest in test and val...folder
+# TODO put a trace in pycoco coco.py ...file also...
