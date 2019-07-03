@@ -62,7 +62,7 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
             print(self.ids)
 
         self.categories = {cat['id']: cat['name'] for cat in self.coco.cats.values()}
-        print("categories:" + self.categories.keys())
+        print(self.categories.keys())
         self.json_category_id_to_contiguous_id = {
             v: i + 1 for i, v in enumerate(self.coco.getCatIds())
         }
