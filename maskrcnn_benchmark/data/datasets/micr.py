@@ -99,6 +99,7 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
         print(anno)
         if anno and "segmentation" in anno[0]:
             masks = [obj["segmentation"] for obj in anno]
+            print(masks)
             masks = SegmentationMask(masks, img.size, mode='poly')
             target.add_field("masks", masks)
 
