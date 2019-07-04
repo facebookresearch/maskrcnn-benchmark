@@ -81,7 +81,7 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
 
     def __getitem__(self, idx):
         
-        img, anno = super(self).__getitem__(idx) # TODO changed from MICRDataset to COCODataset # super(MICRDataset, self)
+        img, anno = super(MICRDataset,self).__getitem__(idx) # TODO changed from MICRDataset to COCODataset # super(MICRDataset, self)
 
         # filter crowd annotations
         # TODO might be better to add an extra field
