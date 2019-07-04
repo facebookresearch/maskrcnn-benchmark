@@ -37,8 +37,8 @@ def has_valid_annotation(anno):
         return True
     return False
 
-DATA_DIR = "/home/p_vinsentds/maskrcnn-benchmark/datasets/micr/"
-folder = "train2017"
+# DATA_DIR = "/home/p_vinsentds/maskrcnn-benchmark/datasets/micr/"
+# folder = "train2017"
         
 # print("you have reached micr datatset get method")
 class MICRDataset(torchvision.datasets.coco.CocoDetection):
@@ -81,8 +81,10 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
 
     def __getitem__(self, idx):
         
-        img, anno = super(MICRDataset,self).__getitem__(idx) # TODO changed from MICRDataset to COCODataset # super(MICRDataset, self)
-
+        img, anno = super(MICRDataset, self).__getitem__(idx) # TODO changed from MICRDataset to COCODataset # super(MICRDataset, self)
+        print(img)
+        print(anno)
+        print("entering get in MICR dataset")
         # filter crowd annotations
         # TODO might be better to add an extra field
         anno = [obj for obj in anno if obj["iscrowd"] == 0]
