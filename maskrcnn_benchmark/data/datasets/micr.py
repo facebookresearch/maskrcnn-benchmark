@@ -48,11 +48,10 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
         # super().__init__(self, ann_file,root)
         super(MICRDataset, self).__init__(root,ann_file)
         # sort indices for reproducible results
-        self.ids = sorted(self.ids)
-        print(self.ids)
-
         from pycocotools.coco import COCO
         self.coco = COCO(ann_file)
+        self.ids = sorted(self.ids)
+        print(self.ids)
         # print(dir(self.coco))
         # coco = self.coco
         # # filter images without detection annotations
