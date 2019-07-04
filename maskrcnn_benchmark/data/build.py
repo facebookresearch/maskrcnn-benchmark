@@ -30,7 +30,6 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
             "dataset_list should be a list of strings, got {}".format(dataset_list)
         )
     datasets = []
-    import pdb;pdb.set_trace()
     for dataset_name in dataset_list:
         data = dataset_catalog.get(dataset_name)
         factory = getattr(D, data["factory"])
