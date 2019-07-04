@@ -64,7 +64,7 @@ def train(cfg, local_rank, distributed):
     )
     extra_checkpoint_data = checkpointer.load(cfg.MODEL.WEIGHT)
     arguments.update(extra_checkpoint_data)
-
+    print(arguments["iteration"]) # TODO remove print
     data_loader = make_data_loader(
         cfg,
         is_train=True,

@@ -1,6 +1,6 @@
 # location of pycoco tools,
 # /home/p_vinsentds/.conda/envs/qanet/lib/python3.6/site-packages/pycocotools-2.0-py3.6-linux-x86_64.egg/pycocotools
-# 
+#   lists = [self.imgToAnns[str(imgId)] for imgId in imgIds if str(imgId) in self.imgToAnns] in pycoco tools/coco.py file
 import torch
 import torchvision
 
@@ -83,7 +83,7 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
         self._transforms = transforms
 
     def __getitem__(self, idx):
-        import pdb;pdb.set_trace()
+        # import pdb;pdb.set_trace()
         print("you have reached micr datatset get method")
         img, anno = super(MICRDataset, self).__getitem__(idx)
 
