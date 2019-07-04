@@ -12,7 +12,7 @@ plt.ion()
 class DriveData(Dataset):
     __xs = []
     __ys = []
-    import pdb; pdb.set_trace()
+    
     def __init__(self, folder_dataset, transform=None):
         self.transform = transform
         # Open and load text file including the whole training data

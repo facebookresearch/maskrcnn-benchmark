@@ -20,7 +20,6 @@ def save_labels(dataset_list, output_dir):
 
         ids_to_labels = {}
         for dataset in dataset_list:
-            import pdb; pdb.set_trace()
             if hasattr(dataset, 'categories'):
                 ids_to_labels.update(dataset.categories)
             else:
