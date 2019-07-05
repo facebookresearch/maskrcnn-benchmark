@@ -1,0 +1,6 @@
+{'id': 19, 'image_id': '3', 'category_id': 5, 'segmentation': [498, 63, 850, 63, 850, 171, 498, 171], 'area': 38016, 'bbox': [498, 63, 352, 108], 'iscrowd': 0}, 
+{'id': 20, 'image_id': '4', 'category_id': 1, 'segmentation': [527, 941, 1876, 941, 1876, 1069, 527, 1069], 'area': 172672, 'bbox': [527, 941, 1349, 128], 'iscrowd': 0}, 
+{'id': 21, 'image_id': '4', 'category_id': 4, 'segmentation': [138, 518, 820, 518, 820, 606, 138, 606], 'area': 60016, 'bbox': [138, 518, 682, 88], 'iscrowd': 0}, 
+{'id': 22, 'image_id': '4', 'category_id': 5, 'segmentation': [237, 46, 654, 46, 654, 120, 237, 120], 'area': 30858, 'bbox': [237, 46, 417, 74], 'iscrowd': 0}, 
+{'id': 23, 'image_id': '4', 'category_id': 2, 'segmentation': [1798, 65, 2314, 65, 2314, 158, 1798, 158], 'area': 47988, 'bbox': [1798, 65, 516, 93], 'iscrowd': 0}, 
+{'id': 24, 'image_id': '4', 'category_id': 3, 'segmentation': [1696, 408, 2288, 408, 2288, 504, 1696, 504], 'area': 56832, 'bbox': [1696, 408, 592, 96], 'iscrowd': 0}
