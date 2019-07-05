@@ -51,9 +51,6 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
         from pycocotools.coco import COCO
         self.coco = COCO(ann_file)
         self.ids = sorted(self.ids)
-        print(self.ids)
-        # print(dir(self.coco))
-        # coco = self.coco
         # # filter images without detection annotations
         if remove_images_without_annotations:
             print("remove_images_without_annotations")
@@ -63,13 +60,8 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
                 anno = self.coco.loadAnns(ann_ids)
                 if has_valid_annotation(anno):
                     ids.append(img_id)
-                    print("valid annotationid")
             self.ids = ids
-            print("printing second ids")
-            print(self.ids)
-
         self.categories = {cat['id']: cat['name'] for cat in self.coco.cats.values()}
-        print(self.categories.keys())
         self.json_category_id_to_contiguous_id = {
             v: i + 1 for i, v in enumerate(self.coco.getCatIds())
         }
@@ -82,9 +74,7 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
     def __getitem__(self, idx):
         
         img, anno = super(MICRDataset, self).__getitem__(idx) # TODO changed from MICRDataset to COCODataset # super(MICRDataset, self)
-        print(img)
-        print(anno)
-        print("entering get in MICR dataset")
+
         # filter crowd annotations
         # TODO might be better to add an extra field
         anno = [obj for obj in anno if obj["iscrowd"] == "0"] #TODO need to check the for type as string
@@ -97,11 +87,8 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
         classes = [self.json_category_id_to_contiguous_id[c] for c in classes]
         classes = torch.tensor(classes)
         target.add_field("labels", classes)
-        print(type(anno))
-        print(anno)
         if anno and "segmentation" in anno[0]:
             masks = [obj["segmentation"] for obj in anno]
-            print(masks)
             masks = SegmentationMask(masks, img.size, mode='poly')
             target.add_field("masks", masks)
 
