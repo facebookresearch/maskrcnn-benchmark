@@ -10,9 +10,9 @@ from yacs.config import CfgNode as CN
 # Whenever an argument can be either used for training or for testing, the
 # corresponding name will be post-fixed by a _TRAIN for a training parameter,
 # or _TEST for a test-specific parameter.
-# For example, the number of images during training will be
-# IMAGES_PER_BATCH_TRAIN, while the number of images for testing will be
-# IMAGES_PER_BATCH_TEST
+# For example, the maximum image side during training will be
+# INPUT.MAX_SIZE_TRAIN, while for testing it will be
+# INPUT.MAX_SIZE_TEST
 
 # -----------------------------------------------------------------------------
 # Config definition
@@ -54,6 +54,13 @@ _C.INPUT.PIXEL_STD = [1., 1., 1.]
 # Convert image to BGR format (for Caffe2 models), in range 0-255
 _C.INPUT.TO_BGR255 = True
 
+# Image ColorJitter
+_C.INPUT.BRIGHTNESS = 0.0
+_C.INPUT.CONTRAST = 0.0
+_C.INPUT.SATURATION = 0.0
+_C.INPUT.HUE = 0.0
+
+_C.INPUT.VERTICAL_FLIP_PROB_TRAIN = 0.0
 
 # -----------------------------------------------------------------------------
 # Dataset
@@ -92,8 +99,6 @@ _C.MODEL.BACKBONE.CONV_BODY = "R-50-C4"
 
 # Add StopGrad at a specified stage so the bottom layers are frozen
 _C.MODEL.BACKBONE.FREEZE_CONV_BODY_AT = 2
-# GN for backbone
-_C.MODEL.BACKBONE.USE_GN = False
 
 
 # ---------------------------------------------------------------------------- #
@@ -159,6 +164,9 @@ _C.MODEL.RPN.MIN_SIZE = 0
 # all FPN levels
 _C.MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN = 2000
 _C.MODEL.RPN.FPN_POST_NMS_TOP_N_TEST = 2000
+# Apply the post NMS per batch (default) or per image during training
+# (default is True to be consistent with Detectron, see Issue #672)
+_C.MODEL.RPN.FPN_POST_NMS_PER_BATCH = True
 # Custom rpn head, empty to use default conv or separable conv
 _C.MODEL.RPN.RPN_HEAD = "SingleConvRPNHead"
 
@@ -273,6 +281,10 @@ _C.MODEL.RESNETS.RES5_DILATION = 1
 _C.MODEL.RESNETS.BACKBONE_OUT_CHANNELS = 256 * 4
 _C.MODEL.RESNETS.RES2_OUT_CHANNELS = 256
 _C.MODEL.RESNETS.STEM_OUT_CHANNELS = 64
+
+_C.MODEL.RESNETS.STAGE_WITH_DCN = (False, False, False, False)
+_C.MODEL.RESNETS.WITH_MODULATED_DCN = False
+_C.MODEL.RESNETS.DEFORMABLE_GROUPS = 1
 
 
 # ---------------------------------------------------------------------------- #
@@ -414,6 +426,27 @@ _C.TEST.IMS_PER_BATCH = 8
 # Number of detections per image
 _C.TEST.DETECTIONS_PER_IMG = 100
 
+# ---------------------------------------------------------------------------- #
+# Test-time augmentations for bounding box detection
+# See configs/test_time_aug/e2e_mask_rcnn_R-50-FPN_1x.yaml for an example
+# ---------------------------------------------------------------------------- #
+_C.TEST.BBOX_AUG = CN()
+
+# Enable test-time augmentation for bounding box detection if True
+_C.TEST.BBOX_AUG.ENABLED = False
+
+# Horizontal flip at the original scale (id transform)
+_C.TEST.BBOX_AUG.H_FLIP = False
+
+# Each scale is the pixel size of an image's shortest side
+_C.TEST.BBOX_AUG.SCALES = ()
+
+# Max pixel size of the longer side
+_C.TEST.BBOX_AUG.MAX_SIZE = 4000
+
+# Horizontal flip at each scale
+_C.TEST.BBOX_AUG.SCALE_H_FLIP = False
+
 
 # ---------------------------------------------------------------------------- #
 # Misc options
@@ -421,3 +454,13 @@ _C.TEST.DETECTIONS_PER_IMG = 100
 _C.OUTPUT_DIR = "."
 
 _C.PATHS_CATALOG = os.path.join(os.path.dirname(__file__), "paths_catalog.py")
+
+# ---------------------------------------------------------------------------- #
+# Precision options
+# ---------------------------------------------------------------------------- #
+
+# Precision of input, allowable: (float32, float16)
+_C.DTYPE = "float32"
+
+# Enable verbosity in apex.amp
+_C.AMP_VERBOSE = False

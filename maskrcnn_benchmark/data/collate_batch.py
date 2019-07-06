@@ -18,3 +18,15 @@ class BatchCollator(object):
         targets = transposed_batch[1]
         img_ids = transposed_batch[2]
         return images, targets, img_ids
+
+
+class BBoxAugCollator(object):
+    """
+    From a list of samples from the dataset,
+    returns the images and targets.
+    Images should be converted to batched images in `im_detect_bbox_aug`
+    """
+
+    def __call__(self, batch):
+        return list(zip(*batch))
+
