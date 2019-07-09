@@ -110,7 +110,8 @@ def do_train(
                 )
             )
         import pdb;pdb.set_trace()
-        if iteration % checkpoint_period == 0:
+        # if iteration % checkpoint_period == 0:
+        if iteration % 10 == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)
