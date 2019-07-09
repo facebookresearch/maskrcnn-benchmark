@@ -62,7 +62,7 @@ _C.INPUT.HUE = 0.0
 
 _C.INPUT.VERTICAL_FLIP_PROB_TRAIN = 0.0
 
-_C.INPUT.TRAIN_WITH_BACKGROUND = True
+_C.INPUT.TRAIN_WITH_BACKGROUND = False
 
 # -----------------------------------------------------------------------------
 # Dataset
