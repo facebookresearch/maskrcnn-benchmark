@@ -205,14 +205,18 @@ def convert_rect_to_pts2(anchors, lib=np):
     b = lib.cos(angle)*0.5
     a = lib.sin(angle)*0.5
 
-    rect_pts[:,0,0] = cx - a*h - b*w
-    rect_pts[:,0,1] = cy + b*h - a*w
-    rect_pts[:,1,0] = cx + a*h - b*w
-    rect_pts[:,1,1] = cy - b*h - a*w
-    rect_pts[:,2,0] = 2*cx - rect_pts[:,0,0]
-    rect_pts[:,2,1] = 2*cy - rect_pts[:,0,1]
-    rect_pts[:,3,0] = 2*cx - rect_pts[:,1,0]
-    rect_pts[:,3,1] = 2*cy - rect_pts[:,1,1]
+    pts1_x = cx - a*h - b*w
+    pts1_y = cy + b*h - a*w
+    pts2_x = cx + a*h - b*w
+    pts2_y = cy - b*h - a*w
+    rect_pts[:,0,0] = pts1_x
+    rect_pts[:,0,1] = pts1_y
+    rect_pts[:,1,0] = pts2_x
+    rect_pts[:,1,1] = pts2_y
+    rect_pts[:,2,0] = 2*cx - pts1_x
+    rect_pts[:,2,1] = 2*cy - pts1_y
+    rect_pts[:,3,0] = 2*cx - pts2_x
+    rect_pts[:,3,1] = 2*cy - pts2_y
 
     return rect_pts
 
@@ -417,13 +421,13 @@ def iou_rotate_cpu2(boxes1, boxes2, lib=np):
         pts2 = box2_pts[i].flatten()
 
         num_of_inter, int_pts = inter_pts(pts1, pts2, lib=lib)
-        iou = 0.0
-        if num_of_inter > 0:
+        # iou = 0.0
+        if num_of_inter > 2:
             reorder_pts(int_pts, num_of_inter, lib=lib)
             int_area = area(int_pts, num_of_inter, lib=lib)
 
             iou = int_area * 1.0 / (area1[i] + area2[i] - int_area + 1e-7)
-        ious[i] = iou
+            ious[i] = iou
 
     return ious
 
@@ -437,7 +441,7 @@ def reorder_pts2(int_pts):
         v = int_pts - center
         d = torch.sqrt(v[:,0] * v[:,0] + v[:,1] * v[:,1])
         v = v / d.unsqueeze(-1)
-        v1_lt_0 = v[:,1] < 0 
+        v1_lt_0 = v[:,1] < 0
         v[v1_lt_0, 0] = -2 - v[v1_lt_0, 0]
         vs = v[:,0]
 
@@ -451,7 +455,7 @@ def reorder_pts2(int_pts):
                 vs[j] = vs[j-1].item()
                 indexing[j] = indexing[j-1]
                 j -= 1
-          
+
             vs[j] = temp
             indexing[j] = i
 
@@ -519,12 +523,13 @@ def iou_rotate_cpu(boxes1, boxes2):
 
 def compute_iou_loss(pred, target, base_box, box_coder):
     pred_box = box_coder.decode(pred, base_box)
-    gt_box = box_coder.decode(target, base_box)
+    with torch.no_grad():
+        gt_box = box_coder.decode(target, base_box)
 
     # ious = iou_rotate_cpu2(pred_box, gt_box, lib=torch)
     ious = iou_rotate_cpu3(pred_box, gt_box)
     # ious = (ious - 0.5) * 1.0 / 0.5
-    iou_loss = -torch.log(ious**2)
+    iou_loss = -torch.log(ious)
     return iou_loss.mean()
 
 if __name__ == '__main__':
@@ -571,7 +576,7 @@ if __name__ == '__main__':
 
     # ious = iou_rotate_cpu(bbox_gt, anchor)
     # ious2 = iou_rotate_cpu2(bbox_gt, anchor)
-    # ious3 = iou_rotate_cpu3(t_bbox_gt, t_anchor)
+    # ious3 = iou_rotate_cpu3(t_bbox_gt, t_anchor).numpy()
     # print(ious)
     # print(ious2)
     # print(ious3)
