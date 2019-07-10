@@ -106,7 +106,7 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
     def __getitem__(self, idx):        
         # img, anno = super(MICRDataset, self).__getitem__(idx) # TODO changed from MICRDataset to COCODataset # super(MICRDataset, self)
         img =  Image.open(img_path + str(idx) + '.jpg').convert("RGB")
-        boxes, label  = self.get_img_anno(idx)
+        boxes, label, segcollection = self.get_img_anno(idx)
         # filter crowd annotations
         # TODO might be better to add an extra field
         # anno = [obj for obj in anno if obj["iscrowd"] == "0"] #TODO need to check the for type as string
@@ -120,10 +120,11 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
         classes = [self.json_category_id_to_contiguous_id[c] for c in classes]
         classes = torch.tensor(classes)
         target.add_field("labels", classes)
-        # if anno and "segmentation" in anno[0]:
-        #     masks = [obj["segmentation"] for obj in anno]
-        #     masks = SegmentationMask(masks, img.size, mode='poly')
-        #     target.add_field("masks", masks)
+        # # if anno and "segmentation" in anno[0]:
+        # # masks = [obj["segmentation"] for obj in anno]
+        # masks = segcollection
+        # masks = SegmentationMask(masks, img.size, mode='poly')
+        # target.add_field("masks", masks)
 
         # if anno and "keypoints" in anno[0]:
         #     keypoints = [obj["keypoints"] for obj in anno]
