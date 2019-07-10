@@ -31,6 +31,7 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
         )
     datasets = []
     for dataset_name in dataset_list:
+        import pdb;pdb.set_trace()
         data = dataset_catalog.get(dataset_name)
         factory = getattr(D, data["factory"])
         args = data["args"]
