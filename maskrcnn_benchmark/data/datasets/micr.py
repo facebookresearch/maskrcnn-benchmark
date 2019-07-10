@@ -60,10 +60,12 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
                 ann_ids = self.coco.getAnnIds(imgIds=img_id, iscrowd=None)
                 anno = self.coco.loadAnns(ann_ids)
                 if has_valid_annotation(anno):
-                    print(f"has valid annotations {anno}")
+                    # print(f"has valid annotations {anno}")
                     ids.append(img_id)
             self.ids = ids
-        self.categories = {cat['id']: cat['name'] for cat in self.coco.cats.values()}
+            print(f"has valid ids {self.ids}")
+
+        self.categories = {cat['id']: cat['name'] for cat in self.micr.cats.values()} # for cat in self.coco.cats.values()
         self.json_category_id_to_contiguous_id = {
             v: i + 1 for i, v in enumerate(self.coco.getCatIds())
         }
