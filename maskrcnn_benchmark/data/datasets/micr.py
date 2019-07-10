@@ -39,7 +39,7 @@ def has_valid_annotation(anno):
     return False
 
 DATA_DIR = "/home/p_vinsentds/maskrcnn-benchmark/datasets/micr/"
-folder = "train2017"
+folder = "train2017/"
 img_path   = DATA_DIR + folder
 # print("you have reached micr datatset get method")
 class MICRDataset(torchvision.datasets.coco.CocoDetection):
