@@ -7,7 +7,7 @@ import torchvision
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
 from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
-
+from .coco import COCODataset
 
 min_keypoints_per_image = 10
 
@@ -41,7 +41,7 @@ def has_valid_annotation(anno):
 # folder = "train2017"
         
 # print("you have reached micr datatset get method")
-class COCODataset(torchvision.datasets.coco.CocoDetection):
+class MICRDataset(torchvision.datasets.coco.CocoDetection):
     def __init__(
         self, ann_file, root, remove_images_without_annotations, transforms=None
     ):
