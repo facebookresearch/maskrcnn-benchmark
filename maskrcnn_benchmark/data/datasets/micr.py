@@ -80,7 +80,7 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
         self._transforms = transforms
 
         print(f"self.id_to_img_map:{self.id_to_img_map}")
-        print(f"self._transforms:{self._transforms})
+        print(f"self._transforms:{self._transforms}")
 
 
     def __getitem__(self, idx):
