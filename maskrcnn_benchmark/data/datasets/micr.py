@@ -98,7 +98,7 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
             if value['image_id'] == image_id:
                 bbcollection.append(value['bbox'])
                 bblabel.append(value['category_id'])
-    return(bbcollection,bblabel)
+        return (bbcollection,bblabel)
 
 
     def __getitem__(self, idx):
