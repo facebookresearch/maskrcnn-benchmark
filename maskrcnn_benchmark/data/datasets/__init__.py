@@ -4,4 +4,4 @@ from .voc import PascalVOCDataset
 from .concat_dataset import ConcatDataset
 from .micr import MICRDataset
 
-__all__ = ["COCODataset", "ConcatDataset", "PascalVOCDataset" "MICRDataset"]
+__all__ = ["COCODataset", "ConcatDataset", "PascalVOCDataset", "MICRDataset"]
