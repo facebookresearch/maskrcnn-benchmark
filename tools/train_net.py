@@ -56,7 +56,7 @@ def train(cfg, local_rank, distributed):
 
     arguments = {}
     arguments["iteration"] = 0
-    import pdb;pdb.set_trace()
+    # import pdb;pdb.set_trace()
     output_dir = cfg.OUTPUT_DIR
 
     save_to_disk = get_rank() == 0
