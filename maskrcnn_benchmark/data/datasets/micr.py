@@ -45,8 +45,8 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
     def __init__(
         self, ann_file, root, remove_images_without_annotations, transforms=None
     ):
-        # super().__init__(self, ann_file,root)
-        super(MICRDataset, self).__init__(root,ann_file)
+        super().__init__(self, root, ann_file)
+        # super(MICRDataset, self).__init__(root,ann_file)
         # sort indices for reproducible results
         from pycocotools.coco import COCO
         self.coco = COCO(ann_file)
@@ -84,8 +84,8 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
 
 
     def __getitem__(self, idx):
-        import pdb;pdb.set_trace()
-        img, anno = super(MICRDataset,self).__getitem__(idx) # TODO changed from MICRDataset to COCODataset # super(MICRDataset, self)
+
+        img, anno = super(MICRDataset, self).__getitem__(idx) # TODO changed from MICRDataset to COCODataset # super(MICRDataset, self)
         # img, anno = super(COCODataset, self).__getitem__(idx) # TODO changed from MICRDataset to COCODataset # super(MICRDataset, self)
 
         # filter crowd annotations
