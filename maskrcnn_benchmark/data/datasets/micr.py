@@ -43,7 +43,7 @@ DATA_DIR = "/home/p_vinsentds/maskrcnn-benchmark/datasets/micr/"
 folder_train = "train2017/"
 folder_val = "val2017/"
 img_path   = DATA_DIR + folder_train
-path_to_json = DATA_DIR + "annotation/"+ "instances_train2017.json"
+path_to_json = DATA_DIR + "annotations/"+ "instances_train2017.json"
 
 # print("you have reached micr datatset get method")
 class MICRDataset(torchvision.datasets.coco.CocoDetection):
