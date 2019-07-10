@@ -101,12 +101,10 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
         return (bbcollection,bblabel)
 
 
-    def __getitem__(self, idx):
-
-        
+    def __getitem__(self, idx):        
         # img, anno = super(MICRDataset, self).__getitem__(idx) # TODO changed from MICRDataset to COCODataset # super(MICRDataset, self)
         img =  Image.open(img_path + str(idx) + '.jpg').convert("RGB")
-        boxes, label  = get_img_anno(idx)
+        boxes, label  = self.get_img_anno(idx)
         # filter crowd annotations
         # TODO might be better to add an extra field
         # anno = [obj for obj in anno if obj["iscrowd"] == "0"] #TODO need to check the for type as string
