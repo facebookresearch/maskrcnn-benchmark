@@ -8,6 +8,7 @@ from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
 from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
 from .coco import COCODataset
+from PIL import Image
 
 min_keypoints_per_image = 10
 
@@ -37,9 +38,9 @@ def has_valid_annotation(anno):
         return True
     return False
 
-# DATA_DIR = "/home/p_vinsentds/maskrcnn-benchmark/datasets/micr/"
-# folder = "train2017"
-        
+DATA_DIR = "/home/p_vinsentds/maskrcnn-benchmark/datasets/micr/"
+folder = "train2017"
+img_path   = DATA_DIR + folder
 # print("you have reached micr datatset get method")
 class MICRDataset(torchvision.datasets.coco.CocoDetection):
     def __init__(
@@ -85,9 +86,10 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
 
     def __getitem__(self, idx):
 
-        # img, anno = super(self).__getitem__(idx) # TODO changed from MICRDataset to COCODataset # super(MICRDataset, self)
-        img, anno = super(COCODataset, self).__getitem__(idx) # TODO changed from MICRDataset to COCODataset # super(MICRDataset, self)
-
+        
+        # img, anno = super(MICRDataset, self).__getitem__(idx) # TODO changed from MICRDataset to COCODataset # super(MICRDataset, self)
+        img =  Image.open(img_path + idx + '.jpg').convert("RGB")
+        print(img)
         # filter crowd annotations
         # TODO might be better to add an extra field
         anno = [obj for obj in anno if obj["iscrowd"] == "0"] #TODO need to check the for type as string
