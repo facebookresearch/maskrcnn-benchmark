@@ -46,11 +46,12 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
         self, ann_file, root, remove_images_without_annotations, transforms=None
     ):
         # super().__init__(self, ann_file,root)
-        super(COCODataset, self).__init__(root,ann_file)
+        super(MICRDataset, self).__init__(root,ann_file)
         # sort indices for reproducible results
         from pycocotools.coco import COCO
         self.coco = COCO(ann_file)
         self.ids = sorted(self.ids)
+        print(f"printing ids {self.ids}")
         # # filter images without detection annotations
         if remove_images_without_annotations:
             print("remove_images_without_annotations")
