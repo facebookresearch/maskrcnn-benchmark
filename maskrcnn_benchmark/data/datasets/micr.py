@@ -93,12 +93,14 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
         image_id = str(idx)
         bbcollection = []
         bblabel = []
+        segcollection = []
         data = self.anno_json
         for value in data["annotations"]:
             if value['image_id'] == image_id:
                 bbcollection.append(value['bbox'])
                 bblabel.append(value['category_id'])
-        return (bbcollection,bblabel)
+                segcollection.append(value['segmentation'])
+        return (bbcollection,bblabel,segcollection)
 
 
     def __getitem__(self, idx):        
