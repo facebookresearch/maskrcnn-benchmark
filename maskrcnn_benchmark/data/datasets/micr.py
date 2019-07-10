@@ -63,18 +63,25 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
                     # print(f"has valid annotations {anno}")
                     ids.append(img_id)
             self.ids = ids
-            print(f"has valid ids {self.ids}")
+            # print(f"has valid ids {self.ids}")
 
         self.categories = {cat['id']: cat['name'] for cat in self.coco.cats.values()} # for cat in self.coco.cats.values()
         print(f"self.categories:{self.categories}")
         self.json_category_id_to_contiguous_id = {
             v: i + 1 for i, v in enumerate(self.coco.getCatIds())
         }
+        print(f"self.json_category_id_to_contiguous_id:{self.json_category_id_to_contiguous_id}")
         self.contiguous_category_id_to_json_id = {
             v: k for k, v in self.json_category_id_to_contiguous_id.items()
         }
+        print(f"self.contiguous_category_id_to_json_id:{self.contiguous_category_id_to_json_id}")
+       
         self.id_to_img_map = {k: v for k, v in enumerate(self.ids)}
         self._transforms = transforms
+
+        print(f"self.id_to_img_map:{self.id_to_img_map}")
+        print(f"self._transforms:{self._transforms})
+
 
     def __getitem__(self, idx):
         
