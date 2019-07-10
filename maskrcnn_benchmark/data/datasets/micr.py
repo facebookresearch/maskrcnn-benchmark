@@ -100,7 +100,7 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
         classes = [obj["category_id"] for obj in anno]
         classes = [self.json_category_id_to_contiguous_id[c] for c in classes]
         classes = torch.tensor(classes)
-        target.add_field("categories", classes)
+        target.add_field("labels", classes)
         # target.add_field("labels", classes)
         if anno and "segmentation" in anno[0]:
             masks = [obj["segmentation"] for obj in anno]
