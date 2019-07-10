@@ -41,12 +41,12 @@ def has_valid_annotation(anno):
 # folder = "train2017"
         
 # print("you have reached micr datatset get method")
-class MICRDataset(torchvision.datasets.coco.CocoDetection):
+class COCODataset(torchvision.datasets.coco.CocoDetection):
     def __init__(
         self, ann_file, root, remove_images_without_annotations, transforms=None
     ):
         # super().__init__(self, ann_file,root)
-        super(MICRDataset, self).__init__(root,ann_file)
+        super(COCODataset, self).__init__(root,ann_file)
         # sort indices for reproducible results
         from pycocotools.coco import COCO
         self.coco = COCO(ann_file)
@@ -73,11 +73,12 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
 
     def __getitem__(self, idx):
         
-        img, anno = super(MICRDataset, self).__getitem__(idx) # TODO changed from MICRDataset to COCODataset # super(MICRDataset, self)
+        img, anno = super(COCODataset, self).__getitem__(idx) # TODO changed from MICRDataset to COCODataset # super(MICRDataset, self)
 
         # filter crowd annotations
         # TODO might be better to add an extra field
         anno = [obj for obj in anno if obj["iscrowd"] == "0"] #TODO need to check the for type as string
+        print("anno!!!!!!!!!")
         print(anno)
         boxes = [obj["bbox"] for obj in anno]
         boxes = torch.as_tensor(boxes).reshape(-1, 4)  # guard against no boxes
