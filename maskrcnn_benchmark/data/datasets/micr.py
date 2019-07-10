@@ -9,7 +9,7 @@ from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
 from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
 from .coco import COCODataset
 from PIL import Image
-
+import json
 min_keypoints_per_image = 10
 
 
@@ -39,8 +39,12 @@ def has_valid_annotation(anno):
     return False
 
 DATA_DIR = "/home/p_vinsentds/maskrcnn-benchmark/datasets/micr/"
-folder = "train2017/"
-img_path   = DATA_DIR + folder
+
+folder_train = "train2017/"
+folder_val = "val2017/"
+img_path   = DATA_DIR + folder_train
+path_to_json = DATA_DIR + "annotation/"+ "instances_train2017.json"
+
 # print("you have reached micr datatset get method")
 class MICRDataset(torchvision.datasets.coco.CocoDetection):
     def __init__(
@@ -82,6 +86,19 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
 
         print(f"self.id_to_img_map:{self.id_to_img_map}")
         print(f"self._transforms:{self._transforms}")
+        self.anno_json = json.loads(open(path_to_json).read()) 
+
+
+    def get_img_anno(self, idx):
+        image_id = str(idx)
+        bbcollection = []
+        bblabel = []
+        data = self.anno_json
+        for value in data["annotations"]:
+            if value['image_id'] == image_id:
+                bbcollection.append(value['bbox'])
+                bblabel.append(value['category_id'])
+    return bbcollection,bblabel 
 
 
     def __getitem__(self, idx):
@@ -89,17 +106,17 @@ class MICRDataset(torchvision.datasets.coco.CocoDetection):
         
         # img, anno = super(MICRDataset, self).__getitem__(idx) # TODO changed from MICRDataset to COCODataset # super(MICRDataset, self)
         img =  Image.open(img_path + str(idx) + '.jpg').convert("RGB")
-        print(img)
+        boxes, label  = get_img_anno(idx)
         # filter crowd annotations
         # TODO might be better to add an extra field
-        anno = [obj for obj in anno if obj["iscrowd"] == "0"] #TODO need to check the for type as string
-        print("anno!!!!!!!!!")
-        print(anno)
-        boxes = [obj["bbox"] for obj in anno]
+        # anno = [obj for obj in anno if obj["iscrowd"] == "0"] #TODO need to check the for type as string
+        # print("anno!!!!!!!!!")
+        # print(anno)
+        # boxes = [obj["bbox"] for obj in anno]
         boxes = torch.as_tensor(boxes).reshape(-1, 4)  # guard against no boxes
         target = BoxList(boxes, img.size, mode="xywh").convert("xyxy")
-        import pdb;pdb.set_trace()
-        classes = [obj["category_id"] for obj in anno]
+        # classes = [obj["category_id"] for obj in anno]
+        classes = label
         classes = [self.json_category_id_to_contiguous_id[c] for c in classes]
         classes = torch.tensor(classes)
         target.add_field("labels", classes)
