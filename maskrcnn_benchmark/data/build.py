@@ -62,13 +62,13 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
 
 
 def make_data_sampler(dataset, shuffle, distributed):
-    print(f"daaset !!!!!!!!!!!!!1 {dataset}")
-    if distributed:
-        return samplers.DistributedSampler(dataset, shuffle=shuffle)
-    if shuffle:
-        sampler = torch.utils.data.sampler.RandomSampler(dataset)
-    else:
-        sampler = torch.utils.data.sampler.SequentialSampler(dataset)
+    print(f"daaset !!!!!!!!!!!!!1 {dataset} and shuffle {shuffle}")
+    # if distributed:
+    #     return samplers.DistributedSampler(dataset, shuffle=shuffle)
+    # if shuffle:
+    #     sampler = torch.utils.data.sampler.RandomSampler(dataset)
+    # else:
+    sampler = torch.utils.data.sampler.SequentialSampler(dataset)
     return sampler
 
 
