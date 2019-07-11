@@ -28,22 +28,23 @@ _C.MODEL.KEYPOINT_ON = False
 _C.MODEL.DEVICE = "cuda"
 _C.MODEL.META_ARCHITECTURE = "GeneralizedRCNN"
 _C.MODEL.CLS_AGNOSTIC_BBOX_REG = False
-_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
 
+# If the WEIGHT starts with a catalog://, like :R-50, the code will look for
+# the path in paths_catalog. Else, it will use it as the specified absolute
 # path
 _C.MODEL.WEIGHT = ""
 
 
 # -----------------------------------------------------------------------------
-# INPUT_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
-# -----_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17---------------------
-_C.INPU_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
-# Size _C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
-_C.INPU_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
-# Maxim_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
-_C.INPU_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
-# Size _C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
-_C.INPU_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
+# INPUT
+# -----------------------------------------------------------------------------
+_C.INPUT = CN()
+# Size of the smallest side of the image during training
+_C.INPUT.MIN_SIZE_TRAIN = (800,)  # (800,)
+# Maximum size of the side of the image during training
+_C.INPUT.MAX_SIZE_TRAIN = 1333
+# Size of the smallest side of the image during testing
+_C.INPUT.MIN_SIZE_TEST = 800
 # Maximum size of the side of the image during testing
 _C.INPUT.MAX_SIZE_TEST = 1333
 # Values to be used for image normalization
@@ -144,16 +145,17 @@ _C.MODEL.RPN.FG_IOU_THRESHOLD = 0.7
 # ==> negative RPN example)
 _C.MODEL.RPN.BG_IOU_THRESHOLD = 0.3
 # Total number of RPN examples per image
-_C.MODEL.RPN.BATCH_SIZE_PER_IMAGE = 256
+# _C.MODEL.RPN.BATCH_SIZE_PER_IMAGE = 256 # TODO need to check
+_C.MODEL.RPN.BATCH_SIZE_PER_IMAGE = 128
 # Target fraction of foreground (positive) examples per RPN minibatch
 _C.MODEL.RPN.POSITIVE_FRACTION = 0.5
 # Number of top scoring RPN proposals to keep before applying NMS
 # When FPN is used, this is *per FPN level* (not total)
-_C.MODEL.RPN.PRE_NMS_TOP_N_TRAIN = 12000
-_C.MODEL.RPN.PRE_NMS_TOP_N_TEST = 6000
+_C.MODEL.RPN.PRE_NMS_TOP_N_TRAIN = 120
+_C.MODEL.RPN.PRE_NMS_TOP_N_TEST = 60
 # Number of top scoring RPN proposals to keep after applying NMS
-_C.MODEL.RPN.POST_NMS_TOP_N_TRAIN = 2000
-_C.MODEL.RPN.POST_NMS_TOP_N_TEST = 1000
+_C.MODEL.RPN.POST_NMS_TOP_N_TRAIN = 200
+_C.MODEL.RPN.POST_NMS_TOP_N_TEST = 100
 # NMS threshold used on RPN proposals
 _C.MODEL.RPN.NMS_THRESH = 0.7
 # Proposal height and width both need to be greater than RPN_MIN_SIZE
@@ -201,8 +203,8 @@ _C.MODEL.ROI_HEADS.SCORE_THRESH = 0.05
 # IoU >= this threshold)
 _C.MODEL.ROI_HEADS.NMS = 0.5
 # Maximum number of detections to return per image (100 is based on the limit
-# established for the COCO dataset)BATCH_SIZE
-_C.MODEL.ROI_HEADS.DETECTIONS_PER_IBATCH_SIZE
+# established for the COCO dataset)
+_C.MODEL.ROI_HEADS.DETECTIONS_PER_IMG = 100
 
 
 _C.MODEL.ROI_BOX_HEAD = CN()
@@ -220,7 +222,7 @@ _C.MODEL.ROI_BOX_HEAD.USE_GN = False
 # Dilation
 _C.MODEL.ROI_BOX_HEAD.DILATION = 1
 _C.MODEL.ROI_BOX_HEAD.CONV_HEAD_DIM = 256
-_C.MODEL.ROI_BOX_HEAD.NUM_STACKED_CONVS = 4
+_C.MODEL.ROI_BOX_HEAD.NUM_STACKED_CONVS = 2
 
 
 _C.MODEL.ROI_MASK_HEAD = CN()
@@ -310,8 +312,8 @@ _C.MODEL.RETINANET.USE_C5 = True
 
 # Convolutions to use in the cls and bbox tower
 # NOTE: this doesn't include the last conv for logits
-_C.MODEL.RETINANET.NUM_CONVS = 2
-# _C.MODEL.RETINANET.NUM_CONVS = 4 #TODO to recheck
+_C.MODEL.RETINANET.NUM_CONVS = 4
+
 # Weight for bbox_regression loss
 _C.MODEL.RETINANET.BBOX_REG_WEIGHT = 4.0
 
@@ -320,8 +322,8 @@ _C.MODEL.RETINANET.BBOX_REG_BETA = 0.11
 
 # During inference, #locs to select based on cls score before NMS is performed
 # per FPN level
-_C.MODEL.RETINANET.PRE_NMS_TOP_N = 100
-# _C.MODEL.RETINANET.PRE_NMS_TOP_N = 1000 #TODO to recheck
+_C.MODEL.RETINANET.PRE_NMS_TOP_N = 1000
+
 # IoU overlap ratio for labeling an anchor as positive
 # Anchors with >= iou overlap are labeled positive
 _C.MODEL.RETINANET.FG_IOU_THRESHOLD = 0.5
@@ -407,7 +409,7 @@ _C.SOLVER.WARMUP_ITERS = 500
 _C.SOLVER.WARMUP_METHOD = "linear"
 
 # _C.SOLVER.CHECKPOINT_PERIOD = 2500
-_C.SOLVER.CHECKPOINT_PERIOD = 25
+_C.SOLVER.CHECKPOINT_PERIOD = 100
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
