@@ -88,3 +88,7 @@ python tools/cityscapes/convert_cityscapes_to_coco.py --datadir /path/to/citysca
 ```
 
 Example configuration files for Cityscapes could be found [here](https://github.com/facebookresearch/maskrcnn-benchmark/blob/master/configs/cityscapes/).
+
+# Need some changes in coco.py file
+# /home/p_vinsentds/.conda/envs/qanet/lib/python3.6/site-packages/pycocotools-2.0-py3.6-linux-x86_64.egg/pycocotools
+#   lists = [self.imgToAnns[str(imgId)] for imgId in imgIds if str(imgId) in self.imgToAnns] in pycoco tools/coco.py file
