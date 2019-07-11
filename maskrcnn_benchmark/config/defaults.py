@@ -114,7 +114,7 @@ _C.MODEL.FPN.USE_RELU = False
 # ---------------------------------------------------------------------------- #
 _C.MODEL.GROUP_NORM = CN()
 # Number of dimensions per group in GroupNorm (-1 if using NUM_GROUPS)
-_C.MODEL.GROUP_NORM.DIM_PER_GP 8= -1
+_C.MODEL.GROUP_NORM.DIM_PER_GP = -1
 # Number of groups in GroupNorm (-1 if using DIM_PER_GP)
 _C.MODEL.GROUP_NORM.NUM_GROUPS = 32
 # GroupNorm's small constant in the denominator
