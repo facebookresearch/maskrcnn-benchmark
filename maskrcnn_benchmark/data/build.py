@@ -25,6 +25,7 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
             construct a dataset.
         is_train (bool): whether to setup the dataset for training or testing
     """
+    import pdb;pdb.set_trace()
     if not isinstance(dataset_list, (list, tuple)):
         raise RuntimeError(
             "dataset_list should be a list of strings, got {}".format(dataset_list)
@@ -63,16 +64,13 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
 
 def make_data_sampler(dataset, shuffle, distributed):
     print(f"daaset !!!!!!!!!!!!!1 {dataset} and shuffle {shuffle}")
-    # if distributed:
-
-    #   return samplers.DistributedSampler(dataset, shuffle=shuffle)
-    #     
-    # if shuffle:
-    #     sampler = torch.utils.data.sampler.RandomSampler(dataset)
-    # else:
-    # sampler = torch.utils.data.sampler.SequentialSampler(dataset)
-    # return sampler
-    return samplers.DistributedSampler(dataset, shuffle=shuffle)
+    if distributed:
+        return samplers.DistributedSampler(dataset, shuffle=shuffle)
+    if shuffle:
+        sampler = torch.utils.data.sampler.RandomSampler(dataset)
+    else:
+        sampler = torch.utils.data.sampler.SequentialSampler(dataset)
+    return sampler
 
 
 def _quantize(x, bins):
