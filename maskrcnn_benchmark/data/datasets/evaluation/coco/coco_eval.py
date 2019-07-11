@@ -70,7 +70,6 @@ def do_coco_evaluation(
 def prepare_for_coco_detection(predictions, dataset):
     # assert isinstance(dataset, COCODataset)
     coco_results = []
-    # import pdb; pdb.set_trace()
     for image_id, prediction in enumerate(predictions):
         original_id = dataset.id_to_img_map[image_id]
         if len(prediction) == 0:
@@ -85,7 +84,6 @@ def prepare_for_coco_detection(predictions, dataset):
         boxes = prediction.bbox.tolist()
         scores = prediction.get_field("scores").tolist()
         labels = prediction.get_field("labels").tolist()
-        import pdb; pdb.set_trace(); # TODO is to check the  contiguous_category_id_to_json_id
         mapped_labels = [dataset.contiguous_category_id_to_json_id[i] for i in labels]
 
         coco_results.extend(

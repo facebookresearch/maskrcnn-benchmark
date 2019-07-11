@@ -25,14 +25,12 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
             construct a dataset.
         is_train (bool): whether to setup the dataset for training or testing
     """
-    import pdb;pdb.set_trace()
     if not isinstance(dataset_list, (list, tuple)):
         raise RuntimeError(
             "dataset_list should be a list of strings, got {}".format(dataset_list)
         )
     datasets = []
     for dataset_name in dataset_list:
-        # import pdb;pdb.set_trace()
         data = dataset_catalog.get(dataset_name)
         factory = getattr(D, data["factory"])
         args = data["args"]
@@ -112,8 +110,6 @@ def make_batch_data_sampler(
 
 
 def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
-    import pdb;pdb.set_trace()
-    print("make_data_loader") # TODO remove print
     num_gpus = get_world_size()
     if is_train:
         images_per_batch = cfg.SOLVER.IMS_PER_BATCH
@@ -170,7 +166,6 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
         save_labels(datasets, cfg.OUTPUT_DIR) ## TODO need to check this part as its giving warning.
 
     data_loaders = []
-    import pdb;pdb.set_trace()
     for dataset in datasets:
         #sampler = make_data_sampler(dataset, shuffle, is_distributed)
         sampler = make_data_sampler(dataset, shuffle, is_distributed)

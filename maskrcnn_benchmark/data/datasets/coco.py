@@ -75,7 +75,6 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         boxes = [obj["bbox"] for obj in anno]
         boxes = torch.as_tensor(boxes).reshape(-1, 4)  # guard against no boxes
         target = BoxList(boxes, img.size, mode="xywh").convert("xyxy")
-        import pdb;pdb.set_trace()
         print("coco lables")
         classes = [obj["category_id"] for obj in anno]
         classes = [self.json_category_id_to_contiguous_id[c] for c in classes]

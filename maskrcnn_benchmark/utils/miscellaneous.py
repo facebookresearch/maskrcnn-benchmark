@@ -15,7 +15,6 @@ def mkdir(path):
 
 
 def save_labels(dataset_list, output_dir):
-    import pdb;pdb.set_trace()
     if is_main_process():
         logger = logging.getLogger(__name__)
 

@@ -205,7 +205,6 @@ class ShapeDataset(object):
       ann_id = 0
 
       for img_id, d in enumerate(self.image_info):
-        # import pdb;pdb.set_trace()
 
         images.append( {"id": img_id, 'height': self.height, 'width': self.width } )
 
