@@ -114,7 +114,7 @@ _C.MODEL.FPN.USE_RELU = False
 # ---------------------------------------------------------------------------- #
 _C.MODEL.GROUP_NORM = CN()
 # Number of dimensions per group in GroupNorm (-1 if using NUM_GROUPS)
-_C.MODEL.GROUP_NORM.DIM_PER_GP = -1
+_C.MODEL.GROUP_NORM.DIM_PER_GP 8= -1
 # Number of groups in GroupNorm (-1 if using DIM_PER_GP)
 _C.MODEL.GROUP_NORM.NUM_GROUPS = 32
 # GroupNorm's small constant in the denominator
@@ -423,7 +423,7 @@ _C.TEST.EXPECTED_RESULTS_SIGMA_TOL = 4
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
-_C.TEST.IMS_PER_BATCH = 8
+_C.TEST.IMS_PER_BATCH = 4
 # Number of detections per image
 _C.TEST.DETECTIONS_PER_IMG = 100
 
