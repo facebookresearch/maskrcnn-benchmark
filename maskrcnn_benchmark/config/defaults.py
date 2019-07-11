@@ -28,23 +28,23 @@ _C.MODEL.KEYPOINT_ON = False
 _C.MODEL.DEVICE = "cuda"
 _C.MODEL.META_ARCHITECTURE = "GeneralizedRCNN"
 _C.MODEL.CLS_AGNOSTIC_BBOX_REG = False
-
-# If the WEIGHT starts with a catalog://, like :R-50, the code will look for
-# the path in paths_catalog. Else, it will use it as the specified absolute
+_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
+_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17 code will look for
+_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17specified absolute
 # path
 _C.MODEL.WEIGHT = ""
 
 
 # -----------------------------------------------------------------------------
-# INPUT
-# -----------------------------------------------------------------------------
-_C.INPUT = CN()
-# Size of the smallest side of the image during training
-_C.INPUT.MIN_SIZE_TRAIN = (800,)  # (800,)
-# Maximum size of the side of the image during training
-_C.INPUT.MAX_SIZE_TRAIN = 1333
-# Size of the smallest side of the image during testing
-_C.INPUT.MIN_SIZE_TEST = 800
+# INPUT_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
+# -----_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17---------------------
+_C.INPU_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
+# Size _C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
+_C.INPU_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
+# Maxim_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
+_C.INPU_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
+# Size _C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
+_C.INPU_C.MODEL.ROI_KEYPOINT_HEAD.NUM_CLASSES = 17
 # Maximum size of the side of the image during testing
 _C.INPUT.MAX_SIZE_TEST = 1333
 # Values to be used for image normalization
@@ -202,8 +202,8 @@ _C.MODEL.ROI_HEADS.SCORE_THRESH = 0.05
 # IoU >= this threshold)
 _C.MODEL.ROI_HEADS.NMS = 0.5
 # Maximum number of detections to return per image (100 is based on the limit
-# established for the COCO dataset)
-_C.MODEL.ROI_HEADS.DETECTIONS_PER_IMG = 100
+# established for the COCO dataset)BATCH_SIZE
+_C.MODEL.ROI_HEADS.DETECTIONS_PER_IBATCH_SIZE
 
 
 _C.MODEL.ROI_BOX_HEAD = CN()
@@ -311,8 +311,8 @@ _C.MODEL.RETINANET.USE_C5 = True
 
 # Convolutions to use in the cls and bbox tower
 # NOTE: this doesn't include the last conv for logits
-_C.MODEL.RETINANET.NUM_CONVS = 4
-
+_C.MODEL.RETINANET.NUM_CONVS = 2
+# _C.MODEL.RETINANET.NUM_CONVS = 4 #TODO to recheck
 # Weight for bbox_regression loss
 _C.MODEL.RETINANET.BBOX_REG_WEIGHT = 4.0
 
@@ -321,8 +321,8 @@ _C.MODEL.RETINANET.BBOX_REG_BETA = 0.11
 
 # During inference, #locs to select based on cls score before NMS is performed
 # per FPN level
-_C.MODEL.RETINANET.PRE_NMS_TOP_N = 1000
-
+_C.MODEL.RETINANET.PRE_NMS_TOP_N = 100
+# _C.MODEL.RETINANET.PRE_NMS_TOP_N = 1000 #TODO to recheck
 # IoU overlap ratio for labeling an anchor as positive
 # Anchors with >= iou overlap are labeled positive
 _C.MODEL.RETINANET.FG_IOU_THRESHOLD = 0.5
