@@ -38,7 +38,7 @@ def has_valid_annotation(anno):
         return True
     return False
 
-DATA_DIR = "/home/p_vinsentds/maskrcnn-benchmark/datasets/micr/"
+DATA_DIR = "/home/madhevan/maskrcnn-benchmark/datasets/micr/"
 
 folder_train = "train2017/"
 folder_val = "val2017/"
