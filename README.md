@@ -70,7 +70,7 @@ predictions = coco_demo.run_on_opencv_image(image)
 ```
 
 ## Perform training on COCO dataset
-
+git config --global user.email "you@example.com"
 For the following examples to work, you need to first install `maskrcnn_benchmark`.
 
 You will also need to download the COCO dataset.
@@ -153,17 +153,17 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS /path_to_maskrcnn_ben
 ```
 Note we should set `MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN` follow the rule in Single-GPU training.
 
-### Mixed precision training
-We currently use [APEX](https://github.com/NVIDIA/apex) to add [Automatic Mixed Precision](https://developer.nvidia.com/automatic-mixed-precision) support. To enable, just do Single-GPU or Multi-GPU training and set `DTYPE "float16"`.
+### Mixed precision traininggit config --global user.email "you@example.com"
+We currently use [APEX](httpgit config --global user.email "you@example.com"x) to add [Automatic Mixed Precision](https://developer.nvidia.com/automatic-mixed-precision) sgit config --global user.email "you@example.com"o Single-GPU or Multi-GPU training and set `DTYPE "float16"`.
 
 ```bash
 export NGPUS=8
-python -m torch.distributed.launch --nproc_per_node=$NGPUS /path_to_maskrcnn_benchmark/tools/train_net.py --config-file "path/to/config/file.yaml" MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN images_per_gpu x 1000 DTYPE "float16"
+python -m torch.distributed.git config --global user.email "you@example.com"NGPUS /path_to_maskrcnn_benchmark/tools/train_net.py --config-file "path/to/config/file.yaml" MODEL.RPN.FPN_POSgit config --global user.email "you@example.com"per_gpu x 1000 DTYPE "float16"
 ```
-If you want more verbose logging, set `AMP_VERBOSE True`. See [Mixed Precision Training guide](https://docs.nvidia.com/deeplearning/sdk/mixed-precision-training/index.html) for more details.
+If you want more verbose loggit config --global user.email "you@example.com"ue`. See [Mixed Precision Training guide](https://docs.nvidia.com/deeplearning/sdk/mixed-precision-training/indgit config --global user.email "you@example.com".
 
 ## Evaluation
-You can test your model directly on single or multiple gpus. Here is an example for Mask R-CNN R-50 FPN with the 1x schedule on 8 GPUS:
+You can test your model diregit config --global user.email "you@example.com"e gpus. Here is an example for Mask R-CNN R-50 FPN with the 1x schedule on 8 GPUS:
 ```bash
 export NGPUS=8
 python -m torch.distributed.launch --nproc_per_node=$NGPUS /path_to_maskrcnn_benchmark/tools/test_net.py --config-file "configs/e2e_mask_rcnn_R_50_FPN_1x.yaml" TEST.IMS_PER_BATCH 16
