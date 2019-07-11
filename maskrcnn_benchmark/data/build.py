@@ -62,7 +62,7 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
 
 
 def make_data_sampler(dataset, shuffle, distributed):
-    print(f"dataset {dataset}")
+    print(f"daaset !!!!!!!!!!!!!1 {dataset}")
     if distributed:
         return samplers.DistributedSampler(dataset, shuffle=shuffle)
     if shuffle:
@@ -168,7 +168,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
         save_labels(datasets, cfg.OUTPUT_DIR) ## TODO need to check this part as its giving warning.
 
     data_loaders = []
-    # import pdb;pdb.set_trace()
+    import pdb;pdb.set_trace()
     for dataset in datasets:
         sampler = make_data_sampler(dataset, shuffle, is_distributed)
         batch_sampler = make_batch_data_sampler(
