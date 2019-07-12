@@ -109,7 +109,7 @@ def do_train(
                 )
             )
         # if iteration % checkpoint_period == 0:
-        if iteration % 100 == 0:
+        if iteration % 1000 == 0:
             logger.info("saving checkpoints")
             print("savinggggggg checkpoint")
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
