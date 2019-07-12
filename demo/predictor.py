@@ -57,10 +57,10 @@ class COCODemo(object):
         self,
         cfg,
         confidence_threshold=0.5,
-        show_mask_heatmaps=False,
+        show_mask_heatmaps=True,
         masks_per_dim=2,
         min_image_size=224,
-    ):
+    ): # show_mask_heatmaps=False
         self.cfg = cfg.clone()
         self.model = build_detection_model(cfg)
         self.model.eval()
