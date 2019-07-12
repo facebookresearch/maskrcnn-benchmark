@@ -61,11 +61,15 @@ def main():
     demo_im_names = os.listdir(args.images_dir)
 
     # prepare object that handles inference plus adds predictions on top of image
+    # coco_demo = COCODemo(
+    #     cfg,
+    #     confidence_thresholds_for_classes=thresholds_for_classes,
+    #     min_image_size=args.min_image_size
+    # )
     coco_demo = COCODemo(
         cfg,
-        confidence_thresholds_for_classes=thresholds_for_classes,
         min_image_size=args.min_image_size
-    )
+    ) 
 
     for im_name in demo_im_names:
         img = cv2.imread(os.path.join(args.images_dir, im_name))
