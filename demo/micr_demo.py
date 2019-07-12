@@ -56,8 +56,7 @@ def main():
     # Please see compute_thresholds_for_classes() in coco_eval.py for details.
     thresholds_for_classes = [
         0.23860901594161987, 0.24108672142028809, 0.2470853328704834,
-        0.2316885143518448, 0.2708061933517456
-    ]
+        0.2316885143518448, 0.2708061933517456]
 
     demo_im_names = os.listdir(args.images_dir)
 
