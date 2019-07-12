@@ -1,6 +1,6 @@
 MODEL:
   META_ARCHITECTURE: "GeneralizedRCNN"
-  WEIGHT: "catalog://ImageNetPretrained/MSRA/R-50"
+  WEIGHT: "/home/madhevan/maskrcnn-benchmark/last_checkpoint"
   RPN:
     PRE_NMS_TOP_N_TEST: 60
     POST_NMS_TOP_N_TEST: 10
