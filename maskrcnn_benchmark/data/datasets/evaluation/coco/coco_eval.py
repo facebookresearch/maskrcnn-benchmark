@@ -1,6 +1,7 @@
 import logging
 import tempfile
 import os
+import json
 import torch
 from collections import OrderedDict
 from tqdm import tqdm
@@ -18,6 +19,7 @@ def do_coco_evaluation(
     iou_types,
     expected_results,
     expected_results_sigma_tol,
+    include_per_class_results=True
 ):
     logger = logging.getLogger("maskrcnn_benchmark.inference")
 
@@ -51,19 +53,45 @@ def do_coco_evaluation(
 
     results = COCOResults(*iou_types)
     logger.info("Evaluating predictions")
+
+    cat_ids = dataset.coco.getCatIds()
+
+    results_dict = {t: {} for t in iou_types}
     for iou_type in iou_types:
+        metrics = COCOResults.METRICS[iou_type]
+
         with tempfile.NamedTemporaryFile() as f:
             file_path = f.name
             if output_folder:
                 file_path = os.path.join(output_folder, iou_type + ".json")
+
+            if include_per_class_results:
+                for catId in cat_ids:
+                    res = evaluate_predictions_on_coco(
+                        dataset.coco, coco_results[iou_type], file_path, iou_type, catId
+                    )
+                    cat_result = {}
+                    for idx, metric in enumerate(metrics):
+                        cat_result[metric] = res.stats[idx]
+                    results_dict[iou_type][catId] = cat_result
+
             res = evaluate_predictions_on_coco(
                 dataset.coco, coco_results[iou_type], file_path, iou_type
             )
             results.update(res)
+
+            cat_result = {}
+            for idx, metric in enumerate(metrics):
+                cat_result[metric] = res.stats[idx]
+            results_dict[iou_type]["all"] = cat_result
     logger.info(results)
     check_expected_results(results, expected_results, expected_results_sigma_tol)
     if output_folder:
         torch.save(results, os.path.join(output_folder, "coco_results.pth"))
+        results_file = os.path.join(output_folder, "coco_results.json")
+        with open(results_file, "w") as f:
+            json.dump(results_dict, f)
+        print("Saved results to %s" % (results_file))
     return results, coco_results
 
 
@@ -358,7 +386,7 @@ def evaluate_box_proposals(
 
 
 def evaluate_predictions_on_coco(
-    coco_gt, coco_results, json_result_file, iou_type="bbox"
+    coco_gt, coco_results, json_result_file, iou_type="bbox", catId=None
 ):
     import json
 
@@ -372,6 +400,11 @@ def evaluate_predictions_on_coco(
 
     # coco_dt = coco_gt.loadRes(coco_results)
     coco_eval = COCOeval(coco_gt, coco_dt, iou_type)
+    if catId:
+        print("\n*******************\nPREDICTION (%s) FOR CAT ID: %d\n"%(iou_type, catId))
+        coco_eval.params.catIds = [catId]
+    else:
+        print("\n*******************\nPREDICTION (%s) FOR ALL\n"%(iou_type))
     coco_eval.evaluate()
     coco_eval.accumulate()
     coco_eval.summarize()

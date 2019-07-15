@@ -35,6 +35,10 @@ def main():
     )
     parser.add_argument("--local_rank", type=int, default=0)
     parser.add_argument(
+        "--ignore_per_class",
+        action="store_true",
+        help="Ignore per class results, calculate mean results across classes only")
+    parser.add_argument(
         "--ckpt",
         help="The path to the checkpoint for test, default is the latest checkpoint.",
         default=None,
@@ -107,6 +111,7 @@ def main():
             expected_results=cfg.TEST.EXPECTED_RESULTS,
             expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
             output_folder=output_folder,
+            include_per_class_results=not args.ignore_per_class
         )
         synchronize()
 
