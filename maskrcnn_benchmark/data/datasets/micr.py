@@ -49,7 +49,7 @@ path_to_json = DATA_DIR + "annotations/"+ "instances_train2017.json"
 # print("you have reached micr datatset get method")
 class MICRDataset(torchvision.datasets.coco.CocoDetection):
     def __init__(
-        self, ann_file, root, remove_images_without_annotations, transforms=None
+        self, ann_file, root, remove_images_without_annotations, transforms=True
     ):
         super().__init__(self, ann_file,root)
         # super(MICRDataset, self).__init__(root,ann_file)
