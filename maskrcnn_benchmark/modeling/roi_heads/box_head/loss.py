@@ -19,10 +19,10 @@ class FastRCNNLossComputation(object):
     """
 
     def __init__(
-        self, 
-        proposal_matcher, 
-        fg_bg_sampler, 
-        box_coder, 
+        self,
+        proposal_matcher,
+        fg_bg_sampler,
+        box_coder,
         cls_agnostic_bbox_reg=False
     ):
         """
@@ -184,9 +184,9 @@ def make_roi_box_loss_evaluator(cfg):
     cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
 
     loss_evaluator = FastRCNNLossComputation(
-        matcher, 
-        fg_bg_sampler, 
-        box_coder, 
+        matcher,
+        fg_bg_sampler,
+        box_coder,
         cls_agnostic_bbox_reg
     )
 

@@ -20,12 +20,10 @@ class TestSegmentationMask(unittest.TestCase):
         self.P = SegmentationMask(poly, size, 'poly')
         self.M = SegmentationMask(poly, size, 'poly').convert('mask')
 
-
     def L1(self, A, B):
         diff = A.get_mask_tensor() - B.get_mask_tensor()
         diff = torch.sum(torch.abs(diff.float())).item()
         return diff
-
 
     def test_convert(self):
         M_hat = self.M.convert('poly').convert('mask')
@@ -37,12 +35,10 @@ class TestSegmentationMask(unittest.TestCase):
         self.assertTrue(diff_mask <= 8169.)
         self.assertTrue(diff_poly <= 8169.)
 
-
     def test_crop(self):
         box = [400, 250, 500, 300] # xyxy
         diff = self.L1(self.M.crop(box), self.P.crop(box))
         self.assertTrue(diff <= 1.)
-
 
     def test_resize(self):
         new_size = 50, 25
@@ -54,7 +50,6 @@ class TestSegmentationMask(unittest.TestCase):
         self.assertTrue(M_hat.size == P_hat.size)
         self.assertTrue(self.M.size != M_hat.size)
         self.assertTrue(diff <= 255.)
-
 
     def test_transpose(self):
         FLIP_LEFT_RIGHT = 0

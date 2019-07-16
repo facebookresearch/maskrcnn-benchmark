@@ -6,6 +6,7 @@ import logging
 import torch.utils.data
 from maskrcnn_benchmark.utils.comm import get_world_size
 from maskrcnn_benchmark.utils.imports import import_file
+from maskrcnn_benchmark.utils.miscellaneous import save_labels
 
 from . import datasets as D
 from . import samplers
@@ -18,7 +19,7 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
     """
     Arguments:
         dataset_list (list[str]): Contains the names of the datasets, i.e.,
-            coco_2014_trian, coco_2014_val, etc
+            coco_2014_train, coco_2014_val, etc
         transforms (callable): transforms to apply to each (image, target) sample
         dataset_catalog (DatasetCatalog): contains the information on how to
             construct a dataset.
@@ -153,6 +154,10 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
     # If bbox aug is enabled in testing, simply set transforms to None and we will apply transforms later
     transforms = None if not is_train and cfg.TEST.BBOX_AUG.ENABLED else build_transforms(cfg, is_train)
     datasets = build_dataset(dataset_list, transforms, DatasetCatalog, is_train)
+
+    if is_train:
+        # save category_id to label name mapping
+        save_labels(datasets, cfg.OUTPUT_DIR)
 
     data_loaders = []
     for dataset in datasets:
