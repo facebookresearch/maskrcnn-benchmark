@@ -77,6 +77,9 @@ def do_train(
         losses_reduced = sum(loss for loss in loss_dict_reduced.values())
         meters.update(loss=losses_reduced, **loss_dict_reduced)
 
+        clip_grad = 0.5
+        torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad)
+
         optimizer.zero_grad()
         # Note: If mixed precision is not used, this ends up doing nothing
         # Otherwise apply loss scaling for mixed-precision recipe
