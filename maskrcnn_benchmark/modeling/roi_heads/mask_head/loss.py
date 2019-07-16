@@ -40,7 +40,7 @@ def project_masks_on_boxes(segmentation_masks, proposals, discretization_size):
             masks.append(mask)
         except Exception as e:
             print(f"Error {e}")
-            contiune
+            continue
     if len(masks) == 0:
         return torch.empty(0, dtype=torch.float32, device=device)
     return torch.stack(masks, dim=0).to(device, dtype=torch.float32)
