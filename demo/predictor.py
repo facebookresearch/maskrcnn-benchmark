@@ -163,7 +163,7 @@ class COCODemo(object):
         predictions = [o.to(self.cpu_device) for o in predictions]
 
         # always single image is passed at a time
-        import pdb;pdb.set_trace()
+        # import pdb;pdb.set_trace()
         prediction = predictions[0]
 
         # reshape prediction (a BoxList) into the original image size
