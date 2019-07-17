@@ -193,7 +193,7 @@ class COCODemo(object):
                 of the detection properties can be found in the fields of
                 the BoxList via `prediction.fields()`
         """
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         scores = predictions.get_field("scores")
         keep = torch.nonzero(scores > self.confidence_threshold).squeeze(1)
         predictions = predictions[keep]
