@@ -163,6 +163,8 @@ class COCODemo(object):
             predictions = self.model(image_list)
         predictions = [o.to(self.cpu_device) for o in predictions]
 
+        print(predictions)
+        
         # always single image is passed at a time
         # import pdb;pdb.set_trace()
         prediction = predictions[0]
