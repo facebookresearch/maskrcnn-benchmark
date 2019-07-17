@@ -22,7 +22,7 @@ MODEL:
   ROI_BOX_HEAD:
     POOLER_RESOLUTION: 6
     FEATURE_EXTRACTOR: FBNet.roi_head
-    NUM_CLASSES: 81
+    NUM_CLASSES: 6
 DATASETS:
   TRAIN: ("coco_2014_train", "coco_2014_valminusminival")
   TEST: ("coco_2014_minival",)
