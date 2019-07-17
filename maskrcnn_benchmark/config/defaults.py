@@ -22,7 +22,7 @@ _C = CN()
 
 _C.MODEL = CN()
 _C.MODEL.RPN_ONLY = False
-_C.MODEL.MASK_ON = True
+_C.MODEL.MASK_ON = False
 #TODO changed the model from _C.MODEL.MASK_ON = False
 _C.MODEL.RETINANET_ON = False
 _C.MODEL.KEYPOINT_ON = False
