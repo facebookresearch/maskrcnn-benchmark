@@ -24,8 +24,8 @@ MODEL:
     FEATURE_EXTRACTOR: FBNet.roi_head
     NUM_CLASSES: 6
 DATASETS:
-  TRAIN: ("coco_2014_train", "coco_2014_valminusminival")
-  TEST: ("coco_2014_minival",)
+  TRAIN: ("micr_2017_train", "micr_2017_valminusminival")
+  TEST: ("micr_2017_val",)
 SOLVER:
   BASE_LR: 0.06
   WARMUP_FACTOR: 0.1
