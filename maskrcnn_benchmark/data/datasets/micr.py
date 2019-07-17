@@ -38,10 +38,10 @@ def has_valid_annotation(anno):
         return True
     return False
 
-DATA_DIR = "/home/madhevan/maskrcnn-benchmark/datasets/micr/"
+DATA_DIR = "/home/p_vinsentds/maskrcnn-benchmark/datasets/micr/"
 
 folder_train = "train2017/"
-folder_demo = "/home/madhevan/maskrcnn-benchmark/demo/micr/"
+folder_demo = "/home/p_vinsentds/maskrcnn-benchmark/demo/micr/"
 folder_val = "val2017/"
 img_path   = DATA_DIR + folder_train
 path_to_json = DATA_DIR + "annotations/"+ "instances_train2017.json"
