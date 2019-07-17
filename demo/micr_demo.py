@@ -12,13 +12,13 @@ def main():
     parser = argparse.ArgumentParser(description="PyTorch Object Detection Webcam Demo")
     parser.add_argument(
         "--config-file",
-        default="configs/e2e_faster_rcnn_R_50_C4_1x_micr.yaml",
+        default="configs/e2e_faster_rcnn_R_50_C4_1x_micr_pred.yaml",
         metavar="FILE",
         help="path to config file",
     )
     parser.add_argument(
         "--weights",
-        default="model_final.pth",
+        default="model_0070000.pth",
         metavar="FILE",
         help="path to the trained model",
     )
