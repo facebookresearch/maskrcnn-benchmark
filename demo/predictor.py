@@ -157,6 +157,7 @@ class COCODemo(object):
         # cfg.DATALOADER.SIZE_DIVISIBILITY
         image_list = to_image_list(image, self.cfg.DATALOADER.SIZE_DIVISIBILITY)
         image_list = image_list.to(self.device)
+        print(image_list)
         # compute predictions
         with torch.no_grad():
             predictions = self.model(image_list)
