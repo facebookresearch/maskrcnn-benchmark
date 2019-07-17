@@ -23,7 +23,7 @@ MODEL:
   ROI_BOX_HEAD:
     POOLER_RESOLUTION: 6
     FEATURE_EXTRACTOR: FBNet.roi_head
-    NUM_CLASSES: 81
+    NUM_CLASSES: 6
   ROI_MASK_HEAD:
     POOLER_RESOLUTION: 6
     FEATURE_EXTRACTOR: FBNet.roi_head_mask
@@ -32,15 +32,15 @@ MODEL:
     SHARE_BOX_FEATURE_EXTRACTOR: False
   MASK_ON: True
 DATASETS:
-  TRAIN: ("coco_2014_train", "coco_2014_valminusminival")
-  TEST: ("coco_2014_minival",)
+  TRAIN: ("micr_2017_train", "micr_2017_valminusminival")
+  TEST: ("micr_2017_val",)
 SOLVER:
   BASE_LR: 0.06
   WARMUP_FACTOR: 0.1
   WEIGHT_DECAY: 0.0001
   STEPS: (60000, 80000)
   MAX_ITER: 90000
-  IMS_PER_BATCH: 128  # for 8GPUs
+  IMS_PER_BATCH: 16  # for 8GPUs
 # TEST:
 #   IMS_PER_BATCH: 8
 INPUT:
