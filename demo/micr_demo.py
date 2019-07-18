@@ -18,7 +18,7 @@ def main():
     )
     parser.add_argument(
         "--weights",
-        default="model_0070000.pth",
+        default="model_0014000.pth",
         metavar="FILE",
         help="path to the trained model",
     )
