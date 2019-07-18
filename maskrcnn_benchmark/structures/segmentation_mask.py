@@ -3,7 +3,7 @@ import copy
 import torch
 import numpy as np
 from maskrcnn_benchmark.layers.misc import interpolate
-
+from maskrcnn_benchmark.utils import cv2_util
 import pycocotools.mask as mask_utils
 
 # transpose
@@ -48,29 +48,53 @@ class BinaryMaskList(object):
             initializing source data intact.
         """
 
+        assert isinstance(size, (list, tuple))
+        assert len(size) == 2
+
         if isinstance(masks, torch.Tensor):
             # The raw data representation is passed as argument
             masks = masks.clone()
         elif isinstance(masks, (list, tuple)):
-            if isinstance(masks[0], torch.Tensor):
+            if len(masks) == 0:
+                masks = torch.empty([0, size[1], size[0]])  # num_instances = 0!
+            elif isinstance(masks[0], torch.Tensor):
                 masks = torch.stack(masks, dim=2).clone()
             elif isinstance(masks[0], dict) and "counts" in masks[0]:
                 # RLE interpretation
-                assert all(
-                    [(size[1], size[0]) == tuple(inst["size"]) for inst in masks]
-                )  # in RLE, height come first in "size"
+                rle_sizes = [tuple(inst["size"]) for inst in masks]
+
                 masks = mask_utils.decode(masks)  # [h, w, n]
                 masks = torch.tensor(masks).permute(2, 0, 1)  # [n, h, w]
+
+                assert rle_sizes.count(rle_sizes[0]) == len(rle_sizes), (
+                    "All the sizes must be the same size: %s" % rle_sizes
+                )
+
+                # in RLE, height come first in "size"
+                rle_height, rle_width = rle_sizes[0]
+                assert masks.shape[1] == rle_height
+                assert masks.shape[2] == rle_width
+
+                width, height = size
+                if width != rle_width or height != rle_height:
+                    masks = interpolate(
+                        input=masks[None].float(),
+                        size=(height, width),
+                        mode="bilinear",
+                        align_corners=False,
+                    )[0].type_as(masks)
             else:
                 RuntimeError(
-                    "Type of `masks[0]` could not be interpreted: %s" % type(masks)
+                    "Type of `masks[0]` could not be interpreted: %s"
+                    % type(masks)
                 )
         elif isinstance(masks, BinaryMaskList):
             # just hard copy the BinaryMaskList instance's underlying data
             masks = masks.masks.clone()
         else:
             RuntimeError(
-                "Type of `masks` argument could not be interpreted:%s" % type(masks)
+                "Type of `masks` argument could not be interpreted:%s"
+                % type(masks)
             )
 
         if len(masks.shape) == 2:
@@ -122,7 +146,7 @@ class BinaryMaskList(object):
         assert height > 0
 
         # Height comes first here!
-        resized_masks = torch.nn.functional.interpolate(
+        resized_masks = interpolate(
             input=self.masks[None].float(),
             size=(height, width),
             mode="bilinear",
@@ -132,6 +156,9 @@ class BinaryMaskList(object):
         return BinaryMaskList(resized_masks, resized_size)
 
     def convert_to_polygon(self):
+        if self.masks.numel() == 0:
+            return PolygonList([], self.size)
+
         contours = self._findContours()
         return PolygonList(contours, self.size)
 
@@ -143,14 +170,16 @@ class BinaryMaskList(object):
         masks = self.masks.detach().numpy()
         for mask in masks:
             mask = cv2.UMat(mask)
-            contour, hierarchy = cv2.findContours(
+            contour, hierarchy = cv2_util.findContours(
                 mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1
             )
 
             reshaped_contour = []
             for entity in contour:
                 assert len(entity.shape) == 3
-                assert entity.shape[1] == 1, "Hierarchical contours are not allowed"
+                assert (
+                    entity.shape[1] == 1
+                ), "Hierarchical contours are not allowed"
                 reshaped_contour.append(entity.reshape(-1).tolist())
             contours.append(reshaped_contour)
         return contours
@@ -159,10 +188,9 @@ class BinaryMaskList(object):
         return len(self.masks)
 
     def __getitem__(self, index):
-        # Probably it can cause some overhead
-        # but preserves consistency
-        masks = self.masks[index].clone()
-        return BinaryMaskList(masks, self.size)
+        if self.masks.numel() == 0:
+            raise RuntimeError("Indexing empty BinaryMaskList")
+        return BinaryMaskList(self.masks[index], self.size)
 
     def __iter__(self):
         return iter(self.masks)
@@ -202,7 +230,8 @@ class PolygonInstance(object):
 
         else:
             RuntimeError(
-                "Type of argument `polygons` is not allowed:%s" % (type(polygons))
+                "Type of argument `polygons` is not allowed:%s"
+                % (type(polygons))
             )
 
         """ This crashes the training way too many times...
@@ -274,7 +303,9 @@ class PolygonInstance(object):
             assert isinstance(size, (int, float))
             size = size, size
 
-        ratios = tuple(float(s) / float(s_orig) for s, s_orig in zip(size, self.size))
+        ratios = tuple(
+            float(s) / float(s_orig) for s, s_orig in zip(size, self.size)
+        )
 
         if ratios[0] == ratios[1]:
             ratio = ratios[0]
@@ -308,7 +339,7 @@ class PolygonInstance(object):
         s = self.__class__.__name__ + "("
         s += "num_groups={}, ".format(len(self.polygons))
         s += "image_width={}, ".format(self.size[0])
-        s += "image_height={}, ".format(self.size[1])
+        s += "image_height={})".format(self.size[1])
         return s
 
 
@@ -345,7 +376,9 @@ class PolygonList(object):
                     type(polygons[0][0])
                 )
             else:
-                assert isinstance(polygons[0], PolygonInstance), str(type(polygons[0]))
+                assert isinstance(polygons[0], PolygonInstance), str(
+                    type(polygons[0])
+                )
 
         elif isinstance(polygons, PolygonList):
             size = polygons.size
@@ -353,7 +386,8 @@ class PolygonList(object):
 
         else:
             RuntimeError(
-                "Type of argument `polygons` is not allowed:%s" % (type(polygons))
+                "Type of argument `polygons` is not allowed:%s"
+                % (type(polygons))
             )
 
         assert isinstance(size, (list, tuple)), str(type(size))
@@ -400,7 +434,9 @@ class PolygonList(object):
 
     def convert_to_binarymask(self):
         if len(self) > 0:
-            masks = torch.stack([p.convert_to_binarymask() for p in self.polygons])
+            masks = torch.stack(
+                [p.convert_to_binarymask() for p in self.polygons]
+            )
         else:
             size = self.size
             masks = torch.empty([0, size[1], size[0]], dtype=torch.uint8)

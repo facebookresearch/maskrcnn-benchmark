@@ -22,7 +22,8 @@ class PostProcessor(nn.Module):
         nms=0.5,
         detections_per_img=100,
         box_coder=None,
-        cls_agnostic_bbox_reg=False
+        cls_agnostic_bbox_reg=False,
+        bbox_aug_enabled=False
     ):
         """
         Arguments:
@@ -39,6 +40,7 @@ class PostProcessor(nn.Module):
             box_coder = BoxCoder(weights=(10., 10., 5., 5.))
         self.box_coder = box_coder
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
+        self.bbox_aug_enabled = bbox_aug_enabled
 
     def forward(self, x, boxes):
         """
@@ -79,7 +81,8 @@ class PostProcessor(nn.Module):
         ):
             boxlist = self.prepare_boxlist(boxes_per_img, prob, image_shape)
             boxlist = boxlist.clip_to_image(remove_empty=False)
-            boxlist = self.filter_results(boxlist, num_classes)
+            if not self.bbox_aug_enabled:  # If bbox aug is enabled, we will do it later
+                boxlist = self.filter_results(boxlist, num_classes)
             results.append(boxlist)
         return results
 
@@ -156,12 +159,14 @@ def make_roi_box_post_processor(cfg):
     nms_thresh = cfg.MODEL.ROI_HEADS.NMS
     detections_per_img = cfg.MODEL.ROI_HEADS.DETECTIONS_PER_IMG
     cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
+    bbox_aug_enabled = cfg.TEST.BBOX_AUG.ENABLED
 
     postprocessor = PostProcessor(
         score_thresh,
         nms_thresh,
         detections_per_img,
         box_coder,
-        cls_agnostic_bbox_reg
+        cls_agnostic_bbox_reg,
+        bbox_aug_enabled
     )
     return postprocessor
