@@ -214,7 +214,7 @@ MODEL:
   RPN_ONLY: false
   WEIGHT: catalog://ImageNetPretrained/MSRA/R-50
 OUTPUT_DIR: ./
-PATHS_CATALOG: /home/p_vinsentds/maskrcnn-benchmark/maskrcnn_benchmark/config/paths_catalog.py
+PATHS_CATALOG: /home/madhevan/maskrcnn-benchmark/maskrcnn_benchmark/config/paths_catalog.py
 SOLVER:
   BASE_LR: 0.01
   BIAS_LR_FACTOR: 2
