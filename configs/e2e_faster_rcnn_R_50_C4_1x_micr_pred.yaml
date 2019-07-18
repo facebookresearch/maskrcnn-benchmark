@@ -1,6 +1,6 @@
 MODEL:
   META_ARCHITECTURE: "GeneralizedRCNN"
-  WEIGHT: "/home/madhevan/maskrcnn-benchmark/model_0014000.pth"
+  WEIGHT: "/home/p_vinsentds/maskrcnn-benchmark/model_0014000.pth"
   RPN:
     PRE_NMS_TOP_N_TEST: 600
     POST_NMS_TOP_N_TEST: 100
