@@ -42,5 +42,20 @@ docker run --rm -it \
     --config-file configs/caffe2/e2e_mask_rcnn_R_50_FPN_1x_caffe2.yaml
 ```
 
-**DISCLAIMER:** *This was tested for an Ubuntu 16.04 machine, 
+For an image built with nvidia support run:
+
+```
+docker run --rm -it \
+    --runtime=nvidia \
+    -e NVIDIA_VISIBLE_DEVICES=0 \
+    -e DISPLAY=${DISPLAY} \
+    --privileged \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    --device=/dev/video0:/dev/video0 \
+    --ipc=host maskrcnn-benchmark \
+    python demo/webcam.py --min-image-size 300 \
+    --config-file configs/caffe2/e2e_mask_rcnn_R_50_FPN_1x_caffe2.yaml
+```
+
+**DISCLAIMER:** *This was tested for on Ubuntu 16.04 and Ubuntu 18.04, 
 the volume mapping may vary depending on your platform*
