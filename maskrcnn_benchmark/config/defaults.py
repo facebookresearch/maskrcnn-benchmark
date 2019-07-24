@@ -242,8 +242,8 @@ _C.MODEL.RPN.ANCHOR_ANGLES = (-90, -60, -30)
 # Only works in Rotated mode. 
 # If True, angle parameter regresses relative to anchor/proposal angle (+/- 45)
 # If False, angle parameter directly regresses to gt angle (-45, 45)
-_C.MODEL.RPN.BBOX_REG_ANGLE_RELATIVE = False
-_C.MODEL.ROI_HEADS.BBOX_REG_ANGLE_RELATIVE = False
+_C.MODEL.RPN.BBOX_REG_ANGLE_RELATIVE = True
+_C.MODEL.ROI_HEADS.BBOX_REG_ANGLE_RELATIVE = True
 
 
 if _C.MODEL.ROTATED:  # FOR REFERENCE ONLY
@@ -258,13 +258,13 @@ if _C.MODEL.ROTATED:  # FOR REFERENCE ONLY
     _C.MODEL.RPN.ASPECT_RATIOS = (0.5, 1.0, 2.0)
     # Remove RRPN anchors with bounding boxes that go outside the image by
     # RRPN_STRADDLE_THRESH pixels. Since these are based on bboxes of rotated rectangles,
-    # default should be set higher than normal RPN STRADDLE_THRESH
+    # default should be set higher than normal, non-rotated RPN STRADDLE_THRESH
     # Set to -1 or a large value, e.g. 100000, to disable pruning anchors
-    _C.MODEL.RPN.STRADDLE_THRESH = 30
+    _C.MODEL.RPN.STRADDLE_THRESH = -1
 
     # Default weights on (dx, dy, dw, dh, dtheta) for normalizing rotated rect regression targets
     # These are empirically chosen to approximately lead to unit variance targets
-    _C.MODEL.RPN.BBOX_REG_WEIGHTS = (10.0, 10.0, 5.0, 5.0, 3.0)
+    _C.MODEL.RPN.BBOX_REG_WEIGHTS = (1.0, 1.0, 1.0, 1.0, 1.0)
 
     # Rotated IOU threshold
     _C.MODEL.RPN.FG_IOU_THRESHOLD = 0.7
@@ -277,7 +277,7 @@ if _C.MODEL.ROTATED:  # FOR REFERENCE ONLY
 
     # Default weights on (dx, dy, dw, dh, dtheta) for normalizing rotated rect regression targets
     # These are empirically chosen to approximately lead to unit variance targets
-    _C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 5., 5., 3.0)
+    _C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 5., 5., 1.0)
 
 
 _C.MODEL.ROI_BOX_HEAD = CN()
