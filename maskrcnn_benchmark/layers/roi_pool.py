@@ -7,7 +7,12 @@ from torch.nn.modules.utils import _pair
 
 from maskrcnn_benchmark import _C
 
-from apex import amp
+try:
+    from apex import amp
+    use_amp = True
+except Ecception as e:
+    print("Couldn't load apex, because you are running on cpu probably, and couldn't detect cuda !")
+    use_amp = False
 
 class _ROIPool(Function):
     @staticmethod
@@ -53,8 +58,9 @@ class ROIPool(nn.Module):
         self.output_size = output_size
         self.spatial_scale = spatial_scale
 
-    @amp.float_function
     def forward(self, input, rois):
+        if use_amp:
+            return amp.float_function(roi_pool(input, rois, self.output_size, self.spatial_scale))
         return roi_pool(input, rois, self.output_size, self.spatial_scale)
 
     def __repr__(self):
