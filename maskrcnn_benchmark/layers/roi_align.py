@@ -9,13 +9,10 @@ from maskrcnn_benchmark import _C
 
 try:
     from apex import amp
-    decorate = True
+    use_amp = True
 except Ecception as e:
     print("Couldn't load apex, because you are running on cpu probably, and couldn't detect cuda !")
-    decorate = False
-
-def maybe_decorate(condition, decorator):
-    return decorator if condition else lambda x: x
+    use_amp = False
 
 class _ROIAlign(Function):
     @staticmethod
@@ -62,8 +59,11 @@ class ROIAlign(nn.Module):
         self.spatial_scale = spatial_scale
         self.sampling_ratio = sampling_ratio
 
-    @maybe_decorate(decorate, amp.float_function)
     def forward(self, input, rois):
+        if use_amp:
+            return amp.float_function(roi_align(
+                input, rois, self.output_size, self.spatial_scale, self.sampling_ratio
+            ))
         return roi_align(
             input, rois, self.output_size, self.spatial_scale, self.sampling_ratio
         )
