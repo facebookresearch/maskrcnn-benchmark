@@ -10,7 +10,7 @@ from maskrcnn_benchmark import _C
 try:
     from apex import amp
     use_amp = True
-except Ecception as e:
+except Exception as e:
     print("Couldn't load apex, because you are running on cpu probably, and couldn't detect cuda !")
     use_amp = False
 
