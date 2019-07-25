@@ -8,11 +8,13 @@ This project is based on [maskrcnn-benchmark](https://github.com/facebookresearc
 
 Introduction
 -----------------
-[Rotated Mask R-CNN]() extends Faster R-CNN, Mask R-CNN, or even RPN only to work with rotated bounding boxes.
+![alt text](demo/surfboard.png)
 
-This work also builds on the Mask Scoring R-CNN (or 'MS R-CNN') paper ([maskscoring_rcnn](https://github.com/zjhuang22/maskscoring_rcnn)) by learning the quality of the predicted instance masks.
+[Rotated Mask R-CNN]() extends Faster R-CNN, Mask R-CNN, or even RPN-only to work with rotated bounding boxes.
 
-The repo master branch is fully merged upstream with the latest master branch of [maskrcnn-benchmark](https://github.com/facebookresearch/maskrcnn-benchmark) (as of 24/07/2019)
+This work also builds on the Mask Scoring R-CNN ('MS R-CNN') paper by learning the quality of the predicted instance masks ([maskscoring_rcnn](https://github.com/zjhuang22/maskscoring_rcnn)).
+
+The repo master branch is fully merged upstream with the latest master branch of [maskrcnn-benchmark](https://github.com/facebookresearch/maskrcnn-benchmark) (as of 25/07/2019)
 
 Additional Features
 -----------------
@@ -40,7 +42,9 @@ All example configs related to rotated maskrcnn are in **configs/rotated** folde
 
 Pretrained Models
 ---------------
-Pre-trained models on MSCOCO can be found here [link: TODO]()
+Pre-trained models (and config) on MSCOCO can be found here:
+ - [Rotated MS R-CNN](https://drive.google.com/open?id=1HYER9pFxvg6y43UeqAzu8u1YDazewrns)
+ - [MS R-CNN](https://drive.google.com/open?id=1rBmxrW0PqKUKwgWNGDEnEjbupS69DeV0)
 
 
 Training
@@ -66,22 +70,24 @@ Inference
 ```
   python my_tools/infer_demo.py
 ```
-Be sure to change the input values e.g. config_file, model_file, image_dir
+Be sure to change the input values e.g. config_file (.yaml), model_file (.pth), image_dir
 
 Results
-------------
-Trained on coco/train2014, evaluated on coco/val2014  
+------------  
+**COCO**  
+Trained on coco/train2014, evaluated on coco/val2014
 
 | Backbone  | Method | mAP(mask) |
 |----------|--------|-----------|
-| ResNet-50 FPN | Mask R-CNN | 34.2 |
-| ResNet-50 FPN | MS R-CNN | 35.6 |
-| ResNet-50 FPN | Rotated Mask R-CNN | 34.2 |
-| ResNet-50 FPN | Rotated MS R-CNN | 35.6 |
+| ResNet-50 FPN | Mask R-CNN | 34.1 |
+| ResNet-50 FPN | MS R-CNN | 35.3 |
+| ResNet-50 FPN | Rotated Mask R-CNN | 33.4 |
+| ResNet-50 FPN | Rotated MS R-CNN | 34.7 |
 
 
 Examples
 -------------
+![alt text](demo/ocr_1.png)
 
 Acknowledgment
 -------------
