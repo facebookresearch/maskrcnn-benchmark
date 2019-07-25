@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 
 from maskrcnn_benchmark.modeling.rrpn.anchor_generator import draw_anchors
+from maskrcnn_benchmark.utils import cv2_util
 
 from predictor import Predictor
 
@@ -15,12 +16,12 @@ if __name__ == '__main__':
 
     confidence_threshold = 0.7
 
-    CLASSES = ["__background__", "text"]
+    # CLASSES = ["__background__", "text"]
 
-    config_file = "configs/icdar/general_text_detector.yaml"
-    model_file = "./checkpoints/icdar/general_text_detector/model_final.pth"
-    image_dir = "/home/vincent/hd/datasets/OCR/ICDAR/2017/Total-Text-Dataset/Images/Test"
-    image_files = glob.glob("%s/*.jpg"%(image_dir))#[::-1]
+    config_file = "configs/mscoco/mscoco_miou_4x.yaml"
+    model_file = "checkpoints/mscoco/mscoco_miou/model_final.pth"
+    image_dir = "/data/MSCOCO/val2014"
+    image_files = glob.glob("%s/*.jpg"%(image_dir))
 
     prediction_model = Predictor(config_file, min_score=confidence_threshold, device="cuda")
     prediction_model.load_weights(model_file)
@@ -61,7 +62,7 @@ if __name__ == '__main__':
             if has_masks:
                 mask = data["masks"][ix]
 
-                _, contours, hierarchy = cv2.findContours(
+                contours, hierarchy = cv2_util.findContours(
                     mask.astype(np.uint8) * 255, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
                 )
                 color = get_random_color()
@@ -90,6 +91,6 @@ if __name__ == '__main__':
         #     cv2.imshow("pred_merged", img_copy2)
 
         cv2.imshow("img", img)
-        cv2.imshow("pred", cv2.resize(img_copy, (960,960)))
+        cv2.imshow("pred", img_copy)
         cv2.waitKey(0)
 

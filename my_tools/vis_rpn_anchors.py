@@ -5,13 +5,13 @@ import cv2
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.data import make_data_loader
 
-from maskrcnn_benchmark.modeling.rrpn.inference import make_rpn_postprocessor, REGRESSION_CN
+# from maskrcnn_benchmark.modeling.rrpn.inference import make_rpn_postprocessor
 from maskrcnn_benchmark.modeling.rrpn.loss import make_rpn_loss_evaluator
 
 from maskrcnn_benchmark.modeling.rotated_box_coder import BoxCoder
 
-from maskrcnn_benchmark.structures.image_list import to_image_list
-from maskrcnn_benchmark.structures.bounding_box import BoxList
+# from maskrcnn_benchmark.structures.image_list import to_image_list
+# from maskrcnn_benchmark.structures.bounding_box import BoxList
 
 from maskrcnn_benchmark.modeling.rrpn.anchor_generator import \
     make_anchor_generator as make_rrpn_anchor_generator, convert_rect_to_pts2, draw_anchors
@@ -35,13 +35,16 @@ def normalize(x, xmin=None, xmax=None):
 
 if __name__ == '__main__':
 
-    # config_file = "./configs/mscoco/dog_skate_rotated_miou.yaml"
-    config_file = "./configs/mscoco/surfboard/rotated_mrcnn_miou_5_ratios.yaml"
+    config_file = "./configs/mscoco/mscoco_miou_4x.yaml"
+    # config_file = "./configs/pen_dataset/mrcnn_miou.yaml"
     try:
         cfg.merge_from_file(config_file)
     except KeyError as e:
         print(e)
+    cfg.INPUT.HORIZONTAL_FLIP_PROB_TRAIN = 0.0#  1.0
+    cfg.INPUT.VERTICAL_FLIP_PROB_TRAIN = 0.0
     cfg.INPUT.PIXEL_MEAN = [0,0,0]
+    cfg.SOLVER.IMS_PER_BATCH = 1
     # cfg.MODEL.RPN.ANCHOR_STRIDE = (32,)
     cfg.freeze()
 
@@ -103,29 +106,29 @@ if __name__ == '__main__':
 
         img_tensors = images.tensors
 
-        print(total_pos, total_neg)
+        # print(total_pos, total_neg)
 
         # pos_regression_targets = regression_targets[sampled_pos_inds]
         # print(np.rad2deg(pos_regression_targets[:,-1]))
         device = matched_gt_ids.device
 
-        pos_matched_gt_ids = matched_gt_ids[sampled_pos_inds]
+        # pos_matched_gt_ids = matched_gt_ids[sampled_pos_inds]
         # pos_matched_gt_ious = matched_gt_ious[sampled_pos_inds]
-        label_idxs = [torch.nonzero(pos_matched_gt_ids == x).squeeze() for x in range(start_gt_idx)]
-        label_weights = torch.zeros_like(pos_matched_gt_ids, dtype=torch.float32)
-        MAX_GT_NUM = 10
-        label_cnts = [min(MAX_GT_NUM, nz.numel()) for nz in label_idxs]
-        total_pos = sum(label_cnts)
-        for x in range(start_gt_idx):
-            nz = label_idxs[x]
-            nnn = nz.numel()
-            if nnn <= MAX_GT_NUM:
-                if nnn > 0:
-                    label_weights[nz] = total_pos / nz.numel()
-                continue
-            # top_iou_ids = torch.sort(pos_matched_gt_ious[nz], descending=True)[1][:MAX_GT_NUM]
-            # inds = nz[top_iou_ids]
-            label_weights[inds] = total_pos / MAX_GT_NUM
+        # label_idxs = [torch.nonzero(pos_matched_gt_ids == x).squeeze() for x in range(start_gt_idx)]
+        # label_weights = torch.zeros_like(pos_matched_gt_ids, dtype=torch.float32)
+        # MAX_GT_NUM = 10
+        # label_cnts = [min(MAX_GT_NUM, nz.numel()) for nz in label_idxs]
+        # total_pos = sum(label_cnts)
+        # for x in range(start_gt_idx):
+        #     nz = label_idxs[x]
+        #     nnn = nz.numel()
+        #     if nnn <= MAX_GT_NUM:
+        #         if nnn > 0:
+        #             label_weights[nz] = total_pos / nz.numel()
+        #         continue
+        #     # top_iou_ids = torch.sort(pos_matched_gt_ious[nz], descending=True)[1][:MAX_GT_NUM]
+        #     # inds = nz[top_iou_ids]
+        #     label_weights[inds] = total_pos / MAX_GT_NUM
 
         #                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       = total_pos / label_cnts.to(dtype=torch.float32)
 
@@ -160,8 +163,8 @@ if __name__ == '__main__':
             # reg_targets[gt_135, -1] = 0
 
             # reg_targets[:, -1] = reg_targets_angles
-            print(np.rad2deg(reg_targets[:, -1]))
-            print(reg_target_gt_inds)
+            # print(np.rad2deg(reg_targets[:, -1]))
+            # print(reg_target_gt_inds)
             # print(reg_target_gt_ious)
             proposals = box_coder.decode(reg_targets, anchor_rrects).cpu().numpy()
 
@@ -183,8 +186,8 @@ if __name__ == '__main__':
 
             cv2.imshow("gt", img)
 
-            cv2.imshow("match", img2)
-            cv2.imshow("proposals", img3)
+            cv2.imshow("matching anchors", img2)
+            cv2.imshow("anchor proposals", img3)
 
             cv2.waitKey(0)
 

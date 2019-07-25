@@ -72,6 +72,13 @@ Inference
 ```
 Be sure to change the input values e.g. config_file (.yaml), model_file (.pth), image_dir
 
+Visualizing Rotated RPN Anchors
+------------
+```
+  python my_tools/vis_rpn_anchors.py
+```
+Can be a useful tool for visualizing base Rotated RPN anchors. Use it to adjust the anchor sizes and ratios (and angles, if needed) for your application. 
+
 Results
 ------------  
 **COCO**  
