@@ -21,6 +21,10 @@ Additional Features
 - Soft NMS (Implemented for both bounding box and rotated detections. [Original repo](https://github.com/bharatsingh430/soft-nms))
 - Mask IoU head (From [maskscoring_rcnn](https://github.com/zjhuang22/maskscoring_rcnn)) 
 
+TODO
+-----------------
+- Keypoints for rotated bounding boxes
+
 Install
 -----------------
   Check [INSTALL.md](INSTALL.md) for installation instructions.
@@ -63,9 +67,12 @@ For more details, see README.md in https://github.com/facebookresearch/maskrcnn-
 
 Testing
 ----------------
-see README.md in https://github.com/facebookresearch/maskrcnn-benchmark  
+```
+  python tools/test_net.py --config-file "configs/rotated/e2e_ms_rcnn_R_50_FPN_1x.yaml" --ckpt checkpoints/rotated/mscoco_msrcnn/model_final.pth  
+```
+For more details, see README.md in https://github.com/facebookresearch/maskrcnn-benchmark  
 
-Note that detection ("dets") results are not relevant to Rotated Mask R-CNN, since detections are defined as bounding boxes, while Rotated Mask R-CNN outputs rotated bounding boxes.  
+Note that detection ("bbox") results are not relevant to Rotated Mask R-CNN, since detections are defined as bounding boxes, while Rotated Mask R-CNN outputs rotated bounding boxes.  
 
 Inference
 ----------------

@@ -56,3 +56,6 @@ SOLVER:
   WEIGHT_DECAY: 0.0001
   STEPS: (60000, 80000)
   MAX_ITER: 90000
+
+OUTPUT_DIR: "checkpoints/rotated/mscoco_msrcnn"
+
