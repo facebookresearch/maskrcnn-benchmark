@@ -63,7 +63,9 @@ For more details, see README.md in https://github.com/facebookresearch/maskrcnn-
 
 Testing
 ----------------
-see README.md in https://github.com/facebookresearch/maskrcnn-benchmark
+see README.md in https://github.com/facebookresearch/maskrcnn-benchmark  
+
+Note that detection ("dets") results are not relevant to Rotated Mask R-CNN, since detections are defined as bounding boxes, while Rotated Mask R-CNN outputs rotated bounding boxes.  
 
 Inference
 ----------------
