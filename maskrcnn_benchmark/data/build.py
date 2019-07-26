@@ -158,9 +158,9 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
     transforms = None if not is_train and cfg.TEST.BBOX_AUG.ENABLED else build_transforms(cfg, is_train)
     datasets = build_dataset(dataset_list, transforms, DatasetCatalog, is_train, cfg=cfg)
 
-    if is_train:
-        # save category_id to label name mapping
-        save_labels(datasets, cfg.OUTPUT_DIR)
+    # if is_train:
+    #     # save category_id to label name mapping
+    #     save_labels(datasets, cfg.OUTPUT_DIR)
 
     data_loaders = []
     for dataset in datasets:

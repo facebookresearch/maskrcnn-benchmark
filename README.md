@@ -100,8 +100,28 @@ Trained on coco/train2014, evaluated on coco/val2014
 | ResNet-50 FPN | Rotated Mask R-CNN | 33.4 |
 | ResNet-50 FPN | Rotated MS R-CNN | 34.7 |
 
+**PPC**  
+PPC (pens, pencils, chopsticks) dataset: [Link](https://drive.google.com/open?id=1B4jV49KGVJtiZJVxcG11kNzGQKV02NHz)  
+Trained on train.json, evaluated on test.json (pens & pencils only, no chopstick class)
 
-Examples
+| Backbone  | Method | mAP(mask) |
+|----------|--------|-----------|
+| ResNet-50 FPN | MS R-CNN | 13.2 |
+| ResNet-50 FPN | Rotated MS R-CNN | 19.3 |
+
+
+Comparisons with Mask R-CNN
+-------------
+Due to bounding box ambiguity, **Mask R-CNN** fails in relatively dense scenes with objects of the same class, particularly if those objects have high bounding box overlap.
+![alt text](demo/mrcnn_pencils.png)
+
+**Rotated Mask R-CNN** resolves some of these issues by adopting a rotated bounding box representation.
+![alt text](demo/rotated_mrcnn_pencils.png)
+
+    
+(The above image is taken from the [PPC](https://drive.google.com/open?id=1B4jV49KGVJtiZJVxcG11kNzGQKV02NHz) dataset)
+
+Other Examples
 -------------
 ![alt text](demo/ocr_1.png)
 
