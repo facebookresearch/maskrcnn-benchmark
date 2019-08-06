@@ -5,7 +5,8 @@ from .voc import voc_evaluation
 
 
 def evaluate(dataset, predictions, output_folder, **kwargs):
-    """evaluate dataset using different methods based on dataset type.
+    """
+    evaluate dataset using different methods based on dataset type.
     Args:
         dataset: Dataset object
         predictions(list[BoxList]): each item in the list represents the
@@ -31,5 +32,5 @@ def evaluate(dataset, predictions, output_folder, **kwargs):
     else:
         dataset_name = dataset.__class__.__name__
         raise NotImplementedError(
-            "Unsupported dataset type {}.".format(dataset_name)
+            f"Unsupported dataset type {dataset_name}."
         )

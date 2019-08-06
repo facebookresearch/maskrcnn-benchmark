@@ -1,5 +1,6 @@
 # COCO style evaluation for custom datasets derived from AbstractDataset
 # Warning! area is computed using binary maps, therefore results may differ
+# because of the precomputed COCO areas
 # by botcs@github
 
 import numpy as np
@@ -15,6 +16,13 @@ from tqdm import tqdm
 
 
 def convert_abstract_to_coco(dataset, num_workers=None, chunksize=100):
+    """
+    Convert any dataset derived from AbstractDataset to COCO style
+    for evaluating with the pycocotools lib
+
+    Conversion imitates required fields of COCO instance segmentation
+    ground truth files like: ".../annotations/instances_train2014.json"
+    """
 
     logger = logging.getLogger("maskrcnn_benchmark.inference")
     assert isinstance(dataset, AbstractDataset)
@@ -22,7 +30,10 @@ def convert_abstract_to_coco(dataset, num_workers=None, chunksize=100):
     # 'info', 'licenses', 'images', 'type', 'annotations', 'categories'
     coco_dict = {}
     coco_dict["info"] = {
-        "description": "This is an automatically generated COCO annotation file using maskrcnn_benchmark",
+        "description": (
+            "This is an automatically generated COCO annotation"
+            " file using maskrcnn_benchmark"
+        ),
         "date_created": "%s" % datetime.now(),
     }
     coco_dict["type"] = "instances"
@@ -165,7 +176,6 @@ def process_single_image(args):
 
 def masks_to_rles(masks_tensor):
     # TODO: parallelize
-
     rles = []
     for instance_mask in masks_tensor:
         np_mask = np.array(instance_mask[:, :, None], order="F")

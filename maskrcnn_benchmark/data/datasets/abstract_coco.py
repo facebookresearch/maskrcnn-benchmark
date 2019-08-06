@@ -1,4 +1,6 @@
-# Abstract dataset definition for custom datasets
+# Testing unit for PR #860
+# https://github.com/facebookresearch/maskrcnn-benchmark/pull/860
+# TODO: REMOVE THIS BEFORE MERGING
 # by botcs@github
 
 import torch
@@ -14,13 +16,12 @@ class AbstractCOCO(AbstractDataset):
         remove_images_without_annotations=False,
         transforms=None,
     ):
-        super(AbstractCOCO, self).__init__()
         self.coco = COCODataset(
             ann_file, root, remove_images_without_annotations, transforms
         )
-        self.classid_to_name = {
-            key: value["name"] for key, value in self.coco.coco.cats.items()
-        }
+        self.CLASSES = ["__background__"][
+            cat["name"] for cat in self.coco.coco.cats.values()
+        ]
         self.initMaps()
         self.transforms = transforms
 

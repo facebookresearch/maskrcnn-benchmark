@@ -1,8 +1,6 @@
-# Abstract dataset definition for custom datasets
 # by botcs@github
 
 import torch
-
 
 class AbstractDataset(torch.utils.data.Dataset):
     """
@@ -12,7 +10,7 @@ class AbstractDataset(torch.utils.data.Dataset):
     A generic Dataset for the maskrcnn_benchmark must have the following
     non-trivial fields / methods implemented:
         classid_to_name - dict:
-            This will allow the trivial generation of classid_to_ccid 
+            This will allow the trivial generation of classid_to_ccid
             (contiguous) and ccid_to_classid (reversed)
 
         __getitem__ - function(idx):
@@ -32,62 +30,38 @@ class AbstractDataset(torch.utils.data.Dataset):
     """
 
     def __init__(self, *args, **kwargs):
-        self.classid_to_name = None
-        self.classid_to_ccid = None
-
-        self.name_to_classid = None
-        self.name_to_ccid = None
-
-        self.ccid_to_classid = None
-        self.ccid_to_name = None
+        self.name_to_id = None
+        self.id_to_name = None
 
     def __getitem__(self, idx):
         raise NotImplementedError
 
+
     def initMaps(self):
         """
-        it is required to have classid->name mapping to start with
+        it is required to have class name list CLASSES to start with
 
         Initialize mappings between:
-            classid <-> name <-> continuous class id (ccid)
+            class <-> index
 
-        classid: originally in COCO this goes from 1 to 90 and not necessarily 
-            continuously
+        class: this is a string that is linked to the classid
 
-        name: this is a string that is linked to the classid
-
-        ccid: positive int represent the MaskRCNN heads. Must be continuous
+        index: positive int represent the MaskRCNN heads. Must be continuous
 
 
         NOTE:
-        It is important that classid should not list the background
-        more important, that ccid must start from 1, since the backround is
-        always associated to ccid=0 by the framework.
+        make sure that the background is always indexed by 0.
+        "__background__" <==> 0
         """
+        assert self.CLASSES[0] == "__background__"
+        cls = self.CLASSES
+        self.name_to_id = dict(zip(cls, range(len(cls))))
+        self.id_to_name = dict(zip(range(len(cls)), cls))
 
-        assert self.classid_to_name is not None
-        self.classid_to_ccid = {
-            classid: ccid
-            for ccid, classid in enumerate(self.classid_to_name.keys(), 1)
-        }
-
-        self.name_to_classid = {
-            name: classid for classid, name in self.classid_to_name.items()
-        }
-        self.name_to_ccid = {
-            name: self.classid_to_ccid[classid]
-            for classid, name in self.classid_to_name.items()
-        }
-
-        self.ccid_to_classid = {
-            ccid: classid for classid, ccid in self.classid_to_ccid.items()
-        }
-        self.ccid_to_name = {
-            ccid: name for name, ccid in self.name_to_ccid.items()
-        }
 
     def get_img_info(self, index):
         raise NotImplementedError
+
 
     def __len__(self):
         raise NotImplementedError
