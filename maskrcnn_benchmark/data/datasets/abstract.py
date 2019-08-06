@@ -1,3 +1,4 @@
+
 # by botcs@github
 
 import torch
@@ -9,9 +10,9 @@ class AbstractDataset(torch.utils.data.Dataset):
 
     A generic Dataset for the maskrcnn_benchmark must have the following
     non-trivial fields / methods implemented:
-        classid_to_name - dict:
-            This will allow the trivial generation of classid_to_ccid
-            (contiguous) and ccid_to_classid (reversed)
+        CLASSES - list/tuple:
+            A list of strings representing the classes. It must have
+            "__background__" as its 0th element for correct id mapping.
 
         __getitem__ - function(idx):
             This has to return three things: img, target, idx.
@@ -19,7 +20,7 @@ class AbstractDataset(torch.utils.data.Dataset):
             implementing the target requires the most effort, since it must have
             multiple fields: the size, bounding boxes, labels (contiguous), and
             masks (either COCO-style Polygons, RLE or torch BinaryMask).
-            Ideally the target is a BoxList instance with extra fields.
+            Usually the target is a BoxList instance with extra fields.
             Lastly, idx is simply the input argument of the function.
 
     also the following is required:
@@ -32,6 +33,7 @@ class AbstractDataset(torch.utils.data.Dataset):
     def __init__(self, *args, **kwargs):
         self.name_to_id = None
         self.id_to_name = None
+
 
     def __getitem__(self, idx):
         raise NotImplementedError
