@@ -19,10 +19,16 @@ class AbstractCOCO(AbstractDataset):
         self.coco = COCODataset(
             ann_file, root, remove_images_without_annotations, transforms
         )
-        self.CLASSES = ["__background__"][
-            cat["name"] for cat in self.coco.coco.cats.values()
+
+        # To make sure that the class IDs are contiguous and follows the same
+        # order that was used during training.
+        self.CLASSES = [(0, "__background__")] + [
+            (cat["id"], cat["name"]) for cat in self.coco.coco.cats.values()
         ]
+        self.CLASSES.sort(key=lambda x: x[0])
+        self.CLASSES = [c[1] for c in self.CLASSES]
         self.initMaps()
+
         self.transforms = transforms
 
     def __getitem__(self, idx):

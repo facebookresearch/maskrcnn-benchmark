@@ -22,6 +22,19 @@ def convert_abstract_to_coco(dataset, num_workers=None, chunksize=100):
 
     Conversion imitates required fields of COCO instance segmentation
     ground truth files like: ".../annotations/instances_train2014.json"
+
+    After th conversion is done a dict is returned that follows the same
+    format as COCO json files.
+
+    By default .coco_eval_wrapper.py saves it to the hard-drive in json format
+    and loads it with the maskrcnn_benchmark's default COCODataset
+
+    Args:
+        dataset: any dataset derived from AbstractDataset
+        num_workers (optional): number of worker threads to parallelize the
+            conversion (default is to use all cores for conversion)
+        chunk_size (optional): how many entries one thread processes before
+            requesting new task. The larger the less overhead there is.
     """
 
     logger = logging.getLogger("maskrcnn_benchmark.inference")
@@ -75,7 +88,8 @@ def convert_abstract_to_coco(dataset, num_workers=None, chunksize=100):
     # CATEGORY DATA
     categories = [
         {"id": category_id, "name": name}
-        for category_id, name in dataset.classid_to_name.items()
+        for category_id, name in dataset.id_to_name.items()
+        if name != "__background__"
     ]
     # Logging categories
     for cat in categories:
@@ -155,10 +169,8 @@ def process_single_image(args):
     else:
         areas = target.area().tolist()
 
-    ccids = target.get_field("labels").long().tolist()
-    category_ids = [dataset.ccid_to_classid[ccid] for ccid in ccids]
-
-    assert len(bboxes) == len(areas) == len(ccids)
+    cat_ids = target.get_field("labels").long().tolist()
+    assert len(bboxes) == len(areas) == len(cat_ids)
     num_instances = len(target)
     for ann_idx in range(num_instances):
         annotation = {}
@@ -168,7 +180,7 @@ def process_single_image(args):
         annotation["iscrowd"] = 0
         annotation["image_id"] = img_id
         annotation["bbox"] = bboxes[ann_idx]
-        annotation["category_id"] = category_ids[ann_idx]
+        annotation["category_id"] = cat_ids[ann_idx]
         per_img_annotations.append(annotation)
 
     return image, per_img_annotations

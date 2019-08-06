@@ -117,7 +117,8 @@ class DatasetCatalog(object):
             )
             return dict(
                 # TODO: Before merging change this back to COCODataset
-                factory="AbstractCOCODataset",
+                factory="AbstractCOCO",
+                #factory="COCODataset",
                 args=args,
             )
         elif "voc" in name:
