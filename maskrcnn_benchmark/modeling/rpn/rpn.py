@@ -108,8 +108,8 @@ class RPNHead(nn.Module):
 
 class RPNModule(torch.nn.Module):
     """
-    Module for RPN computation. Takes feature maps from the backbone and RPN
-    proposals and losses. Works for both FPN and non-FPN.
+    Module for RPN computation. Takes feature maps from the backbone and outputs 
+    RPN proposals and losses. Works for both FPN and non-FPN.
     """
 
     def __init__(self, cfg, in_channels):
