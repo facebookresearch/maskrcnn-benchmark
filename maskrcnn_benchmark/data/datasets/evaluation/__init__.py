@@ -16,12 +16,20 @@ def evaluate(dataset, predictions, output_folder, **kwargs):
         evaluation result
     """
     args = dict(
-        dataset=dataset, predictions=predictions, output_folder=output_folder, **kwargs
+        dataset=dataset,
+        predictions=predictions,
+        output_folder=output_folder,
+        **kwargs
     )
     if isinstance(dataset, datasets.COCODataset):
         return coco_evaluation(**args)
     elif isinstance(dataset, datasets.PascalVOCDataset):
         return voc_evaluation(**args)
+    elif isinstance(dataset, datasets.AbstractDataset):
+        print("No predefined evaluation method found. Fallback option is COCO")
+        return coco_evaluation(**args)
     else:
         dataset_name = dataset.__class__.__name__
-        raise NotImplementedError("Unsupported dataset type {}.".format(dataset_name))
+        raise NotImplementedError(
+            "Unsupported dataset type {}.".format(dataset_name)
+        )

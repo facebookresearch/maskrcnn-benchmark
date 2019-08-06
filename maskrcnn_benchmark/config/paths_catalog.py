@@ -116,6 +116,7 @@ class DatasetCatalog(object):
                 ann_file=os.path.join(data_dir, attrs["ann_file"]),
             )
             return dict(
+                # TODO: Before merging change this back to COCODataset
                 factory="COCODataset",
                 args=args,
             )
