@@ -266,6 +266,9 @@ note = {Accessed: [Insert date here]}
 - [FCOS: Fully Convolutional One-Stage Object Detection](https://arxiv.org/abs/1904.01355).
   Zhi Tian, Chunhua Shen, Hao Chen and Tong He.
   Tech report, arXiv,1904.01355. [[code](https://github.com/tianzhi0549/FCOS)]
+- [An Energy and GPU-Computation Efficient Backbone Network for Real-Time Object Detection](https://arxiv.org/abs/1904.09730).
+  Youngwan Lee, Joong-won Hwang, Sangrok Lee, Yuseok Bae and Jongyoul Park.
+  CVPR2019 workshop, arXiv, 1904.09730.[[code](https://github.com/vov-net/VoVNet-Detectron)]
 
 ## License
 
