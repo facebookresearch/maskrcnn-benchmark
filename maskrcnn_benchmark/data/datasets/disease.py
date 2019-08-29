@@ -8,7 +8,7 @@ from . import build_disease as bd
 
 
 class DiseaseDataset(object):
-    def __init__(self, json_name='disease_data_fp_7_23_2019', dataroot='../raw', transforms=None):
+    def __init__(self, json_name='disease_data_fp_7_23_2019', dataroot='disease', transforms=None):
         self.dataroot = dataroot
         self.json_name = json_name
         self.transforms = transforms

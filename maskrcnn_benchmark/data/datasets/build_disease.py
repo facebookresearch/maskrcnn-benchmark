@@ -226,14 +226,15 @@ def check_downloaded(df, directory):
     :return: this is a pandas DataFrame
     """
     all_files = []
-    for i in directory.rglob('*.*'):
-        all_files.append((i.name, i.parent, i))
+    for i in directory.rglob('*.jpg'):
+        all_files.append((i.parent, i))
 
-    columns = ["external_id", "parent", "image_path"]
+    df['downloaded'] = np.nan
+    columns = ["parent", "image_path"]
     temp = pd.DataFrame.from_records(all_files, columns=columns)
-
+    temp['downloaded'] = 1
     # Save filepath of existing images, download missing
-    df = pd.merge(df, temp, how='left', on='external_id')
+    df = pd.merge(df, temp, how='left', on='image_path')
 
     return df
 
@@ -241,19 +242,31 @@ def check_downloaded(df, directory):
 def download_imgs(df, download_dir):
     """
     This is a dataframe with the img_filename and url stored
-    it adds the download directory to the image filename and called get_img_from_url
+    it adds the download directory to the image filename and called get_img_from_url.
+    Data for each phase is downloaded into its own directory.
     :param download_dict: dict
     :param download_dir: file path
     :return:
     """
     count = 0
 
-    df['image_path'] = (df['dataset_name'] + '_' + df['patient_id'] + '.jpg').apply(lambda x: Path(download_dir, x))
+    df['image_path'] = (df['phase'] + '/' +
+                        df['dataset_name'] + '_' +
+                        df['patient_id'] +
+                        '.jpg').apply(lambda x: Path(download_dir, x))
+
+    try:
+        check_downloaded(df, download_dir)
+    except:
+        df['downloaded'] = np.nan
+        print('No images detected, downloading entire dataset')
+
+    temp = df.loc[df['downloaded'.isna(), ['image_path', 'labeled_data']]]
 
     for i in range(len(df)):
         # Get download url of image
-        get_img_from_url(df.at[i, 'image_path'], df.at[i, 'labeled_data'])
-        if (count + 1) % 10 == 0:
+        get_img_from_url(temp.at[i, 'image_path'], temp.at[i, 'labeled_data'])
+        if (count + 1) % 100 == 0:
             print(f'Downloaded {count + 1} / {len(df)}')
         count += 1
 
@@ -270,13 +283,12 @@ def get_img_from_url(filename, url):
     try:
         subprocess.check_output(['wget', '-O', filename, url])
         imread(filename)
-    except Exception as E:
-        print(E)
+    except:
+        #         print(E)
         print('File Downloaded FAIL: {}'.format(filename))
 
 
 def massage_labels(df: object, class_names: List) -> object:
-
     df['all_boxes'] = np.nan
     df['all_boxes'] = df['all_boxes'].astype(object)
 
@@ -329,7 +341,7 @@ def create_disease_dataset(json_name, dataroot):
     df = balance_dataset(df, class_names, split=0.3, continuing=False)
 
     # directory for downloaded images
-    download_dir = Path(dataroot, 'imgs')
+    download_dir = Path(dataroot)
 
     # Create directory structure if it does not exist
     download_dir.mkdir(parents=True,
