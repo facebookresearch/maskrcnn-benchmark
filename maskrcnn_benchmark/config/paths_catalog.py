@@ -7,8 +7,13 @@ import os
 class DatasetCatalog(object):
     DATA_DIR = "datasets"
     DATASETS = {
-        "disease": {
-
+        "disease_train": {
+            "img_dir": "disease/train",
+            # "ann_file": "coco/annotations/instances_train2017.json"
+        }
+        "disease_val": {
+            "img_dir": "disease/val",
+            # "ann_file": "coco/annotations/instances_train2017.json"
         }
         "coco_2017_train": {
             "img_dir": "coco/train2017",
@@ -133,6 +138,11 @@ class DatasetCatalog(object):
                 factory="PascalVOCDataset",
                 args=args,
             )
+        elif "disease" in name:
+            data_dir = DatasetCatalog.DATA_DIR
+            attrs = DatasetCatalog.DATASETS[name]
+
+
         raise RuntimeError("Dataset not available: {}".format(name))
 
 
