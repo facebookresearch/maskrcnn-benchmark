@@ -276,6 +276,7 @@ def get_img_from_url(filename, url):
 
 
 def massage_labels(df: object, class_names: List) -> object:
+
     df['all_boxes'] = np.nan
     df['all_boxes'] = df['all_boxes'].astype(object)
 
@@ -308,7 +309,7 @@ def create_disease_dataset(json_name, dataroot):
     class_names = [name.strip().lower().replace(' ', '_') for name in label_types]
 
     # import the json data from the json file. We will use this data to generate the label masks
-    with open(Path(dataroot, f'{dataset_name}.json')) as f:
+    with open(Path(dataroot, f'{json_name}.json')) as f:
         raw_data = json.load(f)
 
     # Load into a dataframe
@@ -316,6 +317,7 @@ def create_disease_dataset(json_name, dataroot):
 
     df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_')
 
+    # For now
     df['dataset_name'] = json_name
 
     # we need to clean the json data to create a dataframe where we can get the label by using the External ID
