@@ -6,9 +6,18 @@ By [Shijie Looi](https://github.com/mrlooi).
 
 This project is based on [maskrcnn-benchmark](https://github.com/facebookresearch/maskrcnn-benchmark).
 
-Introduction
------------------
+The Problem With MaskRCNN (and Bounding Boxes)
+-------------
 ![alt text](demo/surfboard.png)
+
+Due to bounding box ambiguity, **Mask R-CNN** fails in relatively dense scenes with objects of the same class, particularly if those objects have high bounding box overlap. In these scenes, **both recall (due to NMS) and precision (foreground instance class ambiguity)** are affected.
+![alt text](demo/mrcnn_pencils.png)
+
+Rotated Mask R-CNN
+-------------
+![alt text](demo/rotated_mrcnn_pencils.png)
+
+**Rotated Mask R-CNN** resolves some of these issues by adopting a rotated bounding box representation.
 
 [Rotated Mask R-CNN]() extends Faster R-CNN, Mask R-CNN, or even RPN-only to work with rotated bounding boxes.
 
@@ -109,17 +118,6 @@ Trained on train.json, evaluated on test.json (pens & pencils only, no chopstick
 | ResNet-50 FPN | MS R-CNN | 13.2 |
 | ResNet-50 FPN | Rotated MS R-CNN | 19.3 |
 
-
-Comparisons with Mask R-CNN
--------------
-Due to bounding box ambiguity, **Mask R-CNN** fails in relatively dense scenes with objects of the same class, particularly if those objects have high bounding box overlap.
-![alt text](demo/mrcnn_pencils.png)
-
-**Rotated Mask R-CNN** resolves some of these issues by adopting a rotated bounding box representation.
-![alt text](demo/rotated_mrcnn_pencils.png)
-
-    
-(The above image is taken from the [PPC](https://drive.google.com/open?id=1B4jV49KGVJtiZJVxcG11kNzGQKV02NHz) dataset)
 
 Other Examples
 -------------
