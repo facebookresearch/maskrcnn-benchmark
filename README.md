@@ -122,6 +122,8 @@ Trained on train.json, evaluated on test.json (pens & pencils only, no chopstick
 
 Other Examples
 -------------
+![alt text](demo/rotated_people_skateboard.png)
+
 ![alt text](demo/ocr_1.png)
 
 Acknowledgment
