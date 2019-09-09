@@ -4,7 +4,7 @@ Rotated Mask R-CNN
 
 By [Shijie Looi](https://github.com/mrlooi). 
 
-(Paper to be published soon)
+(Paper to be published soon...or not, depends on schedule)
 
 This project is based on [maskrcnn-benchmark](https://github.com/facebookresearch/maskrcnn-benchmark).
 
