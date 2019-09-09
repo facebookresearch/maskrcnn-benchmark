@@ -7,6 +7,7 @@ By [Shijie Looi](https://github.com/mrlooi).
 (Paper to be published soon...or not, depends on schedule)
 
 This project is based on [maskrcnn-benchmark](https://github.com/facebookresearch/maskrcnn-benchmark).
+Rotation NMS layers were based on [RRPN](https://github.com/mjq11302010044/RRPN).
 
 The Problem With MaskRCNN (and Bounding Boxes)
 -------------
