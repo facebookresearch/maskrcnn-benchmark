@@ -1,5 +1,7 @@
 Rotated Mask R-CNN
 -----------------
+![alt text](demo/surfboard.png)
+
 By [Shijie Looi](https://github.com/mrlooi). 
 
 (Paper to be published soon)
@@ -8,8 +10,6 @@ This project is based on [maskrcnn-benchmark](https://github.com/facebookresearc
 
 The Problem With MaskRCNN (and Bounding Boxes)
 -------------
-![alt text](demo/surfboard.png)
-
 Due to bounding box ambiguity, **Mask R-CNN** fails in relatively dense scenes with objects of the same class, particularly if those objects have high bounding box overlap. In these scenes, **both recall (due to NMS) and precision (foreground instance class ambiguity)** are affected.
 ![alt text](demo/mrcnn_pencils.png)
 
