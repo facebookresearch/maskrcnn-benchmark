@@ -17,11 +17,11 @@
 # for that, check that `which conda`, `which pip` and `which python` points to the
 # right path. From a clean conda env, this is what you need to do
 
-conda create --name maskrcnn_benchmark
+conda create --name maskrcnn_benchmark -y
 conda activate maskrcnn_benchmark
 
 # this installs the right pip and dependencies for the fresh python
-conda install ipython
+conda install ipython pip
 
 # maskrcnn_benchmark and coco api dependencies
 pip install ninja yacs cython matplotlib tqdm opencv-python
