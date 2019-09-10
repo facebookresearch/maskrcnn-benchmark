@@ -7,7 +7,7 @@ from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
 from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
 
 
-min_keypoints_per_image = 10
+min_keypoints_per_image = 1
 
 
 def _count_visible_keypoints(anno):
