@@ -91,6 +91,11 @@ Inference
 ```
 Be sure to change the input values e.g. config_file (.yaml), model_file (.pth), image_dir
 
+Performance
+----------------
+- Memory: Almost identical to Mask RCNN (with just a few more parameters)
+- Speed: slightly slower (~10%) during inference, 30-50% slower during training
+
 Visualizing Rotated RPN Anchors
 ------------
 ```
