@@ -5,19 +5,22 @@ import torch
 FLIP_LEFT_RIGHT = 0
 FLIP_TOP_BOTTOM = 1
 
+
 class Keypoints(object):
     def __init__(self, keypoints, size, mode=None):
         # FIXME remove check once we have better integration with device
         # in my version this would consistently return a CPU tensor
-        device = keypoints.device if isinstance(keypoints, torch.Tensor) else torch.device('cpu')
-        keypoints = torch.as_tensor(keypoints, dtype=torch.float32, device=device)
+        device = keypoints.device if isinstance(
+            keypoints, torch.Tensor) else torch.device('cpu')
+        keypoints = torch.as_tensor(
+            keypoints, dtype=torch.float32, device=device)
         num_keypoints = keypoints.shape[0]
         if num_keypoints:
             keypoints = keypoints.view(num_keypoints, -1, 3)
-        
+
         # TODO should I split them?
         # self.visibility = keypoints[..., 2]
-        self.keypoints = keypoints# [..., :2]
+        self.keypoints = keypoints  # [..., :2]
 
         self.size = size
         self.mode = mode
@@ -27,7 +30,8 @@ class Keypoints(object):
         raise NotImplementedError()
 
     def resize(self, size, *args, **kwargs):
-        ratios = tuple(float(s) / float(s_orig) for s, s_orig in zip(size, self.size))
+        ratios = tuple(float(s) / float(s_orig)
+                       for s, s_orig in zip(size, self.size))
         ratio_w, ratio_h = ratios
         resized_data = self.keypoints.clone()
         resized_data[..., 0] *= ratio_w
@@ -40,7 +44,7 @@ class Keypoints(object):
     def transpose(self, method):
         if method not in (FLIP_LEFT_RIGHT,):
             raise NotImplementedError(
-                    "Only FLIP_LEFT_RIGHT implemented")
+                "Only FLIP_LEFT_RIGHT implemented")
 
         flip_inds = type(self).FLIP_INDS
         flipped_data = self.keypoints[:, flip_inds]
@@ -59,7 +63,8 @@ class Keypoints(object):
         return keypoints
 
     def to(self, *args, **kwargs):
-        keypoints = type(self)(self.keypoints.to(*args, **kwargs), self.size, self.mode)
+        keypoints = type(self)(self.keypoints.to(
+            *args, **kwargs), self.size, self.mode)
         for k, v in self.extra_fields.items():
             if hasattr(v, "to"):
                 v = v.to(*args, **kwargs)
@@ -89,7 +94,8 @@ class Keypoints(object):
 def _create_flip_indices(names, flip_map):
     full_flip_map = flip_map.copy()
     full_flip_map.update({v: k for k, v in flip_map.items()})
-    flipped_names = [i if i not in full_flip_map else full_flip_map[i] for i in names]
+    flipped_names = [i if i not in full_flip_map else full_flip_map[i]
+                     for i in names]
     flip_indices = [names.index(i) for i in flipped_names]
     return torch.tensor(flip_indices)
 
@@ -126,8 +132,23 @@ class PersonKeypoints(Keypoints):
     }
 
 
+class WindTurbineCameraOrientationKeypoints(Keypoints):
+    NAMES = [
+        'camera_target'
+    ]
+    FLIP_MAP = {}
+
+
+keypoint_task_dict = {
+    "PersonKeypoints": PersonKeypoints,
+    "WindTurbineCameraOrientationKeypoints": WindTurbineCameraOrientationKeypoints
+}
+
 # TODO this doesn't look great
-PersonKeypoints.FLIP_INDS = _create_flip_indices(PersonKeypoints.NAMES, PersonKeypoints.FLIP_MAP)
+PersonKeypoints.FLIP_INDS = _create_flip_indices(
+    PersonKeypoints.NAMES, PersonKeypoints.FLIP_MAP)
+
+
 def kp_connections(keypoints):
     kp_lines = [
         [keypoints.index('left_eye'), keypoints.index('right_eye')],
@@ -147,6 +168,8 @@ def kp_connections(keypoints):
         [keypoints.index('right_hip'), keypoints.index('left_hip')],
     ]
     return kp_lines
+
+
 PersonKeypoints.CONNECTIONS = kp_connections(PersonKeypoints.NAMES)
 
 
@@ -174,7 +197,7 @@ def keypoints_to_heat_map(keypoints, rois, heatmap_size):
     x = x.floor().long()
     y = (y - offset_y) * scale_y
     y = y.floor().long()
-    
+
     x[x_boundary_inds] = heatmap_size - 1
     y[y_boundary_inds] = heatmap_size - 1
 

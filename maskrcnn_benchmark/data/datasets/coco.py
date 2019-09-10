@@ -4,7 +4,7 @@ import torchvision
 
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
-from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
+from maskrcnn_benchmark.structures.keypoint import PersonKeypoints, keypoint_task_dict
 
 
 min_keypoints_per_image = 1
@@ -54,7 +54,8 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
                     ids.append(img_id)
             self.ids = ids
 
-        self.categories = {cat['id']: cat['name'] for cat in self.coco.cats.values()}
+        self.categories = {cat['id']: cat['name']
+                           for cat in self.coco.cats.values()}
 
         self.json_category_id_to_contiguous_id = {
             v: i + 1 for i, v in enumerate(self.coco.getCatIds())
@@ -88,7 +89,8 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
 
         if anno and "keypoints" in anno[0]:
             keypoints = [obj["keypoints"] for obj in anno]
-            keypoints = PersonKeypoints(keypoints, img.size)
+            keypoints = keypoint_task_dict[self.coco.dataset["info"].get(
+                "task", "PersonKeypoints")](keypoints, img.size)
             target.add_field("keypoints", keypoints)
 
         target = target.clip_to_image(remove_empty=True)
