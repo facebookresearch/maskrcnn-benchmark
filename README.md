@@ -150,7 +150,11 @@ If you find Rotated Mask R-CNN useful in your research, please consider citing:
   howpublished = {\url{https://github.com/mrlooi/rotated_maskrcnn}}
 }
 ```
-Note that this is not a standard BibTeX citation. 
+Note that this is not a standard BibTeX citation.
+
+Digital Object Identifier (DOI)
+---------------
+[![DOI](https://zenodo.org/badge/158936075.svg)](https://zenodo.org/badge/latestdoi/158936075)
 
 License
 ---------------
