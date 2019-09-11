@@ -141,8 +141,16 @@ The work was done at [Dorabot Inc](https://www.dorabot.com/).
 Citations
 ---------------
 If you find Rotated Mask R-CNN useful in your research, please consider citing:
-```   
 ```
+@misc{looi2019rotatedmrcnn,
+  author = {Shijie Looi},
+  title = {Rotated Mask R-CNN: From Bounding Boxes To Rotated Bounding Boxes},
+  year = {2019},
+  publisher = {GitHub},
+  howpublished = {\url{https://github.com/mrlooi/rotated_maskrcnn}}
+}
+```
+Note that this is not a standard BibTeX citation. 
 
 License
 ---------------
