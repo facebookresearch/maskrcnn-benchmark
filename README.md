@@ -54,7 +54,7 @@ Trained on train.json, evaluated on test.json (pens & pencils only, no chopstick
 Additional Features
 -----------------
 - Soft NMS (Implemented for both bounding box and rotated detections. [Original repo](https://github.com/bharatsingh430/soft-nms))
-- Mask IoU head (From [maskscoring_rcnn](https://github.com/zjhuang22/maskscoring_rcnn)) 
+- Mask IoU head (From [maskscoring_rcnn](https://github.com/zjhuang22/maskscoring_rcnn)). This is a better refactored version than the original repo - the original does not have batch inference/testing in the Mask IoU layer.
 
 TODO
 -----------------
