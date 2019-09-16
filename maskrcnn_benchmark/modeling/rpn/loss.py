@@ -92,7 +92,7 @@ class RPNLossComputation(object):
     def __call__(self, anchors, objectness, box_regression, targets):
         """
         Arguments:
-            anchors (list[BoxList])
+            anchors (list[list[BoxList]])
             objectness (list[Tensor])
             box_regression (list[Tensor])
             targets (list[BoxList])
