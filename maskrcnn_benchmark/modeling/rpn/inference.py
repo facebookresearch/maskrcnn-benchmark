@@ -156,7 +156,7 @@ class RPNPostProcessor(torch.nn.Module):
         # different behavior during training and during testing:
         # during training, post_nms_top_n is over *all* the proposals combined, while
         # during testing, it is over the proposals for each image
-        # NOTE: it should be per image, and not per batch. However, to be consistent 
+        # NOTE: it should be per image, and not per batch. However, to be consistent
         # with Detectron, the default is per batch (see Issue #672)
         if self.training and self.fpn_post_nms_per_batch:
             objectness = torch.cat(
@@ -165,7 +165,7 @@ class RPNPostProcessor(torch.nn.Module):
             box_sizes = [len(boxlist) for boxlist in boxlists]
             post_nms_top_n = min(self.fpn_post_nms_top_n, len(objectness))
             _, inds_sorted = torch.topk(objectness, post_nms_top_n, dim=0, sorted=True)
-            inds_mask = torch.zeros_like(objectness, dtype=torch.uint8)
+            inds_mask = torch.zeros_like(objectness, dtype=torch.bool)
             inds_mask[inds_sorted] = 1
             inds_mask = inds_mask.split(box_sizes)
             for i in range(num_images):
