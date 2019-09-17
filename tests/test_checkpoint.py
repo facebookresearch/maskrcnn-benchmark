@@ -60,6 +60,8 @@ class TestCheckpointer(unittest.TestCase):
                 )
                 _ = fresh_checkpointer.load()
 
+            trained_model.cpu()
+            fresh_model.cpu()
             for trained_p, loaded_p in zip(
                 trained_model.parameters(), fresh_model.parameters()
             ):
@@ -92,6 +94,8 @@ class TestCheckpointer(unittest.TestCase):
                     self.assertEqual(fresh_checkpointer.get_checkpoint_file(), "")
                     _ = fresh_checkpointer.load(os.path.join(f, "checkpoint_file.pth"))
 
+            trained_model.cpu()
+            fresh_model.cpu()
             for trained_p, loaded_p in zip(
                 trained_model.parameters(), fresh_model.parameters()
             ):
@@ -105,6 +109,7 @@ class TestCheckpointer(unittest.TestCase):
             model, state_dict = self.create_complex_model()
             if add_data_parallel:
                 model = nn.DataParallel(model)
+                model.cpu()
 
             load_state_dict(model, state_dict)
             for loaded, stored in zip(model.state_dict().values(), state_dict.values()):
