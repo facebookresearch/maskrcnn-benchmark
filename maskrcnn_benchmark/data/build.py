@@ -7,6 +7,8 @@ import torch.utils.data
 from maskrcnn_benchmark.utils.comm import get_world_size
 from maskrcnn_benchmark.utils.imports import import_file
 from maskrcnn_benchmark.utils.miscellaneous import save_labels
+from maskrcnn_benchmark.data.datasets.wrapper import WrapperDataset
+from maskrcnn_benchmark.data.datasets.abstract import AbstractDataset
 
 from . import datasets as D
 from . import samplers
@@ -44,6 +46,61 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
         # make dataset from factory
         dataset = factory(**args)
         datasets.append(dataset)
+
+    log_info = ""
+    for dataset_idx, (dataset_name, dataset) in enumerate(zip(dataset_list, datasets)):
+        log_info += (
+            f"{dataset_idx:>2}: {dataset_name:>35} [{dataset.__class__.__name__}]\n"
+        )
+    logger = logging.getLogger(__name__)
+    logger.info("Dataset(s) provided in the config:\n" + log_info)
+
+    # BOTCS: Wrapping multiple datasets to mimick the first
+    if len(datasets) > 1:
+        logger.info(
+            "Multiple datasets were provided for training. "
+            "Dataset builder is wrapping datasets[1:] to mimick the first "
+            "dataset's category indexes. Index matching is based on matching "
+            "category names (str). Only works with derived Classes of "
+            "AbstractDataset. Otherwise no wrapping will be carried out. "
+        )
+        mimicked_dataset = datasets[0]
+        if not isinstance(mimicked_dataset, AbstractDataset):
+            logger.warning(
+                "ATTENTION! "
+                f"[{mimicked_dataset.__class__.__name__}] is not a derived Class "
+                "of AbstractDataset. Further datasets will not be wrapped. "
+                "Matching class indices could not be assured. "
+                "Current setting *could* lead to colliding category indices. "
+            )
+        else:
+            wrapped_datasets = []
+            for d in datasets[1:]:
+                if isinstance(d, type(mimicked_dataset)):
+                    logger.warning(
+                        f"[{d.__class__.__name__}] will not be wrapped, because "
+                        "it matches the mimicked Dataset's type."
+                    )
+                    wrapped_datasets.append(d)
+                elif isinstance(d, AbstractDataset):
+                    logger.warning(
+                        f"Wrapping [{d.__class__.__name__}] to mimick "
+                        f"[{mimicked_dataset.__class__.__name__}]"
+                    )
+                    wd = WrapperDataset(mimicked_dataset, d)
+                    logger.info(str(wd))
+                    wrapped_datasets.append(wd)
+                else:
+                    logger.warning(
+                        "ATTENTION! "
+                        "Matching class indices could not be assured. "
+                        f"Using [{mimicked_dataset.__class__.__name__}] and "
+                        f"[{d.__class__.__name__}] *could* lead to colliding "
+                        " category indices. "
+                    )
+                    wrapped_datasets.append(d)
+
+            datasets = [mimicked_dataset] + wrapped_datasets
 
     # for testing, return a list of datasets
     if not is_train:
@@ -112,7 +169,8 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
         assert (
             images_per_batch % num_gpus == 0
         ), "SOLVER.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
-            images_per_batch, num_gpus)
+            images_per_batch, num_gpus
+        )
         images_per_gpu = images_per_batch // num_gpus
         shuffle = True
         num_iters = cfg.SOLVER.MAX_ITER
@@ -121,7 +179,8 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
         assert (
             images_per_batch % num_gpus == 0
         ), "TEST.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
-            images_per_batch, num_gpus)
+            images_per_batch, num_gpus
+        )
         images_per_gpu = images_per_batch // num_gpus
         shuffle = False if not is_distributed else True
         num_iters = None
@@ -152,7 +211,11 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
     dataset_list = cfg.DATASETS.TRAIN if is_train else cfg.DATASETS.TEST
 
     # If bbox aug is enabled in testing, simply set transforms to None and we will apply transforms later
-    transforms = None if not is_train and cfg.TEST.BBOX_AUG.ENABLED else build_transforms(cfg, is_train)
+    transforms = (
+        None
+        if not is_train and cfg.TEST.BBOX_AUG.ENABLED
+        else build_transforms(cfg, is_train)
+    )
     datasets = build_dataset(dataset_list, transforms, DatasetCatalog, is_train)
 
     if is_train:
@@ -165,8 +228,11 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
         batch_sampler = make_batch_data_sampler(
             dataset, sampler, aspect_grouping, images_per_gpu, num_iters, start_iter
         )
-        collator = BBoxAugCollator() if not is_train and cfg.TEST.BBOX_AUG.ENABLED else \
-            BatchCollator(cfg.DATALOADER.SIZE_DIVISIBILITY)
+        collator = (
+            BBoxAugCollator()
+            if not is_train and cfg.TEST.BBOX_AUG.ENABLED
+            else BatchCollator(cfg.DATALOADER.SIZE_DIVISIBILITY)
+        )
         num_workers = cfg.DATALOADER.NUM_WORKERS
         data_loader = torch.utils.data.DataLoader(
             dataset,
