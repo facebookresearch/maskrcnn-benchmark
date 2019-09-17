@@ -65,7 +65,6 @@ class TestCheckpointer(unittest.TestCase):
             for trained_p, loaded_p in zip(
                 trained_model.parameters(), fresh_model.parameters()
             ):
-                print(trained_p.device, loaded_p.device)
                 # different tensor references
                 self.assertFalse(id(trained_p) == id(loaded_p))
                 # same content
