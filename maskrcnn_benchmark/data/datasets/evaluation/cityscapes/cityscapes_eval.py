@@ -12,7 +12,6 @@ import numpy as np
 from maskrcnn_benchmark.modeling.roi_heads.mask_head.inference import Masker
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
-from maskrcnn_benchmark.data.datasets.wrapper import WrapperDataset
 
 from maskrcnn_benchmark.data.datasets.evaluation.cityscapes import eval_instances
 
@@ -31,13 +30,7 @@ def do_cityscapes_evaluation(
 ):
 
     logger = logging.getLogger("maskrcnn_benchmark.inference")
-    if not isinstance(dataset, WrapperDataset):
-        logger.info(f"CityScapes evaluation on [{dataset.__class__.__name__}]:")
-    else:
-        logger.info(
-            f"CityScapes evaluation on [{dataset.B.__class__.__name__}]"
-            f" aligned to categories of [{dataset.A.__class__.__name__}]"
-        )
+    logger.info(f"CityScapes evaluation on [{dataset}]:")
     # Set default args for evaluation
     args = deepcopy(eval_instances.defaultArgs)
 
