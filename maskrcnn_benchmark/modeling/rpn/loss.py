@@ -49,7 +49,10 @@ class RPNLossComputation(object):
         # NB: need to clamp the indices because we can have a single
         # GT in the image, and matched_idxs can be -2, which goes
         # out of bounds
-        matched_targets = target[matched_idxs.clamp(min=0)]
+        if len(target):
+            matched_targets = target[matched_idxs.clamp(min=0)]
+        else:
+            matched_targets = target
         matched_targets.add_field("matched_idxs", matched_idxs)
         return matched_targets
 
@@ -79,9 +82,13 @@ class RPNLossComputation(object):
                 labels_per_image[inds_to_discard] = -1
 
             # compute regression targets
-            regression_targets_per_image = self.box_coder.encode(
-                matched_targets.bbox, anchors_per_image.bbox
-            )
+            if not matched_targets.bbox.shape[0]:
+                zeros = torch.zeros_like(labels_per_image)
+                regression_targets_per_image = torch.stack((zeros, zeros, zeros, zeros), dim=1)
+            else:
+                regression_targets_per_image = self.box_coder.encode(
+                    matched_targets.bbox, anchors_per_image.bbox
+                )
 
             labels.append(labels_per_image)
             regression_targets.append(regression_targets_per_image)

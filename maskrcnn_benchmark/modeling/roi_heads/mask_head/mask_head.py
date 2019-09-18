@@ -63,6 +63,11 @@ class ROIMaskHead(torch.nn.Module):
             # during training, only focus on positive boxes
             all_proposals = proposals
             proposals, positive_inds = keep_only_positive_boxes(proposals)
+
+            if all(len(proposal) < 1 for proposal in proposals):
+                proposal = proposals[0]
+                proposal.bbox = proposal.bbox.new([[0, 0, 10, 10]])
+                positive_inds[0][0] = 1
         if self.training and self.cfg.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             x = features
             x = x[torch.cat(positive_inds, dim=0)]
