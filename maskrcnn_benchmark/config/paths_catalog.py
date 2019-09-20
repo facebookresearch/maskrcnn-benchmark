@@ -2,7 +2,7 @@
 """Centralized catalog of paths."""
 
 import os
-
+from copy import deepcopy
 
 class DatasetCatalog(object):
     DATA_DIR = "datasets"
