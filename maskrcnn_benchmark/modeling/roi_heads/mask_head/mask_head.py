@@ -9,7 +9,6 @@ from .roi_mask_predictors import make_roi_mask_predictor
 from .inference import make_roi_mask_post_processor
 from .loss import make_roi_mask_loss_evaluator
 
-
 def keep_only_positive_boxes(boxes):
     """
     Given a set of BoxList containing the `labels` field,
@@ -58,11 +57,15 @@ class ROIMaskHead(torch.nn.Module):
             losses (dict[Tensor]): During training, returns the losses for the
                 head. During testing, returns an empty dict.
         """
-
         if self.training:
             # during training, only focus on positive boxes
             all_proposals = proposals
             proposals, positive_inds = keep_only_positive_boxes(proposals)
+            if all(len(proposal) < 1 for proposal in proposals):
+                # adding a fake proposal so all gpus would undergo the same computations
+                proposal = proposals[0]
+                proposal.bbox = proposal.bbox.new([[0, 0, 10, 10]])
+                positive_inds[0][0] = 1
         if self.training and self.cfg.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             x = features
             x = x[torch.cat(positive_inds, dim=0)]

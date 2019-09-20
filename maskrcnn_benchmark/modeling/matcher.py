@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
-
-
+from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
+from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
 class Matcher(object):
     """
     This class assigns to each predicted "element" (e.g., a box) a ground-truth
@@ -110,3 +110,40 @@ class Matcher(object):
 
         pred_inds_to_update = gt_pred_pairs_of_highest_quality[:, 1]
         matches[pred_inds_to_update] = all_matches[pred_inds_to_update]
+
+    def match_targets_to_proposals(self, proposal, target, copied_fields=[]):
+        if target:
+            match_quality_matrix = boxlist_iou(target, proposal)
+            matched_idxs = self(match_quality_matrix)
+            # RPN doesn't need any fields from target
+            # Fast RCNN only need "labels" field for selecting the targets
+            # Mask RCNN needs "labels" and "masks "fields for creating the targets
+            # Keypoint RCNN needs "labels" and "keypoints "fields for creating the targets
+            target = target.copy_with_fields(copied_fields)
+            # get the targets corresponding GT for each proposal
+            # NB: need to clamp the indices because we can have a single
+            # GT in the image, and matched_idxs can be -2, which goes
+            # out of bounds
+            matched_targets = target[matched_idxs.clamp(min=0)]
+        else:
+            device = proposal.bbox.device
+            matched_targets = proposal.copy_with_fields([])
+            matched_idxs = torch.full((len(proposal), ),
+                                      Matcher.BELOW_LOW_THRESHOLD,
+                                      device=device,
+                                      dtype=torch.int64)
+            if "labels" in copied_fields:
+                matched_labels = torch.zeros_like(matched_idxs)
+                matched_targets.add_field("labels", matched_labels)
+            if "masks" in copied_fields:
+                # don't care about masks, since they will never be used all all
+                pass
+            if "keypoints" in copied_fields:
+                # make psudo kps
+                keypoints = torch.zeros((len(proposal), 3),
+                                        device=device,
+                                        dtype=torch.float32)
+                matched_kps = PersonKeypoints(keypoints, proposal.size)
+                matched_targets.add_field("keypoints", matched_kps)
+        matched_targets.add_field("matched_idxs", matched_idxs)
+        return matched_targets
