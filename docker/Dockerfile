@@ -29,7 +29,7 @@ ENV PATH=$CONDA_PREFIX/bin:$PATH
 ENV CONDA_AUTO_UPDATE_CONDA=false
 
 RUN conda install -y ipython
-RUN pip install ninja yacs cython matplotlib opencv-python tqdm
+RUN pip install requests ninja yacs cython matplotlib opencv-python tqdm
 
 # Install PyTorch 1.0 Nightly
 ARG CUDA
@@ -45,6 +45,11 @@ RUN git clone https://github.com/pytorch/vision.git \
 RUN git clone https://github.com/cocodataset/cocoapi.git \
  && cd cocoapi/PythonAPI \
  && python setup.py build_ext install
+
+# install apex
+RUN git clone https://github.com/NVIDIA/apex.git \
+ && cd apex \
+ && python setup.py install --cuda_ext --cpp_ext
 
 # install PyTorch Detection
 ARG FORCE_CUDA="1"

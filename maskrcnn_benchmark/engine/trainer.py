@@ -1,14 +1,19 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import datetime
 import logging
+import os
 import time
 
 import torch
 import torch.distributed as dist
+from tqdm import tqdm
 
-from maskrcnn_benchmark.utils.comm import get_world_size
+from maskrcnn_benchmark.data import make_data_loader
+from maskrcnn_benchmark.utils.comm import get_world_size, synchronize
 from maskrcnn_benchmark.utils.metric_logger import MetricLogger
+from maskrcnn_benchmark.engine.inference import inference
 
+from apex import amp
 
 def reduce_loss_dict(loss_dict):
     """
@@ -36,13 +41,16 @@ def reduce_loss_dict(loss_dict):
 
 
 def do_train(
+    cfg,
     model,
     data_loader,
+    data_loader_val,
     optimizer,
     scheduler,
     checkpointer,
     device,
     checkpoint_period,
+    test_period,
     arguments,
 ):
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
@@ -53,12 +61,22 @@ def do_train(
     model.train()
     start_training_time = time.time()
     end = time.time()
+
+    iou_types = ("bbox",)
+    if cfg.MODEL.MASK_ON:
+        iou_types = iou_types + ("segm",)
+    if cfg.MODEL.KEYPOINT_ON:
+        iou_types = iou_types + ("keypoints",)
+    dataset_names = cfg.DATASETS.TEST
+
     for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
+        
+        if any(len(target) < 1 for target in targets):
+            logger.error(f"Iteration={iteration + 1} || Image Ids used for training {_} || targets Length={[len(target) for target in targets]}" )
+            continue
         data_time = time.time() - end
         iteration = iteration + 1
         arguments["iteration"] = iteration
-
-        scheduler.step()
 
         images = images.to(device)
         targets = [target.to(device) for target in targets]
@@ -73,8 +91,12 @@ def do_train(
         meters.update(loss=losses_reduced, **loss_dict_reduced)
 
         optimizer.zero_grad()
-        losses.backward()
+        # Note: If mixed precision is not used, this ends up doing nothing
+        # Otherwise apply loss scaling for mixed-precision recipe
+        with amp.scale_loss(losses, optimizer) as scaled_losses:
+            scaled_losses.backward()
         optimizer.step()
+        scheduler.step()
 
         batch_time = time.time() - end
         end = time.time()
@@ -103,6 +125,53 @@ def do_train(
             )
         if iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
+        if data_loader_val is not None and test_period > 0 and iteration % test_period == 0:
+            meters_val = MetricLogger(delimiter="  ")
+            synchronize()
+            _ = inference(  # The result can be used for additional logging, e. g. for TensorBoard
+                model,
+                # The method changes the segmentation mask format in a data loader,
+                # so every time a new data loader is created:
+                make_data_loader(cfg, is_train=False, is_distributed=(get_world_size() > 1), is_for_period=True),
+                dataset_name="[Validation]",
+                iou_types=iou_types,
+                box_only=False if cfg.MODEL.RETINANET_ON else cfg.MODEL.RPN_ONLY,
+                device=cfg.MODEL.DEVICE,
+                expected_results=cfg.TEST.EXPECTED_RESULTS,
+                expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
+                output_folder=None,
+            )
+            synchronize()
+            model.train()
+            with torch.no_grad():
+                # Should be one image for each GPU:
+                for iteration_val, (images_val, targets_val, _) in enumerate(tqdm(data_loader_val)):
+                    images_val = images_val.to(device)
+                    targets_val = [target.to(device) for target in targets_val]
+                    loss_dict = model(images_val, targets_val)
+                    losses = sum(loss for loss in loss_dict.values())
+                    loss_dict_reduced = reduce_loss_dict(loss_dict)
+                    losses_reduced = sum(loss for loss in loss_dict_reduced.values())
+                    meters_val.update(loss=losses_reduced, **loss_dict_reduced)
+            synchronize()
+            logger.info(
+                meters_val.delimiter.join(
+                    [
+                        "[Validation]: ",
+                        "eta: {eta}",
+                        "iter: {iter}",
+                        "{meters}",
+                        "lr: {lr:.6f}",
+                        "max mem: {memory:.0f}",
+                    ]
+                ).format(
+                    eta=eta_string,
+                    iter=iteration,
+                    meters=str(meters_val),
+                    lr=optimizer.param_groups[0]["lr"],
+                    memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
+                )
+            )
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)
 

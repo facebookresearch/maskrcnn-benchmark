@@ -92,14 +92,14 @@ class RPNLossComputation(object):
     def __call__(self, anchors, objectness, box_regression, targets):
         """
         Arguments:
-            anchors (list[BoxList])
+            anchors (list[list[BoxList]])
             objectness (list[Tensor])
             box_regression (list[Tensor])
             targets (list[BoxList])
 
         Returns:
             objectness_loss (Tensor)
-            box_loss (Tensor
+            box_loss (Tensor)
         """
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]
         labels, regression_targets = self.prepare_targets(anchors, targets)

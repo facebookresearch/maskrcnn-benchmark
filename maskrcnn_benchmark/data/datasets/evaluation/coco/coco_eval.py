@@ -364,8 +364,14 @@ class COCOResults(object):
             res[metric] = s[idx]
 
     def __repr__(self):
-        # TODO make it pretty
-        return repr(self.results)
+        results = '\n'
+        for task, metrics in self.results.items():
+            results += 'Task: {}\n'.format(task)
+            metric_names = metrics.keys()
+            metric_vals = ['{:.4f}'.format(v) for v in metrics.values()]
+            results += (', '.join(metric_names) + '\n')
+            results += (', '.join(metric_vals) + '\n')
+        return results
 
 
 def check_expected_results(results, expected_results, sigma_tol):
