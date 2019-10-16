@@ -326,7 +326,7 @@ class COCODemo(object):
         colors = self.compute_colors_for_labels(labels).tolist()
 
         for mask, color in zip(masks, colors):
-            thresh = mask[0, :, :, None]
+            thresh = mask[0, :, :, None].astype(np.uint8)
             contours, hierarchy = cv2_util.findContours(
                 thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
             )

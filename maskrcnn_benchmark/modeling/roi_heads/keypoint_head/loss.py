@@ -154,7 +154,7 @@ class KeypointRCNNLossComputation(object):
             valid.append(valid_per_image.view(-1))
 
         keypoint_targets = cat(heatmaps, dim=0)
-        valid = cat(valid, dim=0).to(dtype=torch.uint8)
+        valid = cat(valid, dim=0).to(dtype=torch.bool)
         valid = torch.nonzero(valid).squeeze(1)
 
         # torch.mean (in binary_cross_entropy_with_logits) does'nt
