@@ -8,12 +8,16 @@ from maskrcnn_benchmark import _C
 # TODO: Use JIT to replace CUDA implementation in the future.
 class _SigmoidFocalLoss(Function):
     @staticmethod
-    def forward(ctx, logits, targets, gamma, alpha):
+    def forward(ctx, logits, targets, gamma, alpha, dtype):
+        if dtype == 'float16':     
+            logits = logits.float()
         ctx.save_for_backward(logits, targets)
         num_classes = logits.shape[1]
         ctx.num_classes = num_classes
         ctx.gamma = gamma
         ctx.alpha = alpha
+        ctx.dtype = dtype
+        
 
         losses = _C.sigmoid_focalloss_forward(
             logits, targets, num_classes, gamma, alpha
@@ -31,6 +35,9 @@ class _SigmoidFocalLoss(Function):
         d_logits = _C.sigmoid_focalloss_backward(
             logits, targets, d_loss, num_classes, gamma, alpha
         )
+        if ctx.dtype == 'float16':
+            d_logits = d_logits.half()
+
         return d_logits, None, None, None, None
 
 
@@ -39,6 +46,8 @@ sigmoid_focal_loss_cuda = _SigmoidFocalLoss.apply
 
 def sigmoid_focal_loss_cpu(logits, targets, gamma, alpha):
     num_classes = logits.shape[1]
+    gamma = gamma[0]
+    alpha = alpha[0]
     dtype = targets.dtype
     device = targets.device
     class_range = torch.arange(1, num_classes+1, dtype=dtype, device=device).unsqueeze(0)
@@ -51,10 +60,11 @@ def sigmoid_focal_loss_cpu(logits, targets, gamma, alpha):
 
 
 class SigmoidFocalLoss(nn.Module):
-    def __init__(self, gamma, alpha):
+    def __init__(self, gamma, alpha, dtype):
         super(SigmoidFocalLoss, self).__init__()
         self.gamma = gamma
         self.alpha = alpha
+        self.dtype = dtype
 
     def forward(self, logits, targets):
         device = logits.device
@@ -63,7 +73,7 @@ class SigmoidFocalLoss(nn.Module):
         else:
             loss_func = sigmoid_focal_loss_cpu
 
-        loss = loss_func(logits, targets, self.gamma, self.alpha)
+        loss = loss_func(logits, targets, self.gamma, self.alpha,self.dtype)
         return loss.sum()
 
     def __repr__(self):
