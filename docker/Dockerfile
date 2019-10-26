@@ -33,13 +33,8 @@ RUN pip install requests ninja yacs cython matplotlib opencv-python tqdm
 
 # Install PyTorch 1.0 Nightly
 ARG CUDA
-RUN conda install pytorch-nightly cudatoolkit=${CUDA} -c pytorch \
+RUN conda install pytorch-nightly torchvision cudatoolkit=${CUDA} -c pytorch \
  && conda clean -ya
-
-# Install TorchVision master
-RUN git clone https://github.com/pytorch/vision.git \
- && cd vision \
- && python setup.py install
 
 # install pycocotools
 RUN git clone https://github.com/cocodataset/cocoapi.git \
