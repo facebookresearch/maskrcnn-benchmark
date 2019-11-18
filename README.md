@@ -268,7 +268,10 @@ note = {Accessed: [Insert date here]}
 - [FCOS: Fully Convolutional One-Stage Object Detection](https://arxiv.org/abs/1904.01355).
   Zhi Tian, Chunhua Shen, Hao Chen and Tong He.
   Tech report, arXiv,1904.01355. [[code](https://github.com/tianzhi0549/FCOS)]
-
+- [MULAN: Multitask Universal Lesion Analysis Network for Joint Lesion Detection, Tagging, and Segmentation](https://arxiv.org/abs/1908.04373).
+  Ke Yan, Youbao Tang, Yifan Peng, Veit Sandfort, Mohammadhadi Bagheri, Zhiyong Lu, and Ronald M. Summers.
+  MICCAI 2019. [[code](https://github.com/rsummers11/CADLab/tree/master/MULAN_universal_lesion_analysis)]
+  
 ## License
 
 maskrcnn-benchmark is released under the MIT license. See [LICENSE](LICENSE) for additional details.
