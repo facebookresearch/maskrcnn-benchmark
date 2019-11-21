@@ -63,6 +63,7 @@ _C.INPUT.HUE = 0.0
 # Flips
 _C.INPUT.HORIZONTAL_FLIP_PROB_TRAIN = 0.5
 _C.INPUT.VERTICAL_FLIP_PROB_TRAIN = 0.0
+_C.INPUT.ROTATE90_PROB_TRAIN = 0.0
 
 # -----------------------------------------------------------------------------
 # Dataset
