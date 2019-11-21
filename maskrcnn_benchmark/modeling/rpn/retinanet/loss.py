@@ -93,7 +93,8 @@ def make_retinanet_loss_evaluator(cfg, box_coder):
     )
     sigmoid_focal_loss = SigmoidFocalLoss(
         cfg.MODEL.RETINANET.LOSS_GAMMA,
-        cfg.MODEL.RETINANET.LOSS_ALPHA
+        cfg.MODEL.RETINANET.LOSS_ALPHA,
+        cfg.DTYPE
     )
 
     loss_evaluator = RetinaNetLossComputation(
