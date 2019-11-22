@@ -67,7 +67,7 @@ class RetinaNetLossComputation(RPNLossComputation):
             box_regression[pos_inds],
             regression_targets[pos_inds],
             beta=self.bbox_reg_beta,
-            size_average=False,
+            reduction='sum',
         ) / (max(1, pos_inds.numel() * self.regress_norm))
 
         labels = labels.int()
