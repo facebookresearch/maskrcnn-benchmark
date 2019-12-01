@@ -92,7 +92,7 @@ def make_batch_data_sampler(
         aspect_ratios = _compute_aspect_ratios(dataset)
         group_ids = _quantize(aspect_ratios, aspect_grouping)
         batch_sampler = samplers.GroupedBatchSampler(
-            sampler, group_ids, images_per_batch, drop_uneven=False
+            sampler, group_ids, images_per_batch
         )
     else:
         batch_sampler = torch.utils.data.sampler.BatchSampler(
