@@ -42,6 +42,12 @@ def main():
         help="Number of heatmaps per dimension to show",
     )
     parser.add_argument(
+        "--cam-index",
+        type=int,
+        default=0,
+        help="Index of the video device used by OpenCV to capture",
+    )
+    parser.add_argument(
         "opts",
         help="Modify model config options using the command-line",
         default=None,
@@ -64,7 +70,7 @@ def main():
         min_image_size=args.min_image_size,
     )
 
-    cam = cv2.VideoCapture(0)
+    cam = cv2.VideoCapture(args.cam_index)
     while True:
         start_time = time.time()
         ret_val, img = cam.read()
