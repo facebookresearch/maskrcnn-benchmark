@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
+import numpy as np
 
 # transpose
 FLIP_LEFT_RIGHT = 0
@@ -162,6 +163,37 @@ class BoxList(object):
             if not isinstance(v, torch.Tensor):
                 v = v.transpose(method)
             bbox.add_field(k, v)
+        return bbox.convert(self.mode)
+
+    def rotate(self, matrix):
+        """
+        Returns a rotated copy of this bounding box
+
+        :param matrix: Rotation matrix from image rotation.
+        """
+        bbox = self.bbox.numpy()
+        num_box = bbox.shape[0]
+        newbox = np.zeros((num_box, 8))
+        newbox[:, [0, 1, 2, 3, 4, 5, 6, 7]] = bbox[:, [0, 1,2, 1, 0, 3, 2, 3]]
+        a = matrix[:, :2]
+        b = matrix[:, 2:]
+        b = np.reshape(b, newshape=(1, 2))
+        a = np.transpose(a)
+        newbox = np.reshape(newbox, newshape=(num_box*4, 2))
+        newbox = np.dot(newbox, a) + b
+        newbox = np.reshape(newbox, newshape=(num_box, 8))
+        bbox = newbox.astype(int)
+        allx = bbox[:,[0, 2, 4, 6]]
+        ally = bbox[:,[1, 3, 5, 7]]
+        new_box = np.column_stack((allx.min(axis=1), ally.min(axis=1), allx.max(axis=1), ally.max(axis=1)))
+        new_box = torch.from_numpy(new_box)
+        bbox = BoxList(new_box, self.size, mode="xyxy")
+        # bbox._copy_extra_fields(self)
+        for k, v in self.extra_fields.items():
+            if not isinstance(v, torch.Tensor):
+                v = v.rotate(matrix)
+            bbox.add_field(k, v)
+
         return bbox.convert(self.mode)
 
     def crop(self, box):

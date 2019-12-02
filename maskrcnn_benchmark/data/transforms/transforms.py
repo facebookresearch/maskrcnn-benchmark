@@ -1,6 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import random
 
+from PIL import Image
+import numpy as np
+import cv2
 import torch
 import torchvision
 from torchvision.transforms import functional as F
@@ -83,6 +86,58 @@ class RandomVerticalFlip(object):
             target = target.transpose(1)
         return image, target
 
+class HorizontalLinearLight(object):
+    def __init__(self, prob=0.5, lightsacle=50):
+        self.prob = prob
+        self.lightsacle = lightsacle
+
+    def __call__(self, image, target):
+        if random.random() < self.prob:
+            image = np.asarray(image.copy())
+            h, w, c = image.shape
+            x = np.linspace(-1*self.lightsacle, self.lightsacle, w)
+            weight = np.expand_dims(x, axis=1)
+            weight = weight.repeat(c, axis=1)
+            image = image + weight
+            image[image < 0] = 0
+            image[image > 255] = 255
+            image = Image.fromarray(image.astype(np.uint8))
+        return image, target
+
+class VerticalLinearLight(object):
+    def __init__(self, prob=0.5, lightsacle=50):
+        self.prob = prob
+        self.lightsacle = lightsacle
+
+    def __call__(self, image, target):
+        if random.random() < self.prob:
+            image = np.asarray(image.copy())
+            h, w, c = image.shape
+            x = np.linspace(-1*self.lightsacle, self.lightsacle, h)
+            weight = np.expand_dims(x, axis=1)
+            weight = weight.repeat(c, axis=1)
+            weight = np.expand_dims(weight, axis=1)
+            image = image + weight
+            image[image < 0] = 0
+            image[image > 255] = 255
+            image = Image.fromarray(image.astype(np.uint8))
+        return image, target
+
+class SmallAngleRotate(object):
+    def __init__(self,angle=10):
+        self.angle = random.randint(-1*angle, angle)
+
+    def __call__(self, image, target):
+        image = np.asarray(image.copy())
+        h, w, _ = image.shape
+        cx = w / 2
+        cy = h / 2
+        M = cv2.getRotationMatrix2D((cx, cy), self.angle, 1.0)
+        image = cv2.warpAffine(image, M, (w, h))
+        target = target.rotate(M)
+        image = Image.fromarray(image)
+        return image, target
+
 class ColorJitter(object):
     def __init__(self,
                  brightness=None,
@@ -119,3 +174,4 @@ class Normalize(object):
         if target is None:
             return image
         return image, target
+

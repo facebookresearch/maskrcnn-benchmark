@@ -115,6 +115,15 @@ class BinaryMaskList(object):
         flipped_masks = self.masks.flip(dim)
         return BinaryMaskList(flipped_masks, self.size)
 
+    def rotate(self, matirx):
+        masks = self.masks.numpy().astype(np.uint8)
+        rotated_masks = np.zeros_like(masks)
+        for i in range(masks.shape[0]):
+            mask = masks[i]
+            mask = cv2.warpAffine(mask, matirx, (self.size[0], self.size[1]))
+            rotated_masks[i] = torch.from_numpy(mask).float()
+        return BinaryMaskList(rotated_masks, self.size)
+
     def crop(self, box):
         assert isinstance(box, (list, tuple, torch.Tensor)), str(type(box))
         # box is assumed to be xyxy
@@ -324,6 +333,24 @@ class PolygonInstance(object):
 
         return PolygonInstance(scaled_polygons, size=size)
 
+    def rotate(self, matirx):
+        rotated_polygons = []
+
+        a = matirx[:, :2]
+        b = matirx[:, 2:]
+        b = np.reshape(b, newshape=(1, 2))
+        a = np.transpose(a)
+
+        for poly in self.polygons:
+            p = poly.numpy()
+            p = np.reshape(p, newshape=(-1, 2))
+            p = np.dot(p, a) + b
+            p = p.flatten()
+            p = torch.from_numpy(p.astype(int)).float()
+            rotated_polygons.append(p)
+
+        return PolygonInstance(rotated_polygons, size=self.size)
+
     def convert_to_binarymask(self):
         width, height = self.size
         # formatting for COCO PythonAPI
@@ -431,6 +458,13 @@ class PolygonList(object):
         resized_size = size
         return PolygonList(resized_polygons, resized_size)
 
+    def rotate(self, matrix):
+        rotated_polygons = []
+        for polygon in self.polygons:
+            rotated_polygons.append(polygon.rotate(matrix))
+
+        return PolygonList(rotated_polygons, size=self.size)
+
     def to(self, *args, **kwargs):
         return self
 
@@ -524,6 +558,12 @@ class SegmentationMask(object):
         resized_instances = self.instances.resize(size)
         resized_size = size
         return SegmentationMask(resized_instances, resized_size, self.mode)
+
+    def rotate(self, matrix):
+        if self.mode == "mask":
+            raise NotImplementedError("Mask rotate is not tested yet")
+        rotated_polygons = self.instances.rotate(matrix)
+        return SegmentationMask(rotated_polygons, self.size, self.mode)
 
     def to(self, *args, **kwargs):
         return self
