@@ -115,12 +115,12 @@ class BinaryMaskList(object):
         flipped_masks = self.masks.flip(dim)
         return BinaryMaskList(flipped_masks, self.size)
 
-    def rotate(self, matirx):
+    def rotate(self, matrix):
         masks = self.masks.numpy().astype(np.uint8)
         rotated_masks = np.zeros_like(masks)
         for i in range(masks.shape[0]):
             mask = masks[i]
-            mask = cv2.warpAffine(mask, matirx, (self.size[0], self.size[1]))
+            mask = cv2.warpAffine(mask, matrix, (self.size[0], self.size[1]))
             rotated_masks[i] = torch.from_numpy(mask).float()
         return BinaryMaskList(rotated_masks, self.size)
 
@@ -333,11 +333,11 @@ class PolygonInstance(object):
 
         return PolygonInstance(scaled_polygons, size=size)
 
-    def rotate(self, matirx):
+    def rotate(self, matrix):
         rotated_polygons = []
 
-        a = matirx[:, :2]
-        b = matirx[:, 2:]
+        a = matrix[:, :2]
+        b = matrix[:, 2:]
         b = np.reshape(b, newshape=(1, 2))
         a = np.transpose(a)
 
