@@ -1,5 +1,2 @@
-ninja
 yacs
-cython
-matplotlib
-tqdm
+tensorboardX

@@ -14,6 +14,8 @@ from maskrcnn_benchmark.utils.metric_logger import MetricLogger
 from maskrcnn_benchmark.engine.inference import inference
 
 from apex import amp
+import tensorboardX
+
 
 def reduce_loss_dict(loss_dict):
     """
@@ -41,21 +43,22 @@ def reduce_loss_dict(loss_dict):
 
 
 def do_train(
-    cfg,
-    model,
-    data_loader,
-    data_loader_val,
-    optimizer,
-    scheduler,
-    checkpointer,
-    device,
-    checkpoint_period,
-    test_period,
-    arguments,
+        cfg,
+        model,
+        data_loader,
+        data_loader_val,
+        optimizer,
+        scheduler,
+        checkpointer,
+        device,
+        checkpoint_period,
+        test_period,
+        arguments,
 ):
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
     logger.info("Start training")
     meters = MetricLogger(delimiter="  ")
+    summary_writter = tensorboardX.SummaryWriter(log_dir=cfg.OUTPUT_DIR)
     max_iter = len(data_loader)
     start_iter = arguments["iteration"]
     model.train()
@@ -70,9 +73,11 @@ def do_train(
     dataset_names = cfg.DATASETS.TEST
 
     for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
-        
+
         if any(len(target) < 1 for target in targets):
-            logger.error(f"Iteration={iteration + 1} || Image Ids used for training {_} || targets Length={[len(target) for target in targets]}" )
+            logger.error(
+                f"Iteration={iteration + 1} || Image Ids used for training {_} || targets Length={[len(target) for
+                                                                                                   target in targets]}")
             continue
         data_time = time.time() - end
         iteration = iteration + 1
@@ -123,6 +128,10 @@ def do_train(
                     memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
                 )
             )
+            summary_writter.add_scalar('losses/total_loss', losses_reduced, global_step=iteration)
+            for loss_name, loss_item in loss_dict_reduced.items():
+                summary_writter.add_scalar('losses/{}'.format(loss_name), loss_item, global_step=iteration)
+            summary_writter.add_scalar('lr', optimizer.param_groups[0]['lr'], global_step=iteration)
         if iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
         if data_loader_val is not None and test_period > 0 and iteration % test_period == 0:
@@ -172,6 +181,8 @@ def do_train(
                     memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
                 )
             )
+            for loss_name, loss_item in loss_dict_reduced.items():
+                summary_writter.add_scalar('Val_losses/{}'.format(loss_name), loss_item, global_step=iteration)
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)
 
