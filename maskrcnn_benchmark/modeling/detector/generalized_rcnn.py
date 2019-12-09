@@ -12,7 +12,6 @@ from ..backbone import build_backbone
 from ..rpn.rpn import build_rpn
 from ..roi_heads.roi_heads import build_roi_heads
 
-
 class GeneralizedRCNN(nn.Module):
     """
     Main class for Generalized R-CNN. Currently supports boxes and masks.

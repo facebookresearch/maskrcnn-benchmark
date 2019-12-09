@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from maskrcnn_benchmark.modeling import registry
+# from maskrcnn_benchmark.modeling import registry
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 from maskrcnn_benchmark.modeling.rpn.retinanet.retinanet import build_retinanet
 from .loss import make_rpn_loss_evaluator
@@ -70,7 +70,7 @@ class RPNHeadFeatureSingleConv(nn.Module):
         return x
 
 
-@registry.RPN_HEADS.register("SingleConvRPNHead")
+# @registry.RPN_HEADS.register("SingleConvRPNHead")
 class RPNHead(nn.Module):
     """
     Adds a simple RPN Head with classification and regression heads
@@ -116,10 +116,11 @@ class RPNModule(torch.nn.Module):
         super(RPNModule, self).__init__()
 
         self.cfg = cfg.clone()
-
+        RPN_HEADS={'SingleConvRPNHead':RPNHead}
         anchor_generator = make_anchor_generator(cfg)
-
-        rpn_head = registry.RPN_HEADS[cfg.MODEL.RPN.RPN_HEAD]
+        print(cfg.MODEL.RPN.RPN_HEAD)
+#         rpn_head = registry.RPN_HEADS[cfg.MODEL.RPN.RPN_HEAD]
+        rpn_head=RPN_HEADS[cfg.MODEL.RPN.RPN_HEAD]
         head = rpn_head(
             cfg, in_channels, anchor_generator.num_anchors_per_location()[0]
         )

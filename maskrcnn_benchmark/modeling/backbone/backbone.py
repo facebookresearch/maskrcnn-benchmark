@@ -1,18 +1,16 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 from collections import OrderedDict
-
 from torch import nn
-
-from maskrcnn_benchmark.modeling import registry
+# from maskrcnn_benchmark.modeling import registry
 from maskrcnn_benchmark.modeling.make_layers import conv_with_kaiming_uniform
 from . import fpn as fpn_module
 from . import resnet
 
 
-@registry.BACKBONES.register("R-50-C4")
-@registry.BACKBONES.register("R-50-C5")
-@registry.BACKBONES.register("R-101-C4")
-@registry.BACKBONES.register("R-101-C5")
+# @registry.BACKBONES.register("R-50-C4")
+# @registry.BACKBONES.register("R-50-C5")
+# @registry.BACKBONES.register("R-101-C4")
+# @registry.BACKBONES.register("R-101-C5")
 def build_resnet_backbone(cfg):
     body = resnet.ResNet(cfg)
     model = nn.Sequential(OrderedDict([("body", body)]))
@@ -20,9 +18,9 @@ def build_resnet_backbone(cfg):
     return model
 
 
-@registry.BACKBONES.register("R-50-FPN")
-@registry.BACKBONES.register("R-101-FPN")
-@registry.BACKBONES.register("R-152-FPN")
+# @registry.BACKBONES.register("R-50-FPN")
+# @registry.BACKBONES.register("R-101-FPN")
+# @registry.BACKBONES.register("R-152-FPN")
 def build_resnet_fpn_backbone(cfg):
     body = resnet.ResNet(cfg)
     in_channels_stage2 = cfg.MODEL.RESNETS.RES2_OUT_CHANNELS
@@ -45,8 +43,8 @@ def build_resnet_fpn_backbone(cfg):
     return model
 
 
-@registry.BACKBONES.register("R-50-FPN-RETINANET")
-@registry.BACKBONES.register("R-101-FPN-RETINANET")
+# @registry.BACKBONES.register("R-50-FPN-RETINANET")
+# @registry.BACKBONES.register("R-101-FPN-RETINANET")
 def build_resnet_fpn_p3p7_backbone(cfg):
     body = resnet.ResNet(cfg)
     in_channels_stage2 = cfg.MODEL.RESNETS.RES2_OUT_CHANNELS
@@ -71,9 +69,18 @@ def build_resnet_fpn_p3p7_backbone(cfg):
     return model
 
 
+# def build_backbone(cfg):
+#     assert cfg.MODEL.BACKBONE.CONV_BODY in registry.BACKBONES, \
+#         "cfg.MODEL.BACKBONE.CONV_BODY: {} are not registered in registry".format(
+#             cfg.MODEL.BACKBONE.CONV_BODY
+#         )
+#     return registry.BACKBONES[cfg.MODEL.BACKBONE.CONV_BODY](cfg)
+
+#不用registry机制
 def build_backbone(cfg):
-    assert cfg.MODEL.BACKBONE.CONV_BODY in registry.BACKBONES, \
-        "cfg.MODEL.BACKBONE.CONV_BODY: {} are not registered in registry".format(
-            cfg.MODEL.BACKBONE.CONV_BODY
-        )
-    return registry.BACKBONES[cfg.MODEL.BACKBONE.CONV_BODY](cfg)
+    BACKBONE={'R-50-C4':build_resnet_backbone,'R-50-C5':build_resnet_backbone,
+              'R-101-C4':build_resnet_backbone,'R-101-C5':build_resnet_backbone,
+              'R-50-FPN':build_resnet_fpn_backbone,'R-101-FPN':build_resnet_fpn_backbone,
+             'R-152-FPN':build_resnet_fpn_backbone,
+             'R-50-FPN-RETINANET':build_resnet_fpn_p3p7_backbone,'R-101-FPN-RETINANET':build_resnet_fpn_p3p7_backbone}
+    return BACKBONE[cfg.MODEL.BACKBONE.CONV_BODY](cfg)

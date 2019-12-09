@@ -26,7 +26,7 @@ from maskrcnn_benchmark.layers import FrozenBatchNorm2d
 from maskrcnn_benchmark.layers import Conv2d
 from maskrcnn_benchmark.layers import DFConv2d
 from maskrcnn_benchmark.modeling.make_layers import group_norm
-from maskrcnn_benchmark.utils.registry import Registry
+# from maskrcnn_benchmark.utils.registry import Registry
 
 
 # ResNet stage specification
@@ -428,17 +428,37 @@ class StemWithGN(BaseStem):
         super(StemWithGN, self).__init__(cfg, norm_func=group_norm)
 
 
-_TRANSFORMATION_MODULES = Registry({
+# _TRANSFORMATION_MODULES = Registry({
+#     "BottleneckWithFixedBatchNorm": BottleneckWithFixedBatchNorm,
+#     "BottleneckWithGN": BottleneckWithGN,
+# })
+_TRANSFORMATION_MODULES={
     "BottleneckWithFixedBatchNorm": BottleneckWithFixedBatchNorm,
     "BottleneckWithGN": BottleneckWithGN,
-})
+}
+# _STEM_MODULES = Registry({
+#     "StemWithFixedBatchNorm": StemWithFixedBatchNorm,
+#     "StemWithGN": StemWithGN,
+# })
 
-_STEM_MODULES = Registry({
+# _STAGE_SPECS = Registry({
+#     "R-50-C4": ResNet50StagesTo4,
+#     "R-50-C5": ResNet50StagesTo5,
+#     "R-101-C4": ResNet101StagesTo4,
+#     "R-101-C5": ResNet101StagesTo5,
+#     "R-50-FPN": ResNet50FPNStagesTo5,
+#     "R-50-FPN-RETINANET": ResNet50FPNStagesTo5,
+#     "R-101-FPN": ResNet101FPNStagesTo5,
+#     "R-101-FPN-RETINANET": ResNet101FPNStagesTo5,
+#     "R-152-FPN": ResNet152FPNStagesTo5,
+# })
+
+_STEM_MODULES = {
     "StemWithFixedBatchNorm": StemWithFixedBatchNorm,
     "StemWithGN": StemWithGN,
-})
+}
 
-_STAGE_SPECS = Registry({
+_STAGE_SPECS = {
     "R-50-C4": ResNet50StagesTo4,
     "R-50-C5": ResNet50StagesTo5,
     "R-101-C4": ResNet101StagesTo4,
@@ -448,4 +468,4 @@ _STAGE_SPECS = Registry({
     "R-101-FPN": ResNet101FPNStagesTo5,
     "R-101-FPN-RETINANET": ResNet101FPNStagesTo5,
     "R-152-FPN": ResNet152FPNStagesTo5,
-})
+}

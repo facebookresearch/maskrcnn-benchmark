@@ -10,7 +10,7 @@ from . import (
     fbnet_modeldef as modeldef,
 )
 import torch.nn as nn
-from maskrcnn_benchmark.modeling import registry
+# from maskrcnn_benchmark.modeling import registry
 from maskrcnn_benchmark.modeling.rpn import rpn
 from maskrcnn_benchmark.modeling import poolers
 
@@ -93,7 +93,7 @@ class FBNetTrunk(nn.Module):
         return ret
 
 
-@registry.BACKBONES.register("FBNet")
+# @registry.BACKBONES.register("FBNet")
 def add_conv_body(cfg, dim_in=3):
     builder, arch_def = create_builder(cfg)
 
@@ -140,7 +140,7 @@ class FBNetRPNHead(nn.Module):
         return x
 
 
-@registry.RPN_HEADS.register("FBNet.rpn_head")
+# @registry.RPN_HEADS.register("FBNet.rpn_head")
 def add_rpn_head(cfg, in_channels, num_anchors):
     builder, model_arch = create_builder(cfg)
     builder.last_depth = in_channels
@@ -207,7 +207,7 @@ class FBNetROIHead(nn.Module):
         return x
 
 
-@registry.ROI_BOX_FEATURE_EXTRACTORS.register("FBNet.roi_head")
+# @registry.ROI_BOX_FEATURE_EXTRACTORS.register("FBNet.roi_head")
 def add_roi_head(cfg, in_channels):
     builder, model_arch = create_builder(cfg)
     builder.last_depth = in_channels
@@ -222,7 +222,7 @@ def add_roi_head(cfg, in_channels):
     )
 
 
-@registry.ROI_KEYPOINT_FEATURE_EXTRACTORS.register("FBNet.roi_head_keypoints")
+# @registry.ROI_KEYPOINT_FEATURE_EXTRACTORS.register("FBNet.roi_head_keypoints")
 def add_roi_head_keypoints(cfg, in_channels):
     builder, model_arch = create_builder(cfg)
     builder.last_depth = in_channels
@@ -237,7 +237,7 @@ def add_roi_head_keypoints(cfg, in_channels):
     )
 
 
-@registry.ROI_MASK_FEATURE_EXTRACTORS.register("FBNet.roi_head_mask")
+# @registry.ROI_MASK_FEATURE_EXTRACTORS.register("FBNet.roi_head_mask")
 def add_roi_head_mask(cfg, in_channels):
     builder, model_arch = create_builder(cfg)
     builder.last_depth = in_channels

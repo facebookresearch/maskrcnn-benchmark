@@ -3,14 +3,14 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from maskrcnn_benchmark.modeling import registry
+# from maskrcnn_benchmark.modeling import registry
 from maskrcnn_benchmark.modeling.backbone import resnet
 from maskrcnn_benchmark.modeling.poolers import Pooler
 from maskrcnn_benchmark.modeling.make_layers import group_norm
 from maskrcnn_benchmark.modeling.make_layers import make_fc
 
 
-@registry.ROI_BOX_FEATURE_EXTRACTORS.register("ResNet50Conv5ROIFeatureExtractor")
+# @registry.ROI_BOX_FEATURE_EXTRACTORS.register("ResNet50Conv5ROIFeatureExtractor")
 class ResNet50Conv5ROIFeatureExtractor(nn.Module):
     def __init__(self, config, in_channels):
         super(ResNet50Conv5ROIFeatureExtractor, self).__init__()
@@ -46,7 +46,7 @@ class ResNet50Conv5ROIFeatureExtractor(nn.Module):
         return x
 
 
-@registry.ROI_BOX_FEATURE_EXTRACTORS.register("FPN2MLPFeatureExtractor")
+# @registry.ROI_BOX_FEATURE_EXTRACTORS.register("FPN2MLPFeatureExtractor")
 class FPN2MLPFeatureExtractor(nn.Module):
     """
     Heads for FPN for classification
@@ -81,7 +81,7 @@ class FPN2MLPFeatureExtractor(nn.Module):
         return x
 
 
-@registry.ROI_BOX_FEATURE_EXTRACTORS.register("FPNXconv1fcFeatureExtractor")
+# @registry.ROI_BOX_FEATURE_EXTRACTORS.register("FPNXconv1fcFeatureExtractor")
 class FPNXconv1fcFeatureExtractor(nn.Module):
     """
     Heads for FPN for classification
@@ -145,7 +145,8 @@ class FPNXconv1fcFeatureExtractor(nn.Module):
 
 
 def make_roi_box_feature_extractor(cfg, in_channels):
-    func = registry.ROI_BOX_FEATURE_EXTRACTORS[
+    roi_box_feature_extractors={'FPN2MLPFeatureExtractor':FPN2MLPFeatureExtractor,'ResNet50Conv5ROIFeatureExtractor':ResNet50Conv5ROIFeatureExtractor,'FPNXconv1fcFeatureExtractor':FPNXconv1fcFeatureExtractor}
+    func = roi_box_feature_extractors[
         cfg.MODEL.ROI_BOX_HEAD.FEATURE_EXTRACTOR
     ]
     return func(cfg, in_channels)

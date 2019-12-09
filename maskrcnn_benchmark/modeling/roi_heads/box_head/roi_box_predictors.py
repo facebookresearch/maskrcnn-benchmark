@@ -1,9 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-from maskrcnn_benchmark.modeling import registry
+# from maskrcnn_benchmark.modeling import registry
 from torch import nn
 
 
-@registry.ROI_BOX_PREDICTOR.register("FastRCNNPredictor")
+# @registry.ROI_BOX_PREDICTOR.register("FastRCNNPredictor")
 class FastRCNNPredictor(nn.Module):
     def __init__(self, config, in_channels):
         super(FastRCNNPredictor, self).__init__()
@@ -31,7 +31,7 @@ class FastRCNNPredictor(nn.Module):
         return cls_logit, bbox_pred
 
 
-@registry.ROI_BOX_PREDICTOR.register("FPNPredictor")
+# @registry.ROI_BOX_PREDICTOR.register("FPNPredictor")
 class FPNPredictor(nn.Module):
     def __init__(self, cfg, in_channels):
         super(FPNPredictor, self).__init__()
@@ -58,5 +58,6 @@ class FPNPredictor(nn.Module):
 
 
 def make_roi_box_predictor(cfg, in_channels):
-    func = registry.ROI_BOX_PREDICTOR[cfg.MODEL.ROI_BOX_HEAD.PREDICTOR]
+    roi_box_predictor={'FastRCNNPredictor':FastRCNNPredictor,'FPNPredictor':FPNPredictor}
+    func = roi_box_predictor[cfg.MODEL.ROI_BOX_HEAD.PREDICTOR]
     return func(cfg, in_channels)
