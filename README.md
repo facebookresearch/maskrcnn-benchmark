@@ -274,7 +274,10 @@ note = {Accessed: [Insert date here]}
 - [Is Sampling Heuristics Necessary in Training Deep Object Detectors?](https://arxiv.org/abs/1909.04868)
   Joya Chen, Dong Liu, Tong Xu, Shilong Zhang, Shiwei Wu, Bin Luo, Xuezheng Peng, Enhong Chen.
   Tech report, arXiv,1909.04868. [[code](https://github.com/ChenJoya/sampling-free)]
-  
+- [CenterMask : Real-Time Anchor-Free Instance Segmentation](https://arxiv.org/abs/1911.06667)
+  Youngwan Lee and Jongyoul Park.
+  Tech report, arXiv,1911.06667. [[code](https://github.com/youngwanLEE/CenterMask)]
+
 ## License
 
 maskrcnn-benchmark is released under the MIT license. See [LICENSE](LICENSE) for additional details.
