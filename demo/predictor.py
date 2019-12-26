@@ -135,7 +135,7 @@ class COCODemo(object):
         show_mask_heatmaps=False,
         masks_per_dim=2,
         min_image_size=224,
-        weight_loading = None
+        weight_loading=None
     ):
         self.cfg = cfg.clone()
         self.model = build_detection_model(cfg)
