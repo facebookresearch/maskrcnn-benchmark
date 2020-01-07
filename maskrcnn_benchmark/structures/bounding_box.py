@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
+import numpy as np
 
 # transpose
 FLIP_LEFT_RIGHT = 0
@@ -25,7 +26,7 @@ class BoxList(object):
             )
         if bbox.size(-1) != 4:
             raise ValueError(
-                "last dimension of bbox should have a "
+                "last dimenion of bbox should have a "
                 "size of 4, got {}".format(bbox.size(-1))
             )
         if mode not in ("xyxy", "xywh"):
@@ -164,9 +165,31 @@ class BoxList(object):
             bbox.add_field(k, v)
         return bbox.convert(self.mode)
 
+    def rotate(self, matrix):
+        """
+        Returns a rotated copy of this bounding box
+
+        :param matrix: Rotation matrix caculated
+         according to certain degree by Opencv CV2::getRotationMatrix2D
+        """
+        bbox = BoxList(self.bbox, self.size, mode="xyxy")
+        # bbox._copy_extra_fields(self)
+        for k, v in self.extra_fields.items():
+            if not isinstance(v, torch.Tensor):
+                v = v.rotate(matrix)
+                newbox = []
+                for polygon in v.polygons:
+                    coods = polygon.polygons[0].numpy()
+                    allx = coods[[0, 2, 4, 6]]
+                    ally = coods[[1, 3, 5, 7]]
+                    newbox.append([allx.min(), ally.min(), allx.max(), ally.max()])
+                bbox.bbox = torch.from_numpy(np.asarray(newbox))
+            bbox.add_field(k, v)
+        return bbox.convert(self.mode)
+
     def crop(self, box):
         """
-        Crops a rectangular region from this bounding box. The box is a
+        Cropss a rectangular region from this bounding box. The box is a
         4-tuple defining the left, upper, right, and lower pixel
         coordinate.
         """
@@ -232,18 +255,15 @@ class BoxList(object):
             area = box[:, 2] * box[:, 3]
         else:
             raise RuntimeError("Should not be here")
-
+            
         return area
 
-    def copy_with_fields(self, fields, skip_missing=False):
+    def copy_with_fields(self, fields):
         bbox = BoxList(self.bbox, self.size, self.mode)
         if not isinstance(fields, (list, tuple)):
             fields = [fields]
         for field in fields:
-            if self.has_field(field):
-                bbox.add_field(field, self.get_field(field))
-            elif not skip_missing:
-                raise KeyError("Field '{}' not found in {}".format(field, self))
+            bbox.add_field(field, self.get_field(field))
         return bbox
 
     def __repr__(self):
