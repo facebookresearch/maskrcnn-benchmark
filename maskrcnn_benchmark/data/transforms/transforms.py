@@ -125,9 +125,10 @@ class VerticalLinearLight(object):
 
 class SmallAngleRotate(object):
     def __init__(self,angle=10):
-        self.angle = random.randint(-1*angle, angle)
+        self.angle_range = angle
 
     def __call__(self, image, target):
+        self.angle = random.randint(-1*self.angle_range, self.angle_range)
         image = np.asarray(image.copy())
         h, w, _ = image.shape
         cx = w / 2
