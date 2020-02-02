@@ -16,16 +16,10 @@ registry.ROI_MASK_FEATURE_EXTRACTORS.register(
 @registry.ROI_MASK_FEATURE_EXTRACTORS.register("MaskRCNNFPNFeatureExtractor")
 class MaskRCNNFPNFeatureExtractor(nn.Module):
     """
-    Heads for FPN for classification
+    Heads for FPN for segmentation
     """
 
     def __init__(self, cfg, in_channels):
-        """
-        Arguments:
-            num_classes (int): number of output classes
-            input_size (int): number of channels of the input once it's flattened
-            representation_size (int): size of the intermediate representation
-        """
         super(MaskRCNNFPNFeatureExtractor, self).__init__()
 
         resolution = cfg.MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION
@@ -36,14 +30,13 @@ class MaskRCNNFPNFeatureExtractor(nn.Module):
             scales=scales,
             sampling_ratio=sampling_ratio,
         )
-        input_size = in_channels
         self.pooler = pooler
 
         use_gn = cfg.MODEL.ROI_MASK_HEAD.USE_GN
         layers = cfg.MODEL.ROI_MASK_HEAD.CONV_LAYERS
         dilation = cfg.MODEL.ROI_MASK_HEAD.DILATION
 
-        next_feature = input_size
+        next_feature = in_channels
         self.blocks = []
         for layer_idx, layer_features in enumerate(layers, 1):
             layer_name = "mask_fcn{}".format(layer_idx)
@@ -58,7 +51,6 @@ class MaskRCNNFPNFeatureExtractor(nn.Module):
 
     def forward(self, x, proposals):
         x = self.pooler(x, proposals)
-
         for layer_name in self.blocks:
             x = F.relu(getattr(self, layer_name)(x))
 

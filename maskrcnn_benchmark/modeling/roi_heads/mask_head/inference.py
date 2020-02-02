@@ -3,7 +3,6 @@ import numpy as np
 import torch
 from torch import nn
 from maskrcnn_benchmark.layers.misc import interpolate
-
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 
 
@@ -70,7 +69,6 @@ class MaskPostProcessorCOCOFormat(MaskPostProcessor):
 
     def forward(self, x, boxes):
         import pycocotools.mask as mask_util
-        import numpy as np
 
         results = super(MaskPostProcessorCOCOFormat, self).forward(x, boxes)
         for result in results:
@@ -87,7 +85,7 @@ class MaskPostProcessorCOCOFormat(MaskPostProcessor):
 
 # the next two functions should be merged inside Masker
 # but are kept here for the moment while we need them
-# temporarily gor paste_mask_in_image
+# temporarily for paste_mask_in_image
 def expand_boxes(boxes, scale):
     w_half = (boxes[:, 2] - boxes[:, 0]) * .5
     h_half = (boxes[:, 3] - boxes[:, 1]) * .5
@@ -127,10 +125,8 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
     box = box.to(dtype=torch.int32)
 
     TO_REMOVE = 1
-    w = int(box[2] - box[0] + TO_REMOVE)
-    h = int(box[3] - box[1] + TO_REMOVE)
-    w = max(w, 1)
-    h = max(h, 1)
+    w = max(int(box[2] - box[0] + TO_REMOVE), 1)
+    h = max(int(box[3] - box[1] + TO_REMOVE), 1)
 
     # Set shape to [batchxCxHxW]
     mask = mask.expand((1, 1, -1, -1))

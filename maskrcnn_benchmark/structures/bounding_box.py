@@ -101,7 +101,6 @@ class BoxList(object):
             ratio = ratios[0]
             scaled_box = self.bbox * ratio
             bbox = BoxList(scaled_box, size, mode=self.mode)
-            # bbox._copy_extra_fields(self)
             for k, v in self.extra_fields.items():
                 if not isinstance(v, torch.Tensor):
                     v = v.resize(size, *args, **kwargs)
@@ -118,7 +117,6 @@ class BoxList(object):
             (scaled_xmin, scaled_ymin, scaled_xmax, scaled_ymax), dim=-1
         )
         bbox = BoxList(scaled_box, size, mode="xyxy")
-        # bbox._copy_extra_fields(self)
         for k, v in self.extra_fields.items():
             if not isinstance(v, torch.Tensor):
                 v = v.resize(size, *args, **kwargs)
@@ -157,7 +155,6 @@ class BoxList(object):
             (transposed_xmin, transposed_ymin, transposed_xmax, transposed_ymax), dim=-1
         )
         bbox = BoxList(transposed_boxes, self.size, mode="xyxy")
-        # bbox._copy_extra_fields(self)
         for k, v in self.extra_fields.items():
             if not isinstance(v, torch.Tensor):
                 v = v.transpose(method)
@@ -185,7 +182,6 @@ class BoxList(object):
             (cropped_xmin, cropped_ymin, cropped_xmax, cropped_ymax), dim=-1
         )
         bbox = BoxList(cropped_box, (w, h), mode="xyxy")
-        # bbox._copy_extra_fields(self)
         for k, v in self.extra_fields.items():
             if not isinstance(v, torch.Tensor):
                 v = v.crop(box)

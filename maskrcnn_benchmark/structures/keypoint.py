@@ -11,9 +11,9 @@ class Keypoints(object):
         # in my version this would consistently return a CPU tensor
         device = keypoints.device if isinstance(keypoints, torch.Tensor) else torch.device('cpu')
         keypoints = torch.as_tensor(keypoints, dtype=torch.float32, device=device)
-        num_keypoints = keypoints.shape[0]
-        if num_keypoints:
-            keypoints = keypoints.view(num_keypoints, -1, 3)
+        num_persons = keypoints.shape[0]
+        if num_persons:
+            keypoints = keypoints.view(num_persons, -1, 3)
         
         # TODO should I split them?
         # self.visibility = keypoints[..., 2]

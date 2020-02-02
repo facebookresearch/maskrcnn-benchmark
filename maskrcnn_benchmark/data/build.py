@@ -123,7 +123,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
         ), "TEST.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
             images_per_batch, num_gpus)
         images_per_gpu = images_per_batch // num_gpus
-        shuffle = False if not is_distributed else True
+        shuffle = True if is_distributed else False
         num_iters = None
         start_iter = 0
 

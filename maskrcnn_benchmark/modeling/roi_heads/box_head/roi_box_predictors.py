@@ -9,19 +9,16 @@ class FastRCNNPredictor(nn.Module):
         super(FastRCNNPredictor, self).__init__()
         assert in_channels is not None
 
-        num_inputs = in_channels
-
         num_classes = config.MODEL.ROI_BOX_HEAD.NUM_CLASSES
         self.avgpool = nn.AdaptiveAvgPool2d(1)
-        self.cls_score = nn.Linear(num_inputs, num_classes)
+        self.cls_score = nn.Linear(in_channels, num_classes)
         num_bbox_reg_classes = 2 if config.MODEL.CLS_AGNOSTIC_BBOX_REG else num_classes
-        self.bbox_pred = nn.Linear(num_inputs, num_bbox_reg_classes * 4)
+        self.bbox_pred = nn.Linear(in_channels, num_bbox_reg_classes * 4)
 
         nn.init.normal_(self.cls_score.weight, mean=0, std=0.01)
-        nn.init.constant_(self.cls_score.bias, 0)
-
         nn.init.normal_(self.bbox_pred.weight, mean=0, std=0.001)
-        nn.init.constant_(self.bbox_pred.bias, 0)
+        for l in [self.cls_score, self.bbox_pred]:
+            nn.init.constant_(l.bias, 0)
 
     def forward(self, x):
         x = self.avgpool(x)
@@ -36,11 +33,10 @@ class FPNPredictor(nn.Module):
     def __init__(self, cfg, in_channels):
         super(FPNPredictor, self).__init__()
         num_classes = cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES
-        representation_size = in_channels
 
-        self.cls_score = nn.Linear(representation_size, num_classes)
+        self.cls_score = nn.Linear(in_channels, num_classes)
         num_bbox_reg_classes = 2 if cfg.MODEL.CLS_AGNOSTIC_BBOX_REG else num_classes
-        self.bbox_pred = nn.Linear(representation_size, num_bbox_reg_classes * 4)
+        self.bbox_pred = nn.Linear(in_channels, num_bbox_reg_classes * 4)
 
         nn.init.normal_(self.cls_score.weight, std=0.01)
         nn.init.normal_(self.bbox_pred.weight, std=0.001)

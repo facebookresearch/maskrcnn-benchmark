@@ -60,7 +60,7 @@ class PostProcessor(nn.Module):
         # TODO think about a representation of batch of boxes
         image_shapes = [box.size for box in boxes]
         boxes_per_image = [len(box) for box in boxes]
-        concat_boxes = torch.cat([a.bbox for a in boxes], dim=0)
+        concat_boxes = torch.cat([box.bbox for box in boxes], dim=0)
 
         if self.cls_agnostic_bbox_reg:
             box_regression = box_regression[:, -4:]
@@ -150,8 +150,6 @@ class PostProcessor(nn.Module):
 
 
 def make_roi_box_post_processor(cfg):
-    use_fpn = cfg.MODEL.ROI_HEADS.USE_FPN
-
     bbox_reg_weights = cfg.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS
     box_coder = BoxCoder(weights=bbox_reg_weights)
 
