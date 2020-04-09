@@ -44,7 +44,7 @@ class CityScapesDataset(AbstractDataset):
         ann_dir = os.path.abspath(os.path.join(ann_dir, split))
 
         assert os.path.exists(img_dir), img_dir
-        assert os.path.exists(ann_dir), ann_dr
+        assert os.path.exists(ann_dir), ann_dir
 
         self.ann_dir = ann_dir
 
