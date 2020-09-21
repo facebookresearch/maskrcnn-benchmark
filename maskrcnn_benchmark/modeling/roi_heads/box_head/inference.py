@@ -140,10 +140,7 @@ class PostProcessor(nn.Module):
         # Limit to max_per_image detections **over all classes**
         if number_of_detections > self.detections_per_img > 0:
             cls_scores = result.get_field("scores")
-            image_thresh, _ = torch.kthvalue(
-                cls_scores.cpu(), number_of_detections - self.detections_per_img + 1
-            )
-            keep = cls_scores >= image_thresh.item()
+            _, keep = torch.topk(cls_scores, k=self.detections_per_img)
             keep = torch.nonzero(keep).squeeze(1)
             result = result[keep]
         return result
