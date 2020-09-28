@@ -121,6 +121,11 @@ cd maskrcnn-benchmark
 python setup.py build develop
 ```
 ### Option 2: Docker Image (Requires CUDA, Linux only)
+Install nvidia-docker
+
+Edit daemon.json file (refer to below link)
+    
+    https://stackoverflow.com/questions/59691207/docker-build-with-nvidia-runtime 
 
 Build image with defaults (`CUDA=9.0`, `CUDNN=7`, `FORCE_CUDA=1`):
 
