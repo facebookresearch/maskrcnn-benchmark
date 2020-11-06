@@ -55,7 +55,8 @@ class Resize(object):
         return (oh, ow)
 
     def __call__(self, image, target=None):
-        size = self.get_size(image.size)
+        #size = self.get_size(image.size)
+        size = (self.min_size[0], self.max_size)
         image = F.resize(image, size)
         if target is None:
             return image
