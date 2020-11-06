@@ -11,7 +11,7 @@ class BalancedPositiveNegativeSampler(object):
         """
         Arguments:
             batch_size_per_image (int): number of elements to be selected per image
-            positive_fraction (float): percentace of positive elements per batch
+            positive_fraction (float): percentage of positive elements per batch
         """
         self.batch_size_per_image = batch_size_per_image
         self.positive_fraction = positive_fraction
@@ -54,10 +54,10 @@ class BalancedPositiveNegativeSampler(object):
 
             # create binary mask from indices
             pos_idx_per_image_mask = torch.zeros_like(
-                matched_idxs_per_image, dtype=torch.uint8
+                matched_idxs_per_image, dtype=torch.bool
             )
             neg_idx_per_image_mask = torch.zeros_like(
-                matched_idxs_per_image, dtype=torch.uint8
+                matched_idxs_per_image, dtype=torch.bool
             )
             pos_idx_per_image_mask[pos_idx_per_image] = 1
             neg_idx_per_image_mask[neg_idx_per_image] = 1

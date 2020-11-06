@@ -1,5 +1,4 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-import datetime
 import logging
 import time
 import os
@@ -8,20 +7,30 @@ import torch
 from tqdm import tqdm
 
 from maskrcnn_benchmark.data.datasets.evaluation import evaluate
-from ..utils.comm import is_main_process
-from ..utils.comm import scatter_gather
+from ..utils.comm import is_main_process, get_world_size
+from ..utils.comm import all_gather
 from ..utils.comm import synchronize
+from ..utils.timer import Timer, get_time_str
+from .bbox_aug import im_detect_bbox_aug
 
 
-def compute_on_dataset(model, data_loader, device):
+def compute_on_dataset(model, data_loader, device, bbox_aug, timer=None):
     model.eval()
     results_dict = {}
     cpu_device = torch.device("cpu")
-    for i, batch in enumerate(tqdm(data_loader)):
+    for _, batch in enumerate(tqdm(data_loader)):
         images, targets, image_ids = batch
-        images = images.to(device)
         with torch.no_grad():
-            output = model(images)
+            if timer:
+                timer.tic()
+            if bbox_aug:
+                output = im_detect_bbox_aug(model, images, device)
+            else:
+                output = model(images.to(device))
+            if timer:
+                if not device.type == 'cpu':
+                    torch.cuda.synchronize()
+                timer.toc()
             output = [o.to(cpu_device) for o in output]
         results_dict.update(
             {img_id: result for img_id, result in zip(image_ids, output)}
@@ -30,7 +39,7 @@ def compute_on_dataset(model, data_loader, device):
 
 
 def _accumulate_predictions_from_multiple_gpus(predictions_per_gpu):
-    all_predictions = scatter_gather(predictions_per_gpu)
+    all_predictions = all_gather(predictions_per_gpu)
     if not is_main_process():
         return
     # merge the list of dicts
@@ -57,6 +66,7 @@ def inference(
         dataset_name,
         iou_types=("bbox",),
         box_only=False,
+        bbox_aug=False,
         device="cuda",
         expected_results=(),
         expected_results_sigma_tol=4,
@@ -64,23 +74,29 @@ def inference(
 ):
     # convert to a torch.device for efficiency
     device = torch.device(device)
-    num_devices = (
-        torch.distributed.get_world_size()
-        if torch.distributed.is_initialized()
-        else 1
-    )
+    num_devices = get_world_size()
     logger = logging.getLogger("maskrcnn_benchmark.inference")
     dataset = data_loader.dataset
     logger.info("Start evaluation on {} dataset({} images).".format(dataset_name, len(dataset)))
-    start_time = time.time()
-    predictions = compute_on_dataset(model, data_loader, device)
+    total_timer = Timer()
+    inference_timer = Timer()
+    total_timer.tic()
+    predictions = compute_on_dataset(model, data_loader, device, bbox_aug, inference_timer)
     # wait for all processes to complete before measuring the time
     synchronize()
-    total_time = time.time() - start_time
-    total_time_str = str(datetime.timedelta(seconds=total_time))
+    total_time = total_timer.toc()
+    total_time_str = get_time_str(total_time)
     logger.info(
-        "Total inference time: {} ({} s / img per device, on {} devices)".format(
+        "Total run time: {} ({} s / img per device, on {} devices)".format(
             total_time_str, total_time * num_devices / len(dataset), num_devices
+        )
+    )
+    total_infer_time = get_time_str(inference_timer.total_time)
+    logger.info(
+        "Model inference time: {} ({} s / img per device, on {} devices)".format(
+            total_infer_time,
+            inference_timer.total_time * num_devices / len(dataset),
+            num_devices,
         )
     )
 

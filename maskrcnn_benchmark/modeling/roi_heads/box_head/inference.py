@@ -17,7 +17,13 @@ class PostProcessor(nn.Module):
     """
 
     def __init__(
-        self, score_thresh=0.05, nms=0.5, detections_per_img=100, box_coder=None
+        self,
+        score_thresh=0.05,
+        nms=0.5,
+        detections_per_img=100,
+        box_coder=None,
+        cls_agnostic_bbox_reg=False,
+        bbox_aug_enabled=False
     ):
         """
         Arguments:
@@ -33,6 +39,8 @@ class PostProcessor(nn.Module):
         if box_coder is None:
             box_coder = BoxCoder(weights=(10., 10., 5., 5.))
         self.box_coder = box_coder
+        self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
+        self.bbox_aug_enabled = bbox_aug_enabled
 
     def forward(self, x, boxes):
         """
@@ -40,7 +48,7 @@ class PostProcessor(nn.Module):
             x (tuple[tensor, tensor]): x contains the class logits
                 and the box_regression from the model.
             boxes (list[BoxList]): bounding boxes that are used as
-                reference, one for ech image
+                reference, one for each image
 
         Returns:
             results (list[BoxList]): one BoxList for each image, containing
@@ -54,9 +62,13 @@ class PostProcessor(nn.Module):
         boxes_per_image = [len(box) for box in boxes]
         concat_boxes = torch.cat([a.bbox for a in boxes], dim=0)
 
+        if self.cls_agnostic_bbox_reg:
+            box_regression = box_regression[:, -4:]
         proposals = self.box_coder.decode(
             box_regression.view(sum(boxes_per_image), -1), concat_boxes
         )
+        if self.cls_agnostic_bbox_reg:
+            proposals = proposals.repeat(1, class_prob.shape[1])
 
         num_classes = class_prob.shape[1]
 
@@ -69,7 +81,8 @@ class PostProcessor(nn.Module):
         ):
             boxlist = self.prepare_boxlist(boxes_per_img, prob, image_shape)
             boxlist = boxlist.clip_to_image(remove_empty=False)
-            boxlist = self.filter_results(boxlist, num_classes)
+            if not self.bbox_aug_enabled:  # If bbox aug is enabled, we will do it later
+                boxlist = self.filter_results(boxlist, num_classes)
             results.append(boxlist)
         return results
 
@@ -113,7 +126,7 @@ class PostProcessor(nn.Module):
             boxlist_for_class = BoxList(boxes_j, boxlist.size, mode="xyxy")
             boxlist_for_class.add_field("scores", scores_j)
             boxlist_for_class = boxlist_nms(
-                boxlist_for_class, self.nms, score_field="scores"
+                boxlist_for_class, self.nms
             )
             num_labels = len(boxlist_for_class)
             boxlist_for_class.add_field(
@@ -145,8 +158,15 @@ def make_roi_box_post_processor(cfg):
     score_thresh = cfg.MODEL.ROI_HEADS.SCORE_THRESH
     nms_thresh = cfg.MODEL.ROI_HEADS.NMS
     detections_per_img = cfg.MODEL.ROI_HEADS.DETECTIONS_PER_IMG
+    cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
+    bbox_aug_enabled = cfg.TEST.BBOX_AUG.ENABLED
 
     postprocessor = PostProcessor(
-        score_thresh, nms_thresh, detections_per_img, box_coder
+        score_thresh,
+        nms_thresh,
+        detections_per_img,
+        box_coder,
+        cls_agnostic_bbox_reg,
+        bbox_aug_enabled
     )
     return postprocessor

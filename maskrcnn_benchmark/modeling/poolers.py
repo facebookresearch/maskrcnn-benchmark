@@ -116,6 +116,18 @@ class Pooler(nn.Module):
         for level, (per_level_feature, pooler) in enumerate(zip(x, self.poolers)):
             idx_in_level = torch.nonzero(levels == level).squeeze(1)
             rois_per_level = rois[idx_in_level]
-            result[idx_in_level] = pooler(per_level_feature, rois_per_level)
+            result[idx_in_level] = pooler(per_level_feature, rois_per_level).to(dtype)
 
         return result
+
+
+def make_pooler(cfg, head_name):
+    resolution = cfg.MODEL[head_name].POOLER_RESOLUTION
+    scales = cfg.MODEL[head_name].POOLER_SCALES
+    sampling_ratio = cfg.MODEL[head_name].POOLER_SAMPLING_RATIO
+    pooler = Pooler(
+        output_size=(resolution, resolution),
+        scales=scales,
+        sampling_ratio=sampling_ratio,
+    )
+    return pooler
