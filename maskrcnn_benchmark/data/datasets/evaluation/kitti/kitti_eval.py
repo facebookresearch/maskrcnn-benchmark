@@ -10,7 +10,7 @@ from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 
 
-def do_coco_evaluation(
+def do_kitti_evaluation(
     dataset,
     predictions,
     box_only,
