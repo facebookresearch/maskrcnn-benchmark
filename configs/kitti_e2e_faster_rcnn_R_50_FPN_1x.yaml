@@ -21,6 +21,8 @@ MODEL:
     POOLER_SAMPLING_RATIO: 2
     FEATURE_EXTRACTOR: "FPN2MLPFeatureExtractor"
     PREDICTOR: "FPNPredictor"
+  GEO_ATTR_ON: True
+
 DATASETS:
   TRAIN: ("kitti_train", )
   #TEST: ("kitti_test",)
