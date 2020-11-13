@@ -19,7 +19,7 @@ class CombinedROIHeads(torch.nn.ModuleDict):
             self.mask.feature_extractor = self.box.feature_extractor
         if cfg.MODEL.KEYPOINT_ON and cfg.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             self.keypoint.feature_extractor = self.box.feature_extractor
-        if cfg.MODEL.GEO_ATTR and cfg.MODEL.ROI_GEO_ATTR_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
+        if cfg.MODEL.GEO_ATTR_ON and cfg.MODEL.ROI_GEO_ATTR_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             self.geo_attribute.feature_extractor = self.box.feature_extractor
 
     def forward(self, features, proposals, targets=None):
