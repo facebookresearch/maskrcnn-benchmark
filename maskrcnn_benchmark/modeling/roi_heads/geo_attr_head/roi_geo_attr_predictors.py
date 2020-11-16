@@ -10,7 +10,7 @@ class GEOATTRRCNNPredictor(nn.Module):
     def __init__(self, cfg, in_channels):
         super(GEOATTRRCNNPredictor, self).__init__()
         num_inputs = in_channels
-        self.ori_bin = cfg.MODEL.ROI_BOX_HEAD.ORI_BIN
+        self.ori_bin = cfg.MODEL.ROI_GEO_ATTR_HEAD.ORI_BIN
 
         self.dimension_head = nn.Linear(num_inputs, 3)
         self.ori_conf_head = nn.Linear(num_inputs, self.ori_bin)
