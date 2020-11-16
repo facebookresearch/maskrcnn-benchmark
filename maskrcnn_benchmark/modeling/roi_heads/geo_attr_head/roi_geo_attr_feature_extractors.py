@@ -34,12 +34,15 @@ class GEOATTRRCNNFeatureExtractor(nn.Module):
             self.add_module(layer_name, module)
             next_feature = layer_features
             self.blocks.append(layer_name)
+
+        self.pooling_last = nn.AvgPool2d(resolution, stride=1)
         self.out_channels = layer_features
 
     def forward(self, x, proposals):
         x = self.pooler(x, proposals)
         for layer_name in self.blocks:
             x = F.relu(getattr(self, layer_name)(x))
+        x = self.pooling_last(x).squeeze()
         return x
 
 def make_roi_geo_attr_feature_extractor(cfg, in_channels):

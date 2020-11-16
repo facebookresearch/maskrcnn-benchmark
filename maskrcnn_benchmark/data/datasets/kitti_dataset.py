@@ -52,21 +52,21 @@ class KittiDataset(torch.utils.data.Dataset):
         calib_file = self.root_split_path + '/calib/' + ('%s.txt' % idx)
         assert os.path.join(calib_file)
         return calibration_kitti.Calibration(calib_file)
-    
+
     def compute_anchors(self, angle, bin, overlap):
         anchors = []
-        
+
         wedge = 2. * np.pi / bin
         l_index = int(angle / wedge)
         r_index = l_index + 1
-        
+
         if (angle - l_index * wedge) < wedge / 2 * (1 + overlap/2):
             anchors.append([l_index, angle - l_index * wedge])
-            
+
         if (r_index*wedge - angle) < wedge / 2 * (1 + overlap / 2):
             anchors.append([r_index % bin, angle - r_index * wedge])
-            
-        return anchors  
+
+        return anchors
 
     def __len__(self):
         return len(self.sample_id_list)
@@ -105,7 +105,7 @@ class KittiDataset(torch.utils.data.Dataset):
             orientation = np.zeros((self.BIN, 2))
             confidence = np.zeros(self.BIN)
 
-            anchors = compute_anchors(alp, self.BIN. self.overlap)
+            anchors = self.compute_anchors(alp, self.BIN, self.overlap)
 
             for anchor in anchors:
                 orientation[anchor[0]] = np.array([np.cos(anchor[1]), np.sin(anchor[1])])
