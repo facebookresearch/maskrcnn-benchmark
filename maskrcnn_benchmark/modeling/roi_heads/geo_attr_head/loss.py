@@ -7,14 +7,12 @@ from maskrcnn_benchmark.modeling.utils import cat
 from maskrcnn_benchmark.layers import smooth_l1_loss
 
 class GEOATTRRCNNLossComputation(object):
-    def __init__(self, proposal_matcher, discretization_size):
+    def __init__(self, proposal_matcher):
         """
         Arguments:
             proposal_matcher (Matcher)
-            discretization_size (int)
         """
         self.proposal_matcher = proposal_matcher
-        self.discretization_size = discretization_size
 
     def match_targets_to_proposals(self, proposal, target):
         match_quality_matrix = boxlist_iou(target, proposal)
@@ -137,8 +135,8 @@ class GEOATTRRCNNLossComputation(object):
 
 def make_roi_geo_attr_loss_evaluator(cfg):
     matcher = Matcher(
-        cfg.ROI_HEADS.FG_IOU_THRESHOLD, 
-        cfg.ROI_HEADS.BG_IOU_THRESHOLD,
+        cfg.MODEL.ROI_HEADS.FG_IOU_THRESHOLD,
+        cfg.MODEL.ROI_HEADS.BG_IOU_THRESHOLD,
         allow_low_quality_matches=False
     )
     loss_evaluator = GEOATTRRCNNLossComputation(proposal_matcher=matcher)
