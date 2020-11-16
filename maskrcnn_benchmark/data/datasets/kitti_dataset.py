@@ -81,22 +81,22 @@ class KittiDataset(torch.utils.data.Dataset):
         labels = self.get_label(index)
         calib = self.get_calib(index)
 
-        boxes = np.array([label.box2d for label in labels if label.get_kitti_obj_level() >= 0])
-        classes = np.array([label.cls_id for label in labels if label.get_kitti_obj_level() >= 0])
-        alphas = np.array([label.alpha for label in labels if label.get_kitti_obj_level() >= 0])
-        locations = np.array([label.loc for label in labels if label.get_kitti_obj_level() >= 0])
-        dimensions = np.array([[label.h, label.w, label.l] for label in labels if label.get_kitti_obj_level() >= 0])
-        relative_dimensions = np.array([[label.h - self.dims_avg[label.cls_type][0], label.w - self.dims_avg[label.cls_type][1], label.l - self.dims_avg[label.cls_type][2]] for label in labels if label.get_kitti_obj_level() >= 0])
-        rotation_y = np.array([label.ry for label in labels if label.get_kitti_obj_level() >= 0])
+        boxes = np.array([label.box2d for label in labels if label.get_kitti_obj_level() >= 0 and label.cls_id > -1])
+        classes = np.array([label.cls_id for label in labels if label.get_kitti_obj_level() >= 0 and label.cls_id > -1])
+        alphas = np.array([label.alpha for label in labels if label.get_kitti_obj_level() >= 0 and label.cls_id > -1])
+        locations = np.array([label.loc for label in labels if label.get_kitti_obj_level() >= 0 and label.cls_id > -1])
+        dimensions = np.array([[label.h, label.w, label.l] for label in labels if label.get_kitti_obj_level() >= 0 and label.cls_id > -1])
+        relative_dimensions = np.array([[label.h - self.dims_avg[label.cls_type][0], label.w - self.dims_avg[label.cls_type][1], label.l - self.dims_avg[label.cls_type][2]] for label in labels if label.get_kitti_obj_level() >= 0 and label.cls_id > -1])
+        rotation_y = np.array([label.ry for label in labels if label.get_kitti_obj_level() >= 0 and label.cls_id > -1])
 
-        pos_ids = np.where(classes > -1)
-        boxes = boxes[pos_ids]
-        classes = classes[pos_ids]
-        alphas = alphas[pos_ids]
-        locations = locations[pos_ids]
-        dimensions = dimensions[pos_ids]
-        relative_dimensions = relative_dimensions[pos_ids]
-        rotation_y = rotation_y[pos_ids]
+        # pos_ids = np.where(classes > -1)
+        # boxes = boxes[pos_ids]
+        # classes = classes[pos_ids]
+        # alphas = alphas[pos_ids]
+        # locations = locations[pos_ids]
+        # dimensions = dimensions[pos_ids]
+        # relative_dimensions = relative_dimensions[pos_ids]
+        # rotation_y = rotation_y[pos_ids]
 
         alpha_conf = []
         alpha_oriention = []
