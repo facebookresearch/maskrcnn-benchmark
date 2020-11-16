@@ -39,7 +39,7 @@ class ROIGEOATTRHead(torch.nn.Module):
         self.predictor = make_roi_geo_attr_predictor(
             cfg, self.feature_extractor.out_channels)
         # self.post_processor = make_roi_geo_attr_post_processor(cfg)
-        # self.loss_evaluator = make_roi_geo_attr_loss_evaluator(cfg)
+        self.loss_evaluator = make_roi_geo_attr_loss_evaluator(cfg)
 
     def forward(self, features, proposals, targets=None):
         if self.training:
@@ -58,9 +58,8 @@ class ROIGEOATTRHead(torch.nn.Module):
             # result = self.post_processor(geo_attr_logits, proposals)
             # return x, result, {}
 
-        # loss_geo_attr = self.loss_evaluator(proposals, geo_attr_logits, targets)
-        loss_geo_attr = torch.tensor(0.0).to('cuda')
-        return x, all_proposals, dict(loss_geo_attr=loss_geo_attr)
+        loss_geo_attr = self.loss_evaluator(proposals, geo_attr_logits, targets)
+        return x, all_proposals, loss_geo_attr
 
 def build_roi_geo_attr_head(cfg, in_channels):
     return ROIGEOATTRHead(cfg, in_channels)
