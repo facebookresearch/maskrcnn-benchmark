@@ -23,7 +23,13 @@ class Object3d(object):
         self.cls_id = cls_type_to_id(self.cls_type)
         self.truncation = float(label[1])
         self.occlusion = float(label[2])  # 0:fully visible 1:partly occluded 2:largely occluded 3:unknown
-        self.alpha = float(label[3])
+
+        new_alpha = float(label[3]) + np.pi/2.
+        if new_alpha < 0:
+            new_alpha = new_alpha + 2.*np.pi
+        new_alpha = new_alpha - int(new_alpha/(2.*np.pi))*(2.*np.pi)
+        self.alpha = new_alpha
+
         self.box2d = np.array((float(label[4]), float(label[5]), float(label[6]), float(label[7])), dtype=np.float32)
         self.h = float(label[8])
         self.w = float(label[9])

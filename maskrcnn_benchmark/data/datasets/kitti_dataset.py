@@ -18,6 +18,10 @@ class KittiDataset(torch.utils.data.Dataset):
     For kitti dataset
     """
     def __init__(self, data_root, list_file, transforms, is_train):
+        self.dims_avg = {'Cyclist': np.array([ 1.73532436,  0.58028152,  1.77413709]), 'Van': np.array([ 2.18928571,  1.90979592,  5.07087755]), 'Tram': np.array([  3.56092896,   2.39601093,  18.34125683]), 'Car': np.array([ 1.52159147,  1.64443089,  3.85813679]), 'Pedestrian': np.array([ 1.75554637,  0.66860882,  0.87623049]), 'Truck': np.array([  3.07392252,   2.63079903,  11.2190799 ])}
+        self.BIN = 2
+        self.overlap = 0.1
+
         self.is_train = is_train
         self.transforms = transforms
         self.root_split_path = data_root
@@ -48,6 +52,21 @@ class KittiDataset(torch.utils.data.Dataset):
         calib_file = self.root_split_path + '/calib/' + ('%s.txt' % idx)
         assert os.path.join(calib_file)
         return calibration_kitti.Calibration(calib_file)
+    
+    def compute_anchors(self, angle, bin, overlap):
+        anchors = []
+        
+        wedge = 2. * np.pi / bin
+        l_index = int(angle / wedge)
+        r_index = l_index + 1
+        
+        if (angle - l_index * wedge) < wedge / 2 * (1 + overlap/2):
+            anchors.append([l_index, angle - l_index * wedge])
+            
+        if (r_index*wedge - angle) < wedge / 2 * (1 + overlap / 2):
+            anchors.append([r_index % bin, angle - r_index * wedge])
+            
+        return anchors  
 
     def __len__(self):
         return len(self.sample_id_list)
@@ -67,30 +86,55 @@ class KittiDataset(torch.utils.data.Dataset):
         alphas = np.array([label.alpha for label in labels if label.get_kitti_obj_level() >= 0])
         locations = np.array([label.loc for label in labels if label.get_kitti_obj_level() >= 0])
         dimensions = np.array([[label.h, label.w, label.l] for label in labels if label.get_kitti_obj_level() >= 0])
+        relative_dimensions = np.array([[label.h - self.dims_avg[label.cls_type][0], label.w - self.dims_avg[label.cls_type][1], label.l - self.dims_avg[label.cls_type][2]] for label in labels if label.get_kitti_obj_level() >= 0])
         rotation_y = np.array([label.ry for label in labels if label.get_kitti_obj_level() >= 0])
 
         pos_ids = np.where(classes > -1)
-
         boxes = boxes[pos_ids]
         classes = classes[pos_ids]
         alphas = alphas[pos_ids]
         locations = locations[pos_ids]
         dimensions = dimensions[pos_ids]
+        relative_dimensions = relative_dimensions[pos_ids]
         rotation_y = rotation_y[pos_ids]
+
+        alpha_conf = []
+        alpha_oriention = []
+        for alp in alphas:
+            # Fix orientation and confidence for no flip
+            orientation = np.zeros((self.BIN, 2))
+            confidence = np.zeros(self.BIN)
+
+            anchors = compute_anchors(alp, self.BIN. self.overlap)
+
+            for anchor in anchors:
+                orientation[anchor[0]] = np.array([np.cos(anchor[1]), np.sin(anchor[1])])
+                confidence[anchor[0]] = 1.
+
+            confidence = confidence / np.sum(confidence)
+
+            alpha_conf.append(confidence)
+            alpha_oriention.append(orientation)
 
         boxes = torch.as_tensor(boxes).reshape(-1, 4)
         classes = torch.as_tensor(classes).reshape(-1)
         alphas = torch.as_tensor(alphas).reshape(-1, 1)
         locations = torch.as_tensor(locations).reshape(-1, 3)
         dimensions = torch.as_tensor(dimensions).reshape(-1, 3)
+        relative_dimensions = torch.as_tensor(relative_dimensions).reshape(-1, 3)
         rotation_y = torch.as_tensor(rotation_y).reshape(-1, 1)
+        alpha_conf = torch.as_tensor(alpha_conf).reshape(-1, self.BIN)
+        alpha_oriention = torch.as_tensor(alpha_oriention).reshape(-1, self.BIN, 2)
 
         target = BoxList(boxes, image_size, mode='xyxy')
         target.add_field('labels', classes)
         target.add_field('alphas', alphas)
         target.add_field('locations', locations)
         target.add_field('dimensions', dimensions)
+        target.add_field('relative_dimensions', relative_dimensions)
         target.add_field('rotation_y', rotation_y)
+        target.add_field('alpha_conf', alpha_conf)
+        target.add_field('alpha_oriention', alpha_oriention)
         #target.add_field('calib', calib)
 
         if self.transforms is not None:

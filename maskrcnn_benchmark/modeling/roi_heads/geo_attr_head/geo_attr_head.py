@@ -2,10 +2,12 @@
 import torch
 from torch import nn
 
+from maskrcnn_benchmark.structures.bounding_box import BoxList
+
 from .roi_geo_attr_feature_extractors import make_roi_geo_attr_feature_extractor
-# from .roi_geo_attr_predictors import make_roi_geo_attr_predictor
+from .roi_geo_attr_predictors import make_roi_geo_attr_predictor
 # from .inference import make_roi_geo_attr_post_processor
-# from .loss import make_roi_geo_attr_loss_evaluator
+from .loss import make_roi_geo_attr_loss_evaluator
 
 def keep_only_positive_boxes(boxes):
     """
@@ -34,8 +36,8 @@ class ROIGEOATTRHead(torch.nn.Module):
         super(ROIGEOATTRHead, self).__init__()
         self.cfg = cfg.clone()
         self.feature_extractor = make_roi_geo_attr_feature_extractor(cfg, in_channels)
-        # self.predictor = make_roi_geo_attr_predictor(
-        #     cfg, self.feature_extractor.out_channels)
+        self.predictor = make_roi_geo_attr_predictor(
+            cfg, self.feature_extractor.out_channels)
         # self.post_processor = make_roi_geo_attr_post_processor(cfg)
         # self.loss_evaluator = make_roi_geo_attr_loss_evaluator(cfg)
     
@@ -49,11 +51,16 @@ class ROIGEOATTRHead(torch.nn.Module):
             x = x[torch.cat(positive_inds, dim=0)]
         else:
             x = self.feature_extractor(features, proposals)
-        
-        print("x.len: ", len(x))
-        print("proposals.shape: ", proposals.shape)
-        print("positive_inds.shape: ", positive_inds.shape)
-        return 0.0
+
+        geo_attr_logits = self.predictor(x)
+
+        # if not self.training:
+            # result = self.post_processor(geo_attr_logits, proposals)
+            # return x, result, {}
+
+        # loss_geo_attr = self.loss_evaluator(proposals, geo_attr_logits, targets)
+        loss_geo_attr = torch.tensor(0.0)
+        return x, all_proposals, dict(loss_geo_attr=loss_geo_attr)
 
 def build_roi_geo_attr_head(cfg, in_channels):
     return ROIGEOATTRHead(cfg, in_channels)

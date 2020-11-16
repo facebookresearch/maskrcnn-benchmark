@@ -22,6 +22,13 @@ MODEL:
     FEATURE_EXTRACTOR: "FPN2MLPFeatureExtractor"
     PREDICTOR: "FPNPredictor"
   GEO_ATTR_ON: True
+  ROI_GEO_ATTR_HEAD:
+    SHARE_BOX_FEATURE_EXTRACTOR: False
+    ORI_BIN: 2
+    CLASS_NAME_MAP: ('Cyclist', 'Van', 'Tram', 'Car', 'Pedestrian', 'Truck')
+    AVG_DIMS: ((1.73532436,  0.58028152,  1.77413709), ( 2.18928571,  1.90979592,  5.07087755), 
+                (3.56092896,   2.39601093,  18.34125683), (1.52159147,  1.64443089,  3.85813679),
+                (1.75554637,  0.66860882,  0.87623049), (3.07392252,   2.63079903,  11.2190799))
 
 DATASETS:
   TRAIN: ("kitti_train", )
