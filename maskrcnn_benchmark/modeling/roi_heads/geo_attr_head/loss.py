@@ -19,8 +19,8 @@ class GEOATTRRCNNLossComputation(object):
         matched_idxs = self.proposal_matcher(match_quality_matrix)
         # GETATTR RCNN needs "labels" and "alphas", "locations", "dimensions", "relative_dimensions"
         # "rotation_y", "alpha_conf", "alpha_oriention" fields for creating the targets
-        target = target.copy_with_fields(["labels", "alphas", "locations", "dimensions", 
-                                        "relative_dimensions", "rotation_y", "alpha_conf", 
+        target = target.copy_with_fields(["labels", "alphas", "locations", "dimensions",
+                                        "relative_dimensions", "rotation_y", "alpha_conf",
                                         "alpha_oriention"])
         # get the targets corresponding GT for each proposal
         # NB: need to clamp the indices because we can have a single
@@ -70,7 +70,7 @@ class GEOATTRRCNNLossComputation(object):
 
             # dimensions_target = matched_targets.get_field("dimensions")
             # dimensions_target = dimensions_target[positive_inds]
-            
+
             # rotation_y_target = matched_targets.get_field("rotation_y")
             # rotation_y_target = rotation_y_target[positive_inds]
 
@@ -102,35 +102,44 @@ class GEOATTRRCNNLossComputation(object):
         alpha_oriention_targets = cat(alpha_oriention_targets, dim=0)
 
         positive_inds = torch.nonzero(labels > 0).squeeze(1)
-        labels_pos = labels[positive_inds]
 
         # torch.mean (in binary_cross_entropy_with_logits) doesn't
         # accept empty tensors, so handle it separately
         if locations_targets.numel() == 0:
             return locations_targets.sum() * 0
-        
+
         pred_dims, pred_ori_conf, pred_ori_consin, pred_location = geo_attr_logits
 
+        #print("pre, target(dim): ", pred_dims[positive_inds].shape, relative_dimensions_targets.shape)
+        #print("pre, target(orientation_location): ", pred_location[positive_inds].shape, locations_targets.shape)
+        #print("pre, target(orientation_conf): ", pred_ori_conf[positive_inds].shape, alpha_conf_targets.shape)
+        #print("pre, target(orientation_consin): ", pred_ori_consin[positive_inds].shape, alpha_oriention_targets.shape)
         dimension_loss = smooth_l1_loss(
-            pred_dims[positive_inds, labels_pos], relative_dimensions_targets
+            pred_dims[positive_inds], relative_dimensions_targets
         )
 
-        orientation_conf_loss = F.smooth_l1_loss(
-            pred_ori_conf[positive_inds, labels_pos], alpha_conf_targets
-        )
+        #location_loss = F.smooth_l1_loss(
+        #    pred_location[positive_inds], locations_targets
+        #)
+
+        mask_bin = torch.nonzero(alpha_conf_targets > 0.1)
+        #print(mask_bin)
+        #orientation_conf_loss =F.cross_entropy(
+        #    pred_ori_conf[positive_inds], mask_bin[1]
+        #)
+        #orientation_conf_loss = F.smooth_l1_loss(
+        #    pred_ori_conf[positive_inds], alpha_conf_targets
+        #)
+        orientation_conf_loss = -torch.mean(torch.sum(F.log_softmax(pred_ori_conf[positive_inds], dim=1) * alpha_conf_targets, dim=1))
 
         orientation_reg_loss = F.smooth_l1_loss(
-            pred_ori_consin[positive_inds, labels_pos], alpha_oriention_targets
-        )
-
-        location_loss = F.smooth_l1_loss(
-            pred_location[positive_inds, labels_pos], locations_targets
+            pred_ori_consin[positive_inds][mask_bin, :], alpha_oriention_targets[mask_bin, :]
         )
 
         return {"loss_geo_attr_dim": dimension_loss,
+                #"loss_geo_attr_loc": location_loss,
                 "loss_geo_attr_ori_conf": orientation_conf_loss,
-                "loss_geo_attr_ori_reg": orientation_reg_loss,
-                "loss_geo_attr_loc": location_loss}
+                "loss_geo_attr_ori_reg": orientation_reg_loss}
 
 
 def make_roi_geo_attr_loss_evaluator(cfg):
