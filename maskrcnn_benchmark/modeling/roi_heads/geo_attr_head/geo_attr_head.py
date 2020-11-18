@@ -43,8 +43,9 @@ class ROIGEOATTRHead(torch.nn.Module):
 
     def forward(self, features, proposals, targets=None):
         if self.training:
-            all_proposals = proposals
-            proposals, positive_inds = keep_only_positive_boxes(proposals)
+            with torch.no_grad():
+                all_proposals = proposals
+                proposals, positive_inds = keep_only_positive_boxes(proposals)
 
         if self.training and self.cfg.MODEL.ROI_GEO_ATTR_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             x = features
