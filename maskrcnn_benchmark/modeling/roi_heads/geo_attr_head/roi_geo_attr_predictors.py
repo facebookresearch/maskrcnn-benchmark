@@ -4,6 +4,7 @@ from torch.nn import functional as F
 from maskrcnn_benchmark.layers import Conv2d
 from maskrcnn_benchmark.layers import ConvTranspose2d
 from maskrcnn_benchmark.modeling import registry
+from maskrcnn_benchmark.modeling.make_layers import make_fc
 
 @registry.ROI_GEO_ATTR_PREDICTOR.register("GEOATTRRCNNPredictor")
 class GEOATTRRCNNPredictor(nn.Module):
@@ -12,18 +13,11 @@ class GEOATTRRCNNPredictor(nn.Module):
         num_inputs = in_channels
         self.ori_bin = cfg.MODEL.ROI_GEO_ATTR_HEAD.ORI_BIN
 
-        self.dimension_head = nn.Linear(num_inputs, 3)
-        self.ori_conf_head = nn.Linear(num_inputs, self.ori_bin)
-        self.ori_consin_head = nn.Linear(num_inputs, self.ori_bin * 2)
+        self.dimension_head = make_fc(num_inputs, 3)
+        self.ori_conf_head = make_fc(num_inputs, self.ori_bin)
+        self.ori_consin_head = make_fc(num_inputs, self.ori_bin * 2)
         # only predict x and y, no z since pred_dim height /2 is equal to location z
-        self.location_head = nn.Linear(num_inputs, 2)
-
-        nn.init.normal_(self.dimension_head.weight, std=0.01)
-        nn.init.normal_(self.ori_conf_head.weight, std=0.01)
-        nn.init.normal_(self.ori_consin_head.weight, std=0.01)
-        nn.init.normal_(self.location_head.weight, std=0.01)
-        for l in [self.dimension_head, self.ori_conf_head, self.ori_consin_head, self.location_head]:
-            nn.init.constant_(l.bias, 0)
+        self.location_head = make_fc(num_inputs, 2)
 
     def forward(self, x):
         pred_dims = self.dimension_head(x)
