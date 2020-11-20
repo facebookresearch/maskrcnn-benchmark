@@ -69,13 +69,7 @@ class GEOATTRRCNNCascadePoolFeatureExtractor(nn.Module):
         self.conv4 = make_conv3x3(512, 1024, use_relu=True)
         self.conv5 = make_conv3x3(1024, 1024, use_relu=True)
         self.conv6 = make_conv3x3(1024, 512, use_relu=True)
-        self.pooling_2 = nn.AvgPool2d(2, stride=2)
-
-        self.conv7 = make_conv3x3(512, 1024, use_relu=True)
-        self.conv8 = make_conv3x3(1024, 1024, use_relu=True)
-        self.conv9 = make_conv3x3(1024, 512, use_relu=True)
-        self.pooling_3 = nn.AvgPool2d(3, stride=1)
-
+        self.pooling_2 = nn.AvgPool2d(4, stride=2)
         self.out_channels = 512
 
     def forward(self, x, proposals):
@@ -88,12 +82,7 @@ class GEOATTRRCNNCascadePoolFeatureExtractor(nn.Module):
         x = self.conv4(x)
         x = self.conv5(x)
         x = self.conv6(x)
-        x = self.pooling_2(x)
-        #print(x.shape)
-        x = self.conv7(x)
-        x = self.conv8(x)
-        x = self.conv9(x)
-        x = self.pooling_3(x).squeeze()
+        x = self.pooling_2(x).squeeze()
         #print(x.shape)
         return x
 
