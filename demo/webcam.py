@@ -4,6 +4,7 @@ import cv2
 
 from maskrcnn_benchmark.config import cfg
 from predictor import COCODemo
+from predictor import KITTIDemo
 
 import time
 
@@ -55,8 +56,28 @@ def main():
     cfg.merge_from_list(args.opts)
     cfg.freeze()
 
+    ## prepare object that handles inference plus adds predictions on top of image
+    #coco_demo = COCODemo(
+    #    cfg,
+    #    confidence_threshold=args.confidence_threshold,
+    #    show_mask_heatmaps=args.show_mask_heatmaps,
+    #    masks_per_dim=args.masks_per_dim,
+    #    min_image_size=args.min_image_size,
+    #)
+
+    #cam = cv2.VideoCapture(0)
+    #while True:
+    #    start_time = time.time()
+    #    ret_val, img = cam.read()
+    #    composite = coco_demo.run_on_opencv_image(img)
+    #    print("Time: {:.2f} s / img".format(time.time() - start_time))
+    #    cv2.imshow("COCO detections", composite)
+    #    if cv2.waitKey(1) == 27:
+    #        break  # esc to quit
+    #cv2.destroyAllWindows()
+
     # prepare object that handles inference plus adds predictions on top of image
-    coco_demo = COCODemo(
+    kitti_demo = KITTIDemo(
         cfg,
         confidence_threshold=args.confidence_threshold,
         show_mask_heatmaps=args.show_mask_heatmaps,
@@ -64,17 +85,17 @@ def main():
         min_image_size=args.min_image_size,
     )
 
-    cam = cv2.VideoCapture(0)
-    while True:
-        start_time = time.time()
-        ret_val, img = cam.read()
-        composite = coco_demo.run_on_opencv_image(img)
-        print("Time: {:.2f} s / img".format(time.time() - start_time))
-        cv2.imshow("COCO detections", composite)
-        if cv2.waitKey(1) == 27:
-            break  # esc to quit
-    cv2.destroyAllWindows()
+    count=0
 
+    import glob
+    img_list = glob.glob('/home/fusion/workspace/data/kitti/training/image_2/*.png')
+    while count < 1000:
+        start_time = time.time()
+        img = cv2.imread(img_list[count])
+        composite = kitti_demo.run_on_opencv_image(img)
+        print("Time: {:.2f} s / img".format(time.time() - start_time))
+        cv2.imwrite('./save_dir/save_%06d.jpg' % count, composite)
+        count += 1
 
 if __name__ == "__main__":
     main()
