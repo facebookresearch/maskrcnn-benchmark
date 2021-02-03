@@ -2,6 +2,32 @@
 
 **maskrcnn-benchmark has been deprecated. Please see [detectron2](https://github.com/facebookresearch/detectron2), which includes implementations for all models in maskrcnn-benchmark**
 
+## Bugfixest: Keep maskrcnn-benchmark running to use with legacy software
+
+Fixes:
+- [Issue #1182](https://github.com/facebookresearch/maskrcnn-benchmark/issues/1182#issuecomment-563896684): Replacing `torch.bool` for `torch.uint8` in
+[maskrcnn_benchmark/structures/segmentation_mask.py](maskrcnn_benchmark/structures/segmentation_mask.py) and
+[maskrcnn_benchmark/modeling/balanced_positive_negative_sampler.py](maskrcnn_benchmark/modeling/balanced_positive_negative_sampler.py)
+- [Issue #1053](https://github.com/facebookresearch/maskrcnn-benchmark/pull/1053#issuecomment-523340294): Encode as `torch.uint8` instead of `torch.bool` in
+[maskrcnn_benchmark/data/datasets/evaluation/coco/coco_eval.py](maskrcnn_benchmark/data/datasets/evaluation/coco/coco_eval.py)
+- [Issue #1148](https://github.com/facebookresearch/maskrcnn-benchmark/issues/1148#issuecomment-590051409): Replacing `torch.bool` for `torch.uint8` in [maskrcnn_benchmark/modeling/rpn/inference.py](maskrcnn_benchmark/modeling/rpn/inference.py)
+- [Issue #1156](https://github.com/facebookresearch/maskrcnn-benchmark/issues/1156#issuecomment-554193539): Convert to integer before using `res` for single image inference in [maskrcnn_benchmark/modeling/roi_heads/mask_head/inference.py](maskrcnn_benchmark/modeling/roi_heads/mask_head/inference.py)
+- Replacing `torch.bool` for `torch.uint8` in [maskrcnn_benchmark/modeling/rpn/inference.py](maskrcnn_benchmark/modeling/rpn/inference.py) in `select_over_all_levels(..)`
+
+Instructions to train and run using your own dataset after fixing this: [Issue #521](https://github.com/facebookresearch/maskrcnn-benchmark/issues/521)
+
+### Trim pretrained Models
+
+A downloaded pretrained model needs to be trimmed (i.e. the head of the network is removed) to then be retrained for your configuration and your number of classes. I've had problems doing this with the script in this repository but an alternative has been posted [here](https://gist.github.com/bernhardschaefer/01905b0fe83615f79e2928a2a10b6f28).
+
+### Dockerfile
+
+The Dockerfile wasn' working for me out of the box which is why I updated this as well.
+
+---
+
+## Repository Description
+
 This project aims at providing the necessary building blocks for easily
 creating detection and segmentation models using PyTorch 1.0.
 
@@ -99,7 +125,7 @@ ln -s /path_to_VOCdevkit_dir datasets/voc
 ```
 
 P.S. `COCO_2017_train` = `COCO_2014_train` + `valminusminival` , `COCO_2017_val` = `minival`
-      
+
 
 You can also configure your own paths to the datasets.
 For that, all you need to do is to modify `maskrcnn_benchmark/config/paths_catalog.py` to
@@ -262,7 +288,7 @@ note = {Accessed: [Insert date here]}
 
 ## Projects using maskrcnn-benchmark
 
-- [RetinaMask: Learning to predict masks improves state-of-the-art single-shot detection for free](https://arxiv.org/abs/1901.03353). 
+- [RetinaMask: Learning to predict masks improves state-of-the-art single-shot detection for free](https://arxiv.org/abs/1901.03353).
   Cheng-Yang Fu, Mykhailo Shvets, and Alexander C. Berg.
   Tech report, arXiv,1901.03353.
 - [FCOS: Fully Convolutional One-Stage Object Detection](https://arxiv.org/abs/1904.01355).
@@ -274,7 +300,7 @@ note = {Accessed: [Insert date here]}
 - [Is Sampling Heuristics Necessary in Training Deep Object Detectors?](https://arxiv.org/abs/1909.04868)
   Joya Chen, Dong Liu, Tong Xu, Shilong Zhang, Shiwei Wu, Bin Luo, Xuezheng Peng, Enhong Chen.
   Tech report, arXiv,1909.04868. [[code](https://github.com/ChenJoya/sampling-free)]
-  
+
 ## License
 
 maskrcnn-benchmark is released under the MIT license. See [LICENSE](LICENSE) for additional details.

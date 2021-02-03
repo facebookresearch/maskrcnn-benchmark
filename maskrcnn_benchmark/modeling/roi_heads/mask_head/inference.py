@@ -172,6 +172,7 @@ class Masker(object):
     def forward_single_image(self, masks, boxes):
         boxes = boxes.convert("xyxy")
         im_w, im_h = boxes.size
+        res = [o.int() for o in res]
         res = [
             paste_mask_in_image(mask[0], box, im_h, im_w, self.threshold, self.padding)
             for mask, box in zip(masks, boxes.bbox)
