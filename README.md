@@ -22,7 +22,7 @@ A downloaded pretrained model needs to be trimmed (i.e. the head of the network 
 
 ### Dockerfile
 
-The Dockerfile wasn' working for me out of the box which is why I updated this as well.
+The Dockerfile wasn't working for me out of the box which is why I updated this as well.
 
 ---
 
